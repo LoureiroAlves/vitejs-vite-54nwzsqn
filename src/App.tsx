@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -672,17 +673,6 @@ export default function App() {
 
   // ---------- Notificar colaboradores por email ----------
   const handleNotify = () => {
-    let link = scheduleLink;
-    if (!link) {
-      const entered = window.prompt(
-        "Cole aqui o link do horário (o link gerado no Netlify) para incluir no email:",
-        ""
-      );
-      if (entered === null) return;
-      link = entered.trim();
-      setScheduleLink(link);
-    }
-
     const recipients = allEmployees
       .map((emp) => employeeEmails[emp])
       .filter((email) => email && email.includes("@"));
@@ -722,13 +712,26 @@ export default function App() {
       body += "Não há alterações desde a última notificação — esta mensagem confirma o horário atual.\n\n";
     }
 
-    body += `Pode consultar o horário completo aqui:\n${link}\n\nObrigado.`;
+    body += `Segue em anexo o horário atualizado em PDF.\n\nObrigado.`;
+
+    if (scheduleLink) {
+      body += `\n\nTambém pode consultar online aqui:\n${scheduleLink}`;
+    }
 
     const subject = `Horário atualizado — ${MONTH_NAMES[month]} ${year}`;
-
     const mailto = `mailto:?bcc=${encodeURIComponent(recipients.join(","))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
-    window.location.href = mailto;
+    // 1) Gera e faz download automático do PDF (versão sem dados pessoais, para colaboradores)
+    handlePrint(false);
+
+    // 2) Abre o programa de email com tudo pronto, passado um pequeno intervalo
+    //    para dar tempo à janela de impressão a abrir primeiro
+    setTimeout(() => {
+      window.location.href = mailto;
+      alert(
+        "Foi aberta uma janela de impressão — escolha 'Guardar como PDF' e depois anexe esse ficheiro ao email que se abriu a seguir."
+      );
+    }, 400);
 
     setLastPublished((prev) => ({
       ...prev,
@@ -908,7 +911,7 @@ export default function App() {
             style={{ ...styles.navBtn, borderLeft: "1px solid #E4DED3", marginLeft: 4, paddingLeft: 12 }}
             onClick={handleNotify}
             aria-label="Notificar colaboradores"
-            title="Notificar colaboradores por email"
+            title="Gerar PDF e abrir email para os colaboradores"
           >
             <IconMail size={18} />
           </button>
