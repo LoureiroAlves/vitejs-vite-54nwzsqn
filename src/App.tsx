@@ -59,6 +59,12 @@ const IconMail = ({ size = 16, ...props }) => (
     <path d="m22 6-10 7L2 6" />
   </svg>
 );
+const IconLink = ({ size = 16, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
 
 // ---------- Tipos de turno / estado ----------
 // Baseado na escala real: M/T/N (turnos), MT (turno duplo Manhã+Tarde),
@@ -672,6 +678,15 @@ export default function App() {
   };
 
   // ---------- Notificar colaboradores por email ----------
+  const handleEditScheduleLink = () => {
+    const entered = window.prompt(
+      "Link do horário online (opcional, incluído no email aos colaboradores):",
+      scheduleLink
+    );
+    if (entered === null) return;
+    setScheduleLink(entered.trim());
+  };
+
   const handleNotify = () => {
     const recipients = allEmployees
       .map((emp) => employeeEmails[emp])
@@ -923,6 +938,15 @@ export default function App() {
             title="Gerar página HTML para partilhar com os colaboradores"
           >
             <IconGlobe size={18} />
+          </button>
+          <button
+            className="nav-btn"
+            style={{ ...styles.navBtn, color: scheduleLink ? "#B08A4E" : "#2A241C" }}
+            onClick={handleEditScheduleLink}
+            aria-label="Definir link do horário online"
+            title={scheduleLink ? `Link definido: ${scheduleLink}` : "Definir link do horário online (opcional)"}
+          >
+            <IconLink size={18} />
           </button>
           <button
             className="nav-btn"
