@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
 const IconPlus = ({ size = 16, ...props }) => (
@@ -64,7 +63,7 @@ const IconMail = ({ size = 16, ...props }) => (
 // Baseado na escala real: M/T/N (turnos), MT (turno duplo Manhã+Tarde),
 // FO (folga semanal), FC (folga compensatória), FE (férias), FR (feriado),
 // BM (baixa médica), EX (turno extra, horas definidas manualmente), FA (falta)
-const SHIFT_TYPES = {
+const SHIFT_TYPES: Record<string, { label: string; hours: number; color: string }> = {
   M: { label: "Manhã", hours: 8, color: "#E8B14A" },
   T: { label: "Tarde", hours: 8, color: "#5B8DBE" },
   N: { label: "Noite", hours: 8, color: "#5C4A8C" },
@@ -112,13 +111,13 @@ const DEFAULT_EMPLOYEES = [
   "Ana Paula Carneiro 89",
 ];
 
-function daysInMonth(year, month) {
+function daysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
 }
 
 const STORAGE_KEY = "turnos-app-data-v2";
 
-function loadStoredData() {
+function loadStoredData(): any {
   try {
     const raw = window.localStorage?.getItem?.(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
@@ -126,7 +125,7 @@ function loadStoredData() {
   return null;
 }
 
-function saveStoredData(data) {
+function saveStoredData(data: any) {
   try {
     window.localStorage?.setItem?.(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {}
@@ -137,38 +136,38 @@ export default function App() {
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
 
-  const [employees, setEmployees] = useState(() => {
+  const [employees, setEmployees] = useState<string[]>(() => {
     const stored = loadStoredData();
     return stored?.employees ?? DEFAULT_EMPLOYEES;
   });
-  const [rvEmployees, setRvEmployees] = useState(() => {
+  const [rvEmployees, setRvEmployees] = useState<string[]>(() => {
     const stored = loadStoredData();
     return stored?.rvEmployees ?? DEFAULT_RV_EMPLOYEES;
   });
-  const [schedule, setSchedule] = useState(() => {
+  const [schedule, setSchedule] = useState<Record<string, Record<string, Record<number, string>>>>(() => {
     const stored = loadStoredData();
     return stored?.schedule ?? {};
   });
-  const [extraHours, setExtraHours] = useState(() => {
+  const [extraHours, setExtraHours] = useState<Record<string, Record<string, Record<number, number>>>>(() => {
     const stored = loadStoredData();
     return stored?.extraHours ?? {};
   });
-  const [employeeEmails, setEmployeeEmails] = useState(() => {
+  const [employeeEmails, setEmployeeEmails] = useState<Record<string, string>>(() => {
     const stored = loadStoredData();
     return stored?.employeeEmails ?? {};
   });
-  const [scheduleLink, setScheduleLink] = useState(() => {
+  const [scheduleLink, setScheduleLink] = useState<string>(() => {
     const stored = loadStoredData();
     return stored?.scheduleLink ?? "";
   });
-  const [lastPublished, setLastPublished] = useState(() => {
+  const [lastPublished, setLastPublished] = useState<Record<string, Record<string, Record<number, string>>>>(() => {
     const stored = loadStoredData();
     return stored?.lastPublished ?? {};
   });
 
   const [newName, setNewName] = useState("");
-  const [showAdd, setShowAdd] = useState(null); // null | "rv" | "main"
-  const [confirmDelete, setConfirmDelete] = useState(null); // { name, group }
+  const [showAdd, setShowAdd] = useState<"rv" | "main" | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ name: string; group: "rv" | "main" } | null>(null);
 
   // Guardar tudo automaticamente
   useEffect(() => {
@@ -189,11 +188,11 @@ export default function App() {
   const allEmployees = useMemo(() => [...rvEmployees, ...employees], [rvEmployees, employees]);
 
   // ---------- Turnos ----------
-  const getShift = (employee, day) => {
+  const getShift = (employee: string, day: number) => {
     return schedule?.[monthKey]?.[employee]?.[day] || null;
   };
 
-  const setShift = (employee, day, value) => {
+  const setShift = (employee: string, day: number, value: string | null) => {
     setSchedule((prev) => {
       const next = { ...prev };
       next[monthKey] = { ...(next[monthKey] || {}) };
@@ -220,7 +219,7 @@ export default function App() {
     }
   };
 
-  const cycleShift = (employee, day) => {
+  const cycleShift = (employee: string, day: number) => {
     const current = getShift(employee, day);
     const idx = current ? SHIFT_ORDER.indexOf(current) : -1;
     const nextIdx = idx + 1;
@@ -231,12 +230,12 @@ export default function App() {
     }
   };
 
-  const getExtraHours = (employee, day) => {
+  const getExtraHours = (employee: string, day: number) => {
     const value = extraHours?.[monthKey]?.[employee]?.[day];
     return value !== undefined ? value : SHIFT_TYPES.EX.hours;
   };
 
-  const setExtraHoursValue = (employee, day, value) => {
+  const setExtraHoursValue = (employee: string, day: number, value: string) => {
     const num = Math.min(24, Math.max(0, Number(value) || 0));
     setExtraHours((prev) => {
       const next = { ...prev };
@@ -262,7 +261,7 @@ export default function App() {
     setShowAdd(null);
   };
 
-  const removeEmployee = (name, group) => {
+  const removeEmployee = (name: string, group: "rv" | "main") => {
     if (group === "rv") {
       setRvEmployees((prev) => prev.filter((e) => e !== name));
     } else {
@@ -297,7 +296,7 @@ export default function App() {
     setConfirmDelete(null);
   };
 
-  const handleEditEmail = (name) => {
+  const handleEditEmail = (name: string) => {
     const current = employeeEmails[name] || "";
     const value = window.prompt(`Email de ${name}:`, current);
     if (value === null) return; // cancelado
@@ -334,12 +333,19 @@ export default function App() {
 
   // ---------- Totais por colaborador ----------
   const employeeTotals = useMemo(() => {
-    const totals = {};
+    const totals: Record<string, {
+      hours: number;
+      counts: Record<string, number>;
+      daysWorked: number;
+      absences: number;
+      extra: number;
+      total: number;
+    }> = {};
     allEmployees.forEach((emp) => {
       let hours = 0;
       let extra = 0;
       let daysWorked = 0;
-      const counts = Object.fromEntries(SHIFT_ORDER.map((k) => [k, 0]));
+      const counts: Record<string, number> = Object.fromEntries(SHIFT_ORDER.map((k) => [k, 0]));
       for (let d = 1; d <= numDays; d++) {
         const s = getShift(emp, d);
         if (s) {
@@ -370,7 +376,7 @@ export default function App() {
 
   // ---------- Cobertura por dia (apenas equipa principal) ----------
   const dayCoverage = useMemo(() => {
-    const cov = {};
+    const cov: Record<number, { M: number; T: number; N: number }> = {};
     for (let d = 1; d <= numDays; d++) {
       cov[d] = { M: 0, T: 0, N: 0 };
       allEmployees.forEach((emp) => {
@@ -387,10 +393,10 @@ export default function App() {
     return cov;
   }, [allEmployees, schedule, monthKey, numDays]);
 
-  const shiftLabel = (code) => (code ? SHIFT_TYPES[code]?.label || code : "Sem turno");
+  const shiftLabel = (code: string | null) => (code ? SHIFT_TYPES[code]?.label || code : "Sem turno");
 
   // ---------- Construção de tabelas HTML (impressão / página partilhável) ----------
-  const buildTableHTML = (names, { showStats, showCoverage, sectionTitle }) => {
+  const buildTableHTML = (names: string[], { showStats, showCoverage, sectionTitle }: { showStats: boolean; showCoverage: boolean; sectionTitle?: string }) => {
     const dayHeaderCells = days
       .map((d) => {
         const date = new Date(year, month, d);
@@ -410,13 +416,13 @@ export default function App() {
             const shift = getShift(emp, d);
             const def = shift ? SHIFT_TYPES[shift] : null;
             const bg = def ? def.color : "#F7F5F0";
-            const color = def && !LIGHT_SHIFTS.includes(shift) ? "#FFFFFF" : "#6B6358";
+            const color = def && shift && !LIGHT_SHIFTS.includes(shift) ? "#FFFFFF" : "#6B6358";
             return `<td style="background:${bg};color:${color}">${shift || "—"}</td>`;
           })
           .join("");
         let statsCells = "";
         if (showStats) {
-          const t = employeeTotals[emp] || {};
+          const t = employeeTotals[emp] || { hours: 0, daysWorked: 0, absences: 0, extra: 0, total: 0 };
           statsCells = `<td class="stat">${t.daysWorked ?? 0}</td><td class="stat">${t.hours ?? 0}h</td><td class="stat">${t.absences ?? 0}</td><td class="stat">${t.extra ?? 0}h</td><td class="stat total">${t.total ?? 0}h</td>`;
         }
         return `<tr><td class="name">${emp}</td>${cells}${statsCells}</tr>`;
@@ -527,7 +533,7 @@ export default function App() {
 
   // ---------- Exportar para Excel (.csv) ----------
   const handleExportExcel = () => {
-    const escapeCsv = (value) => {
+    const escapeCsv = (value: string | number | undefined | null) => {
       const s = String(value ?? "");
       if (s.includes(";") || s.includes('"') || s.includes("\n")) {
         return `"${s.replace(/"/g, '""')}"`;
@@ -546,19 +552,19 @@ export default function App() {
       "Total",
     ];
 
-    const buildRows = (names, groupLabel) =>
+    const buildRows = (names: string[], groupLabel: string) =>
       names.map((emp) => {
-        const t = employeeTotals[emp] || {};
+        const t = employeeTotals[emp];
         const cells = days.map((d) => getShift(emp, d) || "");
         return [
           groupLabel,
           emp,
           ...cells,
-          t.daysWorked ?? 0,
-          t.hours ?? 0,
-          t.absences ?? 0,
-          t.extra ?? 0,
-          t.total ?? 0,
+          t?.daysWorked ?? 0,
+          t?.hours ?? 0,
+          t?.absences ?? 0,
+          t?.extra ?? 0,
+          t?.total ?? 0,
         ];
       });
 
@@ -689,7 +695,7 @@ export default function App() {
     }
 
     const prevMonth = lastPublished?.[monthKey] || {};
-    const changesByEmployee = {};
+    const changesByEmployee: Record<string, string[]> = {};
 
     allEmployees.forEach((emp) => {
       for (let d = 1; d <= numDays; d++) {
@@ -731,11 +737,11 @@ export default function App() {
   };
 
   // ---------- Renderização de células ----------
-  const renderDayCell = (emp, d) => {
+  const renderDayCell = (emp: string, d: number) => {
     const shift = getShift(emp, d);
     const def = shift ? SHIFT_TYPES[shift] : null;
     const bg = def ? def.color : "#F7F5F0";
-    const fg = def && !LIGHT_SHIFTS.includes(shift) ? "#FFFFFF" : "#9A9388";
+    const fg = def && shift && !LIGHT_SHIFTS.includes(shift) ? "#FFFFFF" : "#9A9388";
 
     if (shift === "EX") {
       return (
@@ -800,8 +806,8 @@ export default function App() {
     </>
   );
 
-  const renderStatCells = (emp) => {
-    const t = employeeTotals[emp] || {};
+  const renderStatCells = (emp: string) => {
+    const t = employeeTotals[emp] || { hours: 0, daysWorked: 0, absences: 0, extra: 0, total: 0 };
     return (
       <>
         <div style={styles.statCell}>
@@ -831,7 +837,7 @@ export default function App() {
     );
   };
 
-  const renderEmployeeRow = (emp, group) => (
+  const renderEmployeeRow = (emp: string, group: "rv" | "main") => (
     <div key={emp} style={styles.row}>
       <div style={{ ...styles.nameCell, position: "sticky", left: 0, zIndex: 2, background: "#FFFFFF" }}>
         <span style={styles.nameText}>{emp}</span>
@@ -1117,7 +1123,7 @@ export default function App() {
   );
 }
 
-const styles = {
+const styles: { [key: string]: React.CSSProperties } = {
   page: {
     fontFamily: "'Inter', sans-serif",
     background: "#FBF9F5",
