@@ -65,6 +65,12 @@ const IconLink = ({ size = 16, ...props }) => (
     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
   </svg>
 );
+const IconEraser = ({ size = 16, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M20 20H7L3 16l10-10 7 7-2.5 2.5" />
+    <path d="M6.0001 17.9999L10 14" />
+  </svg>
+);
 
 // ---------- Tipos de turno / estado ----------
 // Baseado na escala real: M/T/N (turnos), MT (turno duplo Manhã+Tarde),
@@ -175,6 +181,9 @@ export default function App() {
   const [newName, setNewName] = useState("");
   const [showAdd, setShowAdd] = useState<"rv" | "main" | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ name: string; group: "rv" | "main" } | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedDays, setSelectedDays] = useState<Set<number>>(new Set());
+  const [confirmClear, setConfirmClear] = useState(false);
 
   // Guardar tudo automaticamente
   useEffect(() => {
@@ -694,6 +703,58 @@ export default function App() {
   };
 
   // ---------- Notificar colaboradores por email ----------
+  const toggleSelectMode = () => {
+    setSelectMode((prev) => {
+      if (prev) setSelectedDays(new Set());
+      return !prev;
+    });
+  };
+
+  const toggleDay = (d: number) => {
+    setSelectedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(d)) {
+        next.delete(d);
+      } else {
+        next.add(d);
+      }
+      return next;
+    });
+  };
+
+  const selectAllDays = () => {
+    setSelectedDays(new Set(days));
+  };
+
+  const clearSelectedDays = () => {
+    // Apagar todos os turnos dos dias selecionados, para todos os colaboradores
+    setSchedule((prev) => {
+      const next = { ...prev };
+      next[monthKey] = { ...(next[monthKey] || {}) };
+      allEmployees.forEach((emp) => {
+        next[monthKey][emp] = { ...(next[monthKey][emp] || {}) };
+        selectedDays.forEach((d) => {
+          delete next[monthKey][emp][d];
+        });
+      });
+      return next;
+    });
+    setExtraHours((prev) => {
+      const next = { ...prev };
+      next[monthKey] = { ...(next[monthKey] || {}) };
+      allEmployees.forEach((emp) => {
+        next[monthKey][emp] = { ...(next[monthKey][emp] || {}) };
+        selectedDays.forEach((d) => {
+          delete next[monthKey][emp][d];
+        });
+      });
+      return next;
+    });
+    setSelectedDays(new Set());
+    setSelectMode(false);
+    setConfirmClear(false);
+  };
+
   const handleEditScheduleLink = () => {
     const entered = window.prompt(
       "Link do horário online (opcional, incluído no email aos colaboradores):",
@@ -775,35 +836,52 @@ export default function App() {
     const shift = getShift(emp, d);
     const def = shift ? SHIFT_TYPES[shift] : null;
     const isToday = d === todayDay;
-    const emptyBg = isToday ? "#F0EDE6" : "#F7F5F0";
-    const bg = def ? def.color : emptyBg;
-    const fg = def && shift && !LIGHT_SHIFTS.includes(shift) ? "#FFFFFF" : "#9A9388";
-    const todayBorder = isToday ? "1px solid #2A241C" : undefined;
+    const isSelected = selectedDays.has(d);
+    const emptyBg = isSelected ? "#FDDDD9" : isToday ? "#F0EDE6" : "#F7F5F0";
+    const bg = isSelected ? "#FDDDD9" : def ? def.color : emptyBg;
+    const fg = isSelected
+      ? "#7A2E24"
+      : def && shift && !LIGHT_SHIFTS.includes(shift)
+      ? "#FFFFFF"
+      : "#9A9388";
+    const outline = isSelected
+      ? "2px solid #B5483D"
+      : isToday
+      ? "2px solid #2A241C"
+      : undefined;
 
     if (shift === "EX") {
       return (
-        <div key={d} style={{ ...styles.dayCell, ...styles.exCell, background: bg, outline: isToday ? "2px solid #2A241C" : undefined, outlineOffset: isToday ? "-2px" : undefined }}>
+        <div key={d} style={{
+          ...styles.dayCell,
+          ...styles.exCell,
+          background: isSelected ? "#FDDDD9" : def!.color,
+          outline,
+          outlineOffset: outline ? "-2px" : undefined,
+        }}>
           <button
             className="cell-btn"
-            onClick={() => cycleShift(emp, d)}
-            style={{ ...styles.exLabel, color: fg }}
-            title="Extra — clique para alterar turno"
+            onClick={() => selectMode ? toggleDay(d) : cycleShift(emp, d)}
+            style={{ ...styles.exLabel, color: isSelected ? "#7A2E24" : fg }}
+            title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : "Extra — clique para alterar turno"}
           >
-            EX
+            {isSelected ? "✕" : "EX"}
           </button>
-          <input
-            type="number"
-            min="0"
-            max="24"
-            step="0.5"
-            className="no-print"
-            value={getExtraHours(emp, d)}
-            onChange={(e) => setExtraHoursValue(emp, d, e.target.value)}
-            onClick={(e) => e.stopPropagation()}
-            style={styles.exInput}
-            aria-label={`Horas extra de ${emp} no dia ${d}`}
-            title="Quantas horas extra"
-          />
+          {!isSelected && (
+            <input
+              type="number"
+              min="0"
+              max="24"
+              step="0.5"
+              className="no-print"
+              value={getExtraHours(emp, d)}
+              onChange={(e) => setExtraHoursValue(emp, d, e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              style={styles.exInput}
+              aria-label={`Horas extra de ${emp} no dia ${d}`}
+              title="Quantas horas extra"
+            />
+          )}
         </div>
       );
     }
@@ -812,18 +890,18 @@ export default function App() {
       <button
         key={d}
         className="cell-btn"
-        onClick={() => cycleShift(emp, d)}
+        onClick={() => selectMode ? toggleDay(d) : cycleShift(emp, d)}
         style={{
           ...styles.dayCell,
           background: bg,
           color: fg,
-          outline: isToday ? "2px solid #2A241C" : undefined,
-          outlineOffset: isToday ? "-2px" : undefined,
-          borderRight: todayBorder || "1px solid #EFEAE2",
+          outline,
+          outlineOffset: outline ? "-2px" : undefined,
+          borderRight: isToday && !isSelected ? "1px solid #2A241C" : "1px solid #EFEAE2",
         }}
-        title={def ? def.label : "Sem turno — clique para atribuir"}
+        title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : def ? def.label : "Sem turno — clique para atribuir"}
       >
-        {shift || "—"}
+        {isSelected ? "✕" : shift || "—"}
       </button>
     );
   };
@@ -911,19 +989,35 @@ export default function App() {
       const date = new Date(year, month, d);
       const isWeekend = date.getDay() === 0 || date.getDay() === 6;
       const isToday = d === todayDay;
+      const isSelected = selectedDays.has(d);
+      const bg = isSelected
+        ? "#B5483D"
+        : isToday
+        ? "#2A241C"
+        : isWeekend
+        ? "#F4EFE6"
+        : "#FBF9F5";
       return (
-        <div key={d} style={{
-          ...styles.dayHeaderCell,
-          background: isToday ? "#2A241C" : isWeekend ? "#F4EFE6" : "#FBF9F5",
-          borderRadius: isToday ? "0" : undefined,
-        }}>
+        <div
+          key={d}
+          onClick={selectMode ? () => toggleDay(d) : undefined}
+          style={{
+            ...styles.dayHeaderCell,
+            background: bg,
+            cursor: selectMode ? "pointer" : "default",
+            userSelect: "none" as const,
+          }}
+          title={selectMode ? (isSelected ? "Desselecionar dia" : "Selecionar dia") : undefined}
+        >
           <div style={{
             ...styles.dayNum,
-            color: isToday ? "#FFFFFF" : "#2A241C",
-          }}>{d}</div>
+            color: isSelected || isToday ? "#FFFFFF" : "#2A241C",
+          }}>
+            {isSelected ? "✓" : d}
+          </div>
           <div style={{
             ...styles.dayLetter,
-            color: isToday ? "#C2BAAC" : "#A39B8E",
+            color: isSelected ? "#FFCCC7" : isToday ? "#C2BAAC" : "#A39B8E",
           }}>{WEEKDAY_LETTERS[date.getDay()]}</div>
         </div>
       );
@@ -962,6 +1056,23 @@ export default function App() {
           </div>
           <button className="nav-btn" style={styles.navBtn} onClick={goNextMonth} aria-label="Mês seguinte">
             <IconChevronRight size={18} />
+          </button>
+          <button
+            className="nav-btn"
+            style={{
+              ...styles.navBtn,
+              borderLeft: "1px solid #E4DED3",
+              marginLeft: 4,
+              paddingLeft: 12,
+              background: selectMode ? "#2A241C" : "transparent",
+              color: selectMode ? "#FBF9F5" : "#2A241C",
+              borderRadius: 8,
+            }}
+            onClick={toggleSelectMode}
+            aria-label="Selecionar dias para apagar"
+            title={selectMode ? "Cancelar seleção" : "Selecionar dias para apagar turnos"}
+          >
+            <IconEraser size={18} />
           </button>
           <button
             className="nav-btn"
@@ -1033,6 +1144,36 @@ export default function App() {
         ))}
         <div style={styles.legendHint}>Clique numa célula para alternar o turno</div>
       </div>
+
+      {/* Barra de seleção de dias */}
+      {selectMode && (
+        <div style={styles.selectBar}>
+          <span style={styles.selectBarText}>
+            {selectedDays.size === 0
+              ? "Clique nos números dos dias para os selecionar"
+              : `${selectedDays.size} ${selectedDays.size === 1 ? "dia selecionado" : "dias selecionados"}`}
+          </span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={styles.selectBtnSecondary} onClick={selectAllDays}>
+              Selecionar todos
+            </button>
+            <button
+              style={{
+                ...styles.selectBtnPrimary,
+                opacity: selectedDays.size === 0 ? 0.4 : 1,
+                cursor: selectedDays.size === 0 ? "default" : "pointer",
+              }}
+              disabled={selectedDays.size === 0}
+              onClick={() => setConfirmClear(true)}
+            >
+              Apagar selecionados
+            </button>
+            <button style={styles.selectBtnCancel} onClick={toggleSelectMode}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Alertas de cobertura insuficiente */}
       {coverageAlerts.length > 0 && (
@@ -1225,6 +1366,29 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Modal de confirmação de limpeza de dias */}
+      {confirmClear && (
+        <div style={styles.overlay} onClick={() => setConfirmClear(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <button style={styles.closeBtn} onClick={() => setConfirmClear(false)} aria-label="Fechar">
+              <IconX size={18} />
+            </button>
+            <h3 style={styles.modalTitle}>Apagar {selectedDays.size} {selectedDays.size === 1 ? "dia" : "dias"}?</h3>
+            <p style={styles.modalText}>
+              Isto vai apagar todos os turnos de <strong>todos os colaboradores</strong> nos dias selecionados ({Array.from(selectedDays).sort((a, b) => a - b).join(", ")}). Esta ação não pode ser desfeita.
+            </p>
+            <div style={styles.modalActions}>
+              <button style={styles.cancelBtn} onClick={() => setConfirmClear(false)}>
+                Cancelar
+              </button>
+              <button style={styles.deleteBtn} onClick={clearSelectedDays}>
+                Apagar turnos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1297,6 +1461,56 @@ const styles: { [key: string]: React.CSSProperties } = {
     margin: "0 auto 8px",
     textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
+  },
+  selectBar: {
+    maxWidth: 1300,
+    margin: "0 auto 16px",
+    background: "#2A241C",
+    borderRadius: 12,
+    padding: "12px 16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap" as const,
+    gap: 10,
+  },
+  selectBarText: {
+    color: "#C2BAAC",
+    fontSize: 14,
+    fontWeight: 500,
+  },
+  selectBtnPrimary: {
+    background: "#B5483D",
+    color: "#FFFFFF",
+    border: "none",
+    borderRadius: 8,
+    padding: "8px 16px",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "'Inter', sans-serif",
+  },
+  selectBtnSecondary: {
+    background: "rgba(255,255,255,0.12)",
+    color: "#FBF9F5",
+    border: "1px solid rgba(255,255,255,0.2)",
+    borderRadius: 8,
+    padding: "8px 16px",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "'Inter', sans-serif",
+  },
+  selectBtnCancel: {
+    background: "transparent",
+    color: "#A39B8E",
+    border: "none",
+    borderRadius: 8,
+    padding: "8px 12px",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "'Inter', sans-serif",
   },
   alertBox: {
     maxWidth: 1300,
