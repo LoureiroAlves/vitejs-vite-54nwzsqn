@@ -402,6 +402,22 @@ export default function App() {
 
   const shiftLabel = (code: string | null) => (code ? SHIFT_TYPES[code]?.label || code : "Sem turno");
 
+  // ---------- Cobertura mínima ----------
+  const COVERAGE_MIN = { M: 3, T: 3, N: 2 };
+
+  const coverageAlerts = useMemo(() => {
+    const alerts: { day: number; shifts: string[] }[] = [];
+    for (let d = 1; d <= numDays; d++) {
+      const c = dayCoverage[d] || { M: 0, T: 0, N: 0 };
+      const under: string[] = [];
+      if (c.M < COVERAGE_MIN.M) under.push(`Manhã (${c.M}/${COVERAGE_MIN.M})`);
+      if (c.T < COVERAGE_MIN.T) under.push(`Tarde (${c.T}/${COVERAGE_MIN.T})`);
+      if (c.N < COVERAGE_MIN.N) under.push(`Noite (${c.N}/${COVERAGE_MIN.N})`);
+      if (under.length > 0) alerts.push({ day: d, shifts: under });
+    }
+    return alerts;
+  }, [dayCoverage, numDays]);
+
   // ---------- Construção de tabelas HTML (impressão / página partilhável) ----------
   const buildTableHTML = (names: string[], { showStats, showCoverage, sectionTitle }: { showStats: boolean; showCoverage: boolean; sectionTitle?: string }) => {
     const dayHeaderCells = days
@@ -758,12 +774,15 @@ export default function App() {
   const renderDayCell = (emp: string, d: number) => {
     const shift = getShift(emp, d);
     const def = shift ? SHIFT_TYPES[shift] : null;
-    const bg = def ? def.color : "#F7F5F0";
+    const isToday = d === todayDay;
+    const emptyBg = isToday ? "#F0EDE6" : "#F7F5F0";
+    const bg = def ? def.color : emptyBg;
     const fg = def && shift && !LIGHT_SHIFTS.includes(shift) ? "#FFFFFF" : "#9A9388";
+    const todayBorder = isToday ? "1px solid #2A241C" : undefined;
 
     if (shift === "EX") {
       return (
-        <div key={d} style={{ ...styles.dayCell, ...styles.exCell, background: bg }}>
+        <div key={d} style={{ ...styles.dayCell, ...styles.exCell, background: bg, outline: isToday ? "2px solid #2A241C" : undefined, outlineOffset: isToday ? "-2px" : undefined }}>
           <button
             className="cell-btn"
             onClick={() => cycleShift(emp, d)}
@@ -794,25 +813,20 @@ export default function App() {
         key={d}
         className="cell-btn"
         onClick={() => cycleShift(emp, d)}
-        style={{ ...styles.dayCell, background: bg, color: fg }}
+        style={{
+          ...styles.dayCell,
+          background: bg,
+          color: fg,
+          outline: isToday ? "2px solid #2A241C" : undefined,
+          outlineOffset: isToday ? "-2px" : undefined,
+          borderRight: todayBorder || "1px solid #EFEAE2",
+        }}
         title={def ? def.label : "Sem turno — clique para atribuir"}
       >
         {shift || "—"}
       </button>
     );
   };
-
-  const renderDayHeaderCells = () =>
-    days.map((d) => {
-      const date = new Date(year, month, d);
-      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-      return (
-        <div key={d} style={{ ...styles.dayHeaderCell, background: isWeekend ? "#F4EFE6" : "#FBF9F5" }}>
-          <div style={styles.dayNum}>{d}</div>
-          <div style={styles.dayLetter}>{WEEKDAY_LETTERS[date.getDay()]}</div>
-        </div>
-      );
-    });
 
   const renderStatHeaderCells = () => (
     <>
@@ -886,6 +900,34 @@ export default function App() {
   );
 
   const gridMinWidth = 190 + numDays * 44 + 260;
+
+  // Dia de hoje neste mês/ano (null se estamos a ver outro mês)
+  const todayDay = today.getFullYear() === year && today.getMonth() === month
+    ? today.getDate()
+    : null;
+
+  const renderDayHeaderCells = () =>
+    days.map((d) => {
+      const date = new Date(year, month, d);
+      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+      const isToday = d === todayDay;
+      return (
+        <div key={d} style={{
+          ...styles.dayHeaderCell,
+          background: isToday ? "#2A241C" : isWeekend ? "#F4EFE6" : "#FBF9F5",
+          borderRadius: isToday ? "0" : undefined,
+        }}>
+          <div style={{
+            ...styles.dayNum,
+            color: isToday ? "#FFFFFF" : "#2A241C",
+          }}>{d}</div>
+          <div style={{
+            ...styles.dayLetter,
+            color: isToday ? "#C2BAAC" : "#A39B8E",
+          }}>{WEEKDAY_LETTERS[date.getDay()]}</div>
+        </div>
+      );
+    });
 
   return (
     <div style={styles.page}>
@@ -992,6 +1034,29 @@ export default function App() {
         <div style={styles.legendHint}>Clique numa célula para alternar o turno</div>
       </div>
 
+      {/* Alertas de cobertura insuficiente */}
+      {coverageAlerts.length > 0 && (
+        <div style={styles.alertBox}>
+          <span style={styles.alertIcon}>⚠️</span>
+          <div>
+            <strong style={styles.alertTitle}>
+              {coverageAlerts.length} {coverageAlerts.length === 1 ? "dia com" : "dias com"} cobertura insuficiente
+            </strong>
+            <div style={styles.alertList}>
+              {coverageAlerts.map(({ day, shifts }) => {
+                const date = new Date(year, month, day);
+                const weekday = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][date.getDay()];
+                return (
+                  <span key={day} style={styles.alertChip}>
+                    {weekday} {day}: {shifts.join(", ")}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Recibo Verde */}
       <h2 style={styles.sectionTitle}>Colaboradores — Recibo Verde</h2>
       <div className="scroll-x" style={styles.gridWrap}>
@@ -1064,15 +1129,29 @@ export default function App() {
             <div style={{ ...styles.nameCell, position: "sticky", left: 0, zIndex: 2, background: "#FBF9F5", fontWeight: 600, color: "#6B6358" }}>
               Cobertura M/T/N
             </div>
-            {days.map((d) => (
-              <div key={d} style={styles.coverageCell}>
-                <span style={{ color: SHIFT_TYPES.M.color }}>{dayCoverage[d]?.M ?? 0}</span>
-                <span style={styles.coverageSep}>/</span>
-                <span style={{ color: SHIFT_TYPES.T.color }}>{dayCoverage[d]?.T ?? 0}</span>
-                <span style={styles.coverageSep}>/</span>
-                <span style={{ color: SHIFT_TYPES.N.color }}>{dayCoverage[d]?.N ?? 0}</span>
-              </div>
-            ))}
+            {days.map((d) => {
+              const c = dayCoverage[d] || { M: 0, T: 0, N: 0 };
+              const mAlert = c.M < COVERAGE_MIN.M;
+              const tAlert = c.T < COVERAGE_MIN.T;
+              const nAlert = c.N < COVERAGE_MIN.N;
+              const anyAlert = mAlert || tAlert || nAlert;
+              const isToday = d === todayDay;
+              return (
+                <div key={d} style={{
+                  ...styles.coverageCell,
+                  background: anyAlert ? "#FFF0EE" : isToday ? "#F0EDE6" : "#FBF9F5",
+                  borderBottom: anyAlert ? "2px solid #C2554A" : undefined,
+                  outline: isToday ? "2px solid #2A241C" : undefined,
+                  outlineOffset: isToday ? "-2px" : undefined,
+                }}>
+                  <span style={{ color: mAlert ? "#C2554A" : SHIFT_TYPES.M.color, fontWeight: mAlert ? 800 : 700 }}>{c.M}</span>
+                  <span style={styles.coverageSep}>/</span>
+                  <span style={{ color: tAlert ? "#C2554A" : SHIFT_TYPES.T.color, fontWeight: tAlert ? 800 : 700 }}>{c.T}</span>
+                  <span style={styles.coverageSep}>/</span>
+                  <span style={{ color: nAlert ? "#C2554A" : SHIFT_TYPES.N.color, fontWeight: nAlert ? 800 : 700 }}>{c.N}</span>
+                </div>
+              );
+            })}
             <div style={styles.statCell} />
             <div style={styles.statCell} />
             <div style={styles.statCell} />
@@ -1216,8 +1295,47 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#6B6358",
     maxWidth: 1300,
     margin: "0 auto 8px",
-    textTransform: "uppercase",
+    textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
+  },
+  alertBox: {
+    maxWidth: 1300,
+    margin: "0 auto 20px",
+    background: "#FFF5F4",
+    border: "1px solid #F2C4BC",
+    borderRadius: 12,
+    padding: "14px 16px",
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  alertIcon: {
+    fontSize: 20,
+    flexShrink: 0,
+    marginTop: 2,
+  },
+  alertTitle: {
+    display: "block",
+    fontSize: 14,
+    fontWeight: 700,
+    color: "#9B3A2F",
+    marginBottom: 8,
+    fontFamily: "'Space Grotesk', sans-serif",
+  },
+  alertList: {
+    display: "flex",
+    flexWrap: "wrap" as const,
+    gap: 6,
+  },
+  alertChip: {
+    display: "inline-block",
+    background: "#FDDDD9",
+    color: "#7A2E24",
+    borderRadius: 6,
+    padding: "3px 8px",
+    fontSize: 12,
+    fontWeight: 600,
+    fontFamily: "'Space Grotesk', sans-serif",
   },
   legend: {
     display: "flex",
