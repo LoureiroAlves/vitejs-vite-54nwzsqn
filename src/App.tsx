@@ -78,12 +78,6 @@ const IconCalendar = ({ size = 16, color = "currentColor", ...props }) => (
     <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
   </svg>
 );
-const IconCalendar = ({ size = 16, color = "currentColor", ...props }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <rect x="3" y="4" width="18" height="18" rx="2" />
-    <path d="M16 2v4M8 2v4M3 10h18" />
-  </svg>
-);
 
 // Gera cor e iniciais para avatar de cada colaborador
 function getAvatar(name: string): { initials: string; bg: string; color: string } {
@@ -179,27 +173,6 @@ function saveStoredData(data: any) {
 }
 
 // ---------- Avatar helper ----------
-const AVATAR_PALETTES = [
-  { bg: "#F0E8D5", color: "#B08A4E" },
-  { bg: "#E8EEF5", color: "#3A5A70" },
-  { bg: "#EDE8F5", color: "#5C4A8C" },
-  { bg: "#E8F0E8", color: "#3B6D11" },
-  { bg: "#F5E8E8", color: "#9B3A2F" },
-  { bg: "#E8F5F0", color: "#2A6B55" },
-  { bg: "#F5F0E8", color: "#7A5C2E" },
-  { bg: "#EAE8F5", color: "#4A4A8C" },
-];
-
-function getAvatar(name: string) {
-  const words = name.trim().split(/\s+/);
-  const initials = words.length >= 2
-    ? (words[0][0] + words[1][0]).toUpperCase()
-    : name.slice(0, 2).toUpperCase();
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) % AVATAR_PALETTES.length;
-  return { initials, ...AVATAR_PALETTES[Math.abs(hash)] };
-}
-
 export default function App() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
