@@ -71,6 +71,40 @@ const IconEraser = ({ size = 16, ...props }) => (
     <path d="M6.0001 17.9999L10 14" />
   </svg>
 );
+const IconCalendar = ({ size = 16, color = "currentColor", ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <path d="M16 2v4M8 2v4M3 10h18" />
+    <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
+  </svg>
+);
+const IconCalendar = ({ size = 16, color = "currentColor", ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <path d="M16 2v4M8 2v4M3 10h18" />
+  </svg>
+);
+
+// Gera cor e iniciais para avatar de cada colaborador
+function getAvatar(name: string): { initials: string; bg: string; color: string } {
+  const parts = name.replace(/\s*[-–]\s*RV\s*/i, "").trim().split(/\s+/);
+  const initials = parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : parts[0].slice(0, 2).toUpperCase();
+  const palettes = [
+    { bg: "#F0E8D5", color: "#9A6B1A" },
+    { bg: "#E8EEF5", color: "#2E5A8A" },
+    { bg: "#EDE8F5", color: "#5C4A8C" },
+    { bg: "#E8F0E8", color: "#2E6B2E" },
+    { bg: "#F5E8E8", color: "#8A2E2E" },
+    { bg: "#E8F5F0", color: "#1A7A5E" },
+    { bg: "#F5F0E8", color: "#7A5E1A" },
+    { bg: "#EEE8F5", color: "#6A2E8A" },
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) % palettes.length;
+  return { initials, ...palettes[Math.abs(hash) % palettes.length] };
+}
 
 // ---------- Tipos de turno / estado ----------
 // Baseado na escala real: M/T/N (turnos), MT (turno duplo Manhã+Tarde),
@@ -142,6 +176,28 @@ function saveStoredData(data: any) {
   try {
     window.localStorage?.setItem?.(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {}
+}
+
+// ---------- Avatar helper ----------
+const AVATAR_PALETTES = [
+  { bg: "#F0E8D5", color: "#B08A4E" },
+  { bg: "#E8EEF5", color: "#3A5A70" },
+  { bg: "#EDE8F5", color: "#5C4A8C" },
+  { bg: "#E8F0E8", color: "#3B6D11" },
+  { bg: "#F5E8E8", color: "#9B3A2F" },
+  { bg: "#E8F5F0", color: "#2A6B55" },
+  { bg: "#F5F0E8", color: "#7A5C2E" },
+  { bg: "#EAE8F5", color: "#4A4A8C" },
+];
+
+function getAvatar(name: string) {
+  const words = name.trim().split(/\s+/);
+  const initials = words.length >= 2
+    ? (words[0][0] + words[1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase();
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) % AVATAR_PALETTES.length;
+  return { initials, ...AVATAR_PALETTES[Math.abs(hash)] };
 }
 
 export default function App() {
@@ -947,35 +1003,56 @@ export default function App() {
     );
   };
 
-  const renderEmployeeRow = (emp: string, group: "rv" | "main") => (
-    <div key={emp} style={styles.row}>
-      <div style={{ ...styles.nameCell, position: "sticky", left: 0, zIndex: 2, background: "#FFFFFF" }}>
-        <span style={styles.nameText}>{emp}</span>
-        <div style={styles.nameActions}>
-          <button
-            className="icon-btn no-print"
-            style={{ ...styles.iconBtn, color: employeeEmails[emp] ? "#B08A4E" : "#C2BAAC" }}
-            onClick={() => handleEditEmail(emp)}
-            aria-label={`Email de ${emp}`}
-            title={employeeEmails[emp] ? `Email: ${employeeEmails[emp]}` : "Definir email"}
-          >
-            <IconMail size={14} />
-          </button>
-          <button
-            className="icon-btn no-print"
-            style={styles.iconBtn}
-            onClick={() => setConfirmDelete({ name: emp, group })}
-            aria-label={`Remover ${emp}`}
-            title="Remover colaborador"
-          >
-            <IconTrash2 size={14} />
-          </button>
+  const renderEmployeeRow = (emp: string, group: "rv" | "main") => {
+    const av = getAvatar(emp);
+    return (
+      <div key={emp} style={styles.row}>
+        <div style={{ ...styles.nameCell, position: "sticky", left: 0, zIndex: 2, background: "#FFFFFF" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden" }}>
+            <div style={{
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              background: av.bg,
+              color: av.color,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 10,
+              fontWeight: 700,
+              fontFamily: "'Space Grotesk', sans-serif",
+              flexShrink: 0,
+            }}>
+              {av.initials}
+            </div>
+            <span style={styles.nameText}>{emp}</span>
+          </div>
+          <div style={styles.nameActions}>
+            <button
+              className="icon-btn no-print"
+              style={{ ...styles.iconBtn, color: employeeEmails[emp] ? "#B08A4E" : "#C2BAAC" }}
+              onClick={() => handleEditEmail(emp)}
+              aria-label={`Email de ${emp}`}
+              title={employeeEmails[emp] ? `Email: ${employeeEmails[emp]}` : "Definir email"}
+            >
+              <IconMail size={14} />
+            </button>
+            <button
+              className="icon-btn no-print"
+              style={styles.iconBtn}
+              onClick={() => setConfirmDelete({ name: emp, group })}
+              aria-label={`Remover ${emp}`}
+              title="Remover colaborador"
+            >
+              <IconTrash2 size={14} />
+            </button>
+          </div>
         </div>
+        {days.map((d) => renderDayCell(emp, d))}
+        {renderStatCells(emp)}
       </div>
-      {days.map((d) => renderDayCell(emp, d))}
-      {renderStatCells(emp)}
-    </div>
-  );
+    );
+  };
 
   const gridMinWidth = 190 + numDays * 44 + 260;
 
@@ -1029,107 +1106,107 @@ export default function App() {
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
         * { box-sizing: border-box; }
         body { margin: 0; }
-        .cell-btn { transition: transform 0.08s ease, box-shadow 0.08s ease; }
-        .cell-btn:hover { transform: scale(1.04); }
+        .cell-btn { transition: transform 0.08s ease; }
+        .cell-btn:hover { transform: scale(1.05); }
         .cell-btn:active { transform: scale(0.97); }
-        .scroll-x::-webkit-scrollbar { height: 8px; }
-        .scroll-x::-webkit-scrollbar-thumb { background: #D9D4CC; border-radius: 4px; }
+        .scroll-x::-webkit-scrollbar { height: 6px; }
+        .scroll-x::-webkit-scrollbar-thumb { background: #D9D4CC; border-radius: 3px; }
         .icon-btn:hover { background: #EFEAE2; }
         .add-btn:hover { background: #1F1B16; }
-        .nav-btn:hover { background: #EFEAE2; }
+        .nav-btn:hover { background: #EFEAE2; border-radius: 6px; }
+        .tool-btn:hover { background: #EFEAE2 !important; }
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
       `}</style>
 
       <header style={styles.header}>
-        <div>
-          <div style={styles.eyebrow}>Painel do administrador</div>
-          <h1 style={styles.title}>Escala de turnos</h1>
-        </div>
-        <div style={styles.monthNav} className="no-print">
-          <button className="nav-btn" style={styles.navBtn} onClick={goPrevMonth} aria-label="Mês anterior">
-            <IconChevronLeft size={18} />
-          </button>
-          <div style={styles.monthLabel}>
-            {MONTH_NAMES[month]} {year}
+        {/* Logótipo */}
+        <div style={styles.logoWrap}>
+          <div style={styles.logoIcon}>
+            <IconCalendar size={20} color="#F5B944" />
           </div>
-          <button className="nav-btn" style={styles.navBtn} onClick={goNextMonth} aria-label="Mês seguinte">
-            <IconChevronRight size={18} />
-          </button>
-          <button
-            className="nav-btn"
-            style={{
-              ...styles.navBtn,
-              borderLeft: "1px solid #E4DED3",
-              marginLeft: 4,
-              paddingLeft: 12,
-              background: selectMode ? "#2A241C" : "transparent",
-              color: selectMode ? "#FBF9F5" : "#2A241C",
-              borderRadius: 8,
-            }}
-            onClick={toggleSelectMode}
-            aria-label="Selecionar dias para apagar"
-            title={selectMode ? "Cancelar seleção" : "Selecionar dias para apagar turnos"}
-          >
-            <IconEraser size={18} />
-          </button>
-          <button
-            className="nav-btn"
-            style={{ ...styles.navBtn, borderLeft: "1px solid #E4DED3", marginLeft: 4, paddingLeft: 12 }}
-            onClick={handleNotify}
-            aria-label="Notificar colaboradores"
-            title="Gerar PDF e abrir email para os colaboradores"
-          >
-            <IconMail size={18} />
-          </button>
-          <button
-            className="nav-btn"
-            style={styles.navBtn}
-            onClick={handleExportEmployeePage}
-            aria-label="Gerar página para colaboradores"
-            title="Gerar página HTML para partilhar com os colaboradores"
-          >
-            <IconGlobe size={18} />
-          </button>
-          <button
-            className="nav-btn"
-            style={{ ...styles.navBtn, color: scheduleLink ? "#B08A4E" : "#2A241C" }}
-            onClick={handleEditScheduleLink}
-            aria-label="Definir link do horário online"
-            title={scheduleLink ? `Link definido: ${scheduleLink}` : "Definir link do horário online (opcional)"}
-          >
-            <IconLink size={18} />
-          </button>
-          <button
-            className="nav-btn"
-            style={styles.navBtn}
-            onClick={handleExportExcel}
-            aria-label="Exportar para Excel"
-            title="Exportar para Excel (.csv)"
-          >
-            <IconFileSpreadsheet size={18} />
-          </button>
-          <button
-            className="nav-btn"
-            style={styles.navBtn}
-            onClick={() => handlePrint(true)}
-            aria-label="Imprimir completo"
-            title="Imprimir / Guardar PDF — versão completa (com horas e totais)"
-          >
-            <IconPrinter size={18} />
-          </button>
-          <button
-            className="nav-btn"
-            style={styles.navBtn}
-            onClick={() => handlePrint(false)}
-            aria-label="Imprimir para colaboradores"
-            title="Imprimir / Guardar PDF — versão para colaboradores (sem horas e totais)"
-          >
-            <IconUsers size={18} />
-          </button>
+          <div>
+            <div style={styles.logoTitle}>Escala de turnos</div>
+            <div style={styles.logoSub}>Painel do administrador</div>
+          </div>
+        </div>
+
+        {/* Navegação de mês + toolbar */}
+        <div style={styles.headerRight} className="no-print">
+          <div style={styles.monthNav}>
+            <button className="nav-btn" style={styles.navBtnCompact} onClick={goPrevMonth} aria-label="Mês anterior">
+              <IconChevronLeft size={16} />
+            </button>
+            <div style={styles.monthLabel}>{MONTH_NAMES[month]} {year}</div>
+            <button className="nav-btn" style={styles.navBtnCompact} onClick={goNextMonth} aria-label="Mês seguinte">
+              <IconChevronRight size={16} />
+            </button>
+          </div>
+
+          <div style={styles.toolbar}>
+            <button
+              className="tool-btn"
+              style={{ ...styles.toolBtn, background: selectMode ? "#2A241C" : undefined, color: selectMode ? "#F5B944" : undefined }}
+              onClick={toggleSelectMode}
+              title={selectMode ? "Cancelar seleção" : "Selecionar dias para apagar turnos"}
+              aria-label="Apagar dias"
+            >
+              <IconEraser size={16} />
+            </button>
+            <div style={styles.toolDivider} />
+            <button className="tool-btn" style={styles.toolBtn} onClick={handleNotify} title="Gerar PDF e notificar por email" aria-label="Notificar">
+              <IconMail size={16} />
+            </button>
+            <button className="tool-btn" style={styles.toolBtn} onClick={handleExportEmployeePage} title="Gerar página para colaboradores" aria-label="Partilhar">
+              <IconGlobe size={16} />
+            </button>
+            <button className="tool-btn" style={{ ...styles.toolBtn, color: scheduleLink ? "#B08A4E" : undefined }} onClick={handleEditScheduleLink} title={scheduleLink ? `Link: ${scheduleLink}` : "Definir link online"} aria-label="Link">
+              <IconLink size={16} />
+            </button>
+            <div style={styles.toolDivider} />
+            <button className="tool-btn" style={styles.toolBtn} onClick={handleExportExcel} title="Exportar para Excel" aria-label="Excel">
+              <IconFileSpreadsheet size={16} />
+            </button>
+            <button className="tool-btn" style={styles.toolBtn} onClick={() => handlePrint(true)} title="Imprimir versão completa" aria-label="Imprimir completo">
+              <IconPrinter size={16} />
+            </button>
+            <button className="tool-btn" style={styles.toolBtn} onClick={() => handlePrint(false)} title="Imprimir versão para colaboradores" aria-label="Imprimir colaboradores">
+              <IconUsers size={16} />
+            </button>
+          </div>
         </div>
       </header>
+
+      {/* Painel de resumo */}
+      <div style={styles.summaryGrid} className="no-print">
+        <div style={styles.summaryCard}>
+          <div style={styles.summaryLabel}>Colaboradores</div>
+          <div style={styles.summaryValue}>{employees.length}</div>
+          <div style={styles.summarySub}>+ {rvEmployees.length} recibo verde</div>
+        </div>
+        <div style={styles.summaryCard}>
+          <div style={styles.summaryLabel}>Horas registadas</div>
+          <div style={styles.summaryValue}>
+            {Object.values(employeeTotals).reduce((acc, t) => acc + (t?.total ?? 0), 0)}h
+          </div>
+          <div style={styles.summarySub}>este mês</div>
+        </div>
+        <div style={{ ...styles.summaryCard, ...(coverageAlerts.length > 0 ? styles.summaryCardWarn : {}) }}>
+          <div style={styles.summaryLabel}>Alertas de cobertura</div>
+          <div style={{ ...styles.summaryValue, color: coverageAlerts.length > 0 ? "#C2554A" : undefined }}>
+            {coverageAlerts.length}
+          </div>
+          <div style={styles.summarySub}>{coverageAlerts.length === 0 ? "sem problemas" : "dias com falta"}</div>
+        </div>
+        <div style={styles.summaryCard}>
+          <div style={styles.summaryLabel}>Faltas</div>
+          <div style={styles.summaryValue}>
+            {Object.values(employeeTotals).reduce((acc, t) => acc + (t?.absences ?? 0), 0)}
+          </div>
+          <div style={styles.summarySub}>este mês</div>
+        </div>
+      </div>
 
       {/* Legend */}
       <div style={styles.legend} className="no-print">
@@ -1404,63 +1481,146 @@ const styles: { [key: string]: React.CSSProperties } = {
   header: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "flex-end",
-    flexWrap: "wrap",
+    alignItems: "center",
+    flexWrap: "wrap" as const,
     gap: 16,
     maxWidth: 1300,
     margin: "0 auto 20px",
   },
-  eyebrow: {
-    fontSize: 12,
-    letterSpacing: "0.12em",
-    textTransform: "uppercase",
-    color: "#B08A4E",
-    fontWeight: 600,
-    marginBottom: 4,
+  logoWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
   },
-  title: {
+  logoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    background: "#1A1612",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  logoTitle: {
     fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 32,
+    fontSize: 18,
     fontWeight: 700,
-    margin: 0,
+    color: "#2A241C",
     letterSpacing: "-0.01em",
+  },
+  logoSub: {
+    fontSize: 12,
+    color: "#A39B8E",
+    marginTop: 1,
+  },
+  headerRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap" as const,
   },
   monthNav: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 4,
     background: "#FFFFFF",
     border: "1px solid #E4DED3",
-    borderRadius: 12,
-    padding: "6px 8px",
-    flexWrap: "wrap",
+    borderRadius: 10,
+    padding: "4px 6px",
   },
-  navBtn: {
+  navBtnCompact: {
     border: "none",
     background: "transparent",
-    borderRadius: 8,
-    padding: 8,
+    borderRadius: 6,
+    padding: 6,
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
-    color: "#2A241C",
+    color: "#6B6358",
   },
   monthLabel: {
     fontFamily: "'Space Grotesk', sans-serif",
     fontWeight: 600,
-    fontSize: 15,
-    minWidth: 130,
-    textAlign: "center",
+    fontSize: 14,
+    minWidth: 120,
+    textAlign: "center" as const,
+    color: "#2A241C",
+  },
+  toolbar: {
+    display: "flex",
+    alignItems: "center",
+    gap: 2,
+    background: "#FFFFFF",
+    border: "1px solid #E4DED3",
+    borderRadius: 10,
+    padding: "4px 6px",
+  },
+  toolBtn: {
+    border: "none",
+    background: "transparent",
+    borderRadius: 6,
+    padding: 7,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#6B6358",
+    transition: "background 0.1s",
+  },
+  toolDivider: {
+    width: 1,
+    height: 18,
+    background: "#E4DED3",
+    margin: "0 4px",
+    flexShrink: 0,
+  },
+  summaryGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: 12,
+    maxWidth: 1300,
+    margin: "0 auto 20px",
+  },
+  summaryCard: {
+    background: "#FFFFFF",
+    border: "1px solid #E4DED3",
+    borderRadius: 14,
+    padding: "16px 18px",
+  },
+  summaryCardWarn: {
+    background: "#FFF5F4",
+    border: "1px solid #F2C4BC",
+  },
+  summaryLabel: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: "#A39B8E",
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.08em",
+    marginBottom: 6,
+  },
+  summaryValue: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 26,
+    fontWeight: 700,
+    color: "#2A241C",
+    lineHeight: 1,
+  },
+  summarySub: {
+    fontSize: 12,
+    color: "#A39B8E",
+    marginTop: 4,
   },
   sectionTitle: {
     fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 700,
-    color: "#6B6358",
+    color: "#A39B8E",
     maxWidth: 1300,
     margin: "0 auto 8px",
     textTransform: "uppercase" as const,
-    letterSpacing: "0.06em",
+    letterSpacing: "0.08em",
   },
   selectBar: {
     maxWidth: 1300,
