@@ -71,6 +71,18 @@ const IconEraser = ({ size = 16, ...props }) => (
     <path d="M6.0001 17.9999L10 14" />
   </svg>
 );
+const IconCopy = ({ size = 16, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="9" y="9" width="13" height="13" rx="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
+const IconClipboard = ({ size = 16, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="8" y="2" width="8" height="4" rx="1" />
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+  </svg>
+);
 const IconCalendar = ({ size = 16, color = "currentColor", ...props }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -756,7 +768,6 @@ export default function App() {
   };
 
   const clearSelectedDays = () => {
-    // Apagar todos os turnos dos dias selecionados, para todos os colaboradores
     setSchedule((prev) => {
       const next = { ...prev };
       next[monthKey] = { ...(next[monthKey] || {}) };
@@ -783,6 +794,76 @@ export default function App() {
     setSelectMode(false);
     setConfirmClear(false);
   };
+
+  // ---------- Copiar / Colar horário ----------
+  const [copiedMonth, setCopiedMonth] = useState<string | null>(null);
+  const [showPasteConfirm, setShowPasteConfirm] = useState(false);
+
+  const handleCopyMonth = () => {
+    setCopiedMonth(monthKey);
+    alert(`Horário de ${MONTH_NAMES[month]} ${year} copiado!\n\nNavegue para o mês de destino e clique em "Colar".`);
+  };
+
+  const handlePasteMonth = () => {
+    if (!copiedMonth) return;
+    setShowPasteConfirm(true);
+  };
+
+  const confirmPaste = (overwrite: boolean) => {
+    if (!copiedMonth) return;
+
+    const srcNumDays = daysInMonth(
+      parseInt(copiedMonth.split("-")[0]),
+      parseInt(copiedMonth.split("-")[1]) - 1
+    );
+    const dstNumDays = numDays;
+
+    setSchedule((prev) => {
+      const next = { ...prev };
+      next[monthKey] = { ...(next[monthKey] || {}) };
+      const srcData = prev[copiedMonth] || {};
+
+      allEmployees.forEach((emp) => {
+        if (!overwrite) {
+          next[monthKey][emp] = { ...(next[monthKey][emp] || {}) };
+        } else {
+          next[monthKey][emp] = {};
+        }
+        const srcEmp = srcData[emp] || {};
+        // Copiar só os dias que existem em ambos os meses
+        for (let d = 1; d <= Math.min(srcNumDays, dstNumDays); d++) {
+          if (srcEmp[d]) {
+            next[monthKey][emp][d] = srcEmp[d];
+          }
+        }
+      });
+      return next;
+    });
+
+    setExtraHours((prev) => {
+      const next = { ...prev };
+      next[monthKey] = { ...(next[monthKey] || {}) };
+      const srcData = prev[copiedMonth] || {};
+
+      allEmployees.forEach((emp) => {
+        if (overwrite) next[monthKey][emp] = {};
+        else next[monthKey][emp] = { ...(next[monthKey][emp] || {}) };
+        const srcEmp = srcData[emp] || {};
+        for (let d = 1; d <= Math.min(srcNumDays, dstNumDays); d++) {
+          if (srcEmp[d] !== undefined) {
+            next[monthKey][emp][d] = srcEmp[d];
+          }
+        }
+      });
+      return next;
+    });
+
+    setShowPasteConfirm(false);
+  };
+
+  const copiedMonthLabel = copiedMonth
+    ? `${MONTH_NAMES[parseInt(copiedMonth.split("-")[1]) - 1]} ${copiedMonth.split("-")[0]}`
+    : "";
 
   const handleEditScheduleLink = () => {
     const entered = window.prompt(
@@ -1147,6 +1228,33 @@ export default function App() {
             <button className="tool-btn" style={styles.toolBtn} onClick={() => handlePrint(false)} title="Imprimir versão para colaboradores" aria-label="Imprimir colaboradores">
               <IconUsers size={16} />
             </button>
+            <div style={styles.toolDivider} />
+            <button
+              className="tool-btn"
+              style={{ ...styles.toolBtn, color: copiedMonth === monthKey ? "#B08A4E" : undefined }}
+              onClick={handleCopyMonth}
+              title={copiedMonth === monthKey ? "Mês já copiado — clique para copiar novamente" : `Copiar horário de ${MONTH_NAMES[month]} ${year}`}
+              aria-label="Copiar mês"
+            >
+              <IconCopy size={16} />
+            </button>
+            <button
+              className="tool-btn"
+              style={{
+                ...styles.toolBtn,
+                color: copiedMonth && copiedMonth !== monthKey ? "#5B8DBE" : "#C2BAAC",
+                cursor: copiedMonth && copiedMonth !== monthKey ? "pointer" : "default",
+              }}
+              onClick={copiedMonth && copiedMonth !== monthKey ? handlePasteMonth : undefined}
+              title={copiedMonth && copiedMonth !== monthKey
+                ? `Colar horário de ${copiedMonthLabel} neste mês`
+                : copiedMonth === monthKey
+                ? "Navegue para outro mês para colar"
+                : "Copie um mês primeiro"}
+              aria-label="Colar mês"
+            >
+              <IconClipboard size={16} />
+            </button>
           </div>
         </div>
       </header>
@@ -1413,6 +1521,45 @@ export default function App() {
                 Remover
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de colar */}
+      {showPasteConfirm && copiedMonth && (
+        <div style={styles.overlay} onClick={() => setShowPasteConfirm(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <button style={styles.closeBtn} onClick={() => setShowPasteConfirm(false)} aria-label="Fechar">
+              <IconX size={18} />
+            </button>
+            <h3 style={styles.modalTitle}>Colar horário de {copiedMonthLabel}?</h3>
+            <p style={styles.modalText}>
+              Vai copiar os turnos de <strong>{copiedMonthLabel}</strong> para <strong>{MONTH_NAMES[month]} {year}</strong>.
+              Como quer colar?
+            </p>
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, marginBottom: 20 }}>
+              <button
+                style={{ ...styles.addBtnPrimary, textAlign: "left" as const, padding: "12px 16px" }}
+                onClick={() => confirmPaste(false)}
+              >
+                <div style={{ fontWeight: 700, marginBottom: 2 }}>Mesclar</div>
+                <div style={{ fontSize: 12, opacity: 0.8, fontWeight: 400 }}>
+                  Mantém turnos já existentes e preenche só os dias vazios
+                </div>
+              </button>
+              <button
+                style={{ ...styles.deleteBtn, textAlign: "left" as const, padding: "12px 16px" }}
+                onClick={() => confirmPaste(true)}
+              >
+                <div style={{ fontWeight: 700, marginBottom: 2 }}>Substituir tudo</div>
+                <div style={{ fontSize: 12, opacity: 0.8, fontWeight: 400 }}>
+                  Apaga o horário atual e substitui pelo copiado
+                </div>
+              </button>
+            </div>
+            <button style={styles.cancelBtn} onClick={() => setShowPasteConfirm(false)}>
+              Cancelar
+            </button>
           </div>
         </div>
       )}
