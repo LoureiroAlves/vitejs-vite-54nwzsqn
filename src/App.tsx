@@ -225,6 +225,7 @@ export default function App() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedDays, setSelectedDays] = useState<Set<number>>(new Set());
   const [confirmClear, setConfirmClear] = useState(false);
+  const [showPrintMenu, setShowPrintMenu] = useState(false);
 
   // Guardar tudo automaticamente
   useEffect(() => {
@@ -1169,6 +1170,7 @@ export default function App() {
         .add-btn:hover { background: #1F1B16; }
         .nav-btn:hover { background: #EFEAE2; border-radius: 6px; }
         .tool-btn:hover { background: #EFEAE2 !important; }
+        .print-menu-item:hover { background: #F7F5F0; }
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
@@ -1199,6 +1201,7 @@ export default function App() {
           </div>
 
           <div style={styles.toolbar}>
+            {/* Borracha */}
             <button
               className="tool-btn"
               style={{ ...styles.toolBtn, background: selectMode ? "#2A241C" : undefined, color: selectMode ? "#F5B944" : undefined }}
@@ -1208,53 +1211,84 @@ export default function App() {
             >
               <IconEraser size={16} />
             </button>
-            <div style={styles.toolDivider} />
-            <button className="tool-btn" style={styles.toolBtn} onClick={handleNotify} title="Gerar PDF e notificar por email" aria-label="Notificar">
-              <IconMail size={16} />
-            </button>
-            <button className="tool-btn" style={styles.toolBtn} onClick={handleExportEmployeePage} title="Gerar página para colaboradores" aria-label="Partilhar">
-              <IconGlobe size={16} />
-            </button>
-            <button className="tool-btn" style={{ ...styles.toolBtn, color: scheduleLink ? "#B08A4E" : undefined }} onClick={handleEditScheduleLink} title={scheduleLink ? `Link: ${scheduleLink}` : "Definir link online"} aria-label="Link">
-              <IconLink size={16} />
-            </button>
-            <div style={styles.toolDivider} />
-            <button className="tool-btn" style={styles.toolBtn} onClick={handleExportExcel} title="Exportar para Excel" aria-label="Excel">
-              <IconFileSpreadsheet size={16} />
-            </button>
-            <button className="tool-btn" style={styles.toolBtn} onClick={() => handlePrint(true)} title="Imprimir versão completa" aria-label="Imprimir completo">
-              <IconPrinter size={16} />
-            </button>
-            <button className="tool-btn" style={styles.toolBtn} onClick={() => handlePrint(false)} title="Imprimir versão para colaboradores" aria-label="Imprimir colaboradores">
-              <IconUsers size={16} />
-            </button>
-            <div style={styles.toolDivider} />
+
+            {/* Copiar / Colar */}
             <button
               className="tool-btn"
               style={{ ...styles.toolBtn, color: copiedMonth === monthKey ? "#B08A4E" : undefined }}
               onClick={handleCopyMonth}
-              title={copiedMonth === monthKey ? "Mês já copiado — clique para copiar novamente" : `Copiar horário de ${MONTH_NAMES[month]} ${year}`}
+              title={copiedMonth === monthKey ? "Mês já copiado" : `Copiar horário de ${MONTH_NAMES[month]} ${year}`}
               aria-label="Copiar mês"
             >
               <IconCopy size={16} />
             </button>
             <button
               className="tool-btn"
-              style={{
-                ...styles.toolBtn,
-                color: copiedMonth && copiedMonth !== monthKey ? "#5B8DBE" : "#C2BAAC",
-                cursor: copiedMonth && copiedMonth !== monthKey ? "pointer" : "default",
-              }}
+              style={{ ...styles.toolBtn, color: copiedMonth && copiedMonth !== monthKey ? "#5B8DBE" : "#C2BAAC", cursor: copiedMonth && copiedMonth !== monthKey ? "pointer" : "default" }}
               onClick={copiedMonth && copiedMonth !== monthKey ? handlePasteMonth : undefined}
-              title={copiedMonth && copiedMonth !== monthKey
-                ? `Colar horário de ${copiedMonthLabel} neste mês`
-                : copiedMonth === monthKey
-                ? "Navegue para outro mês para colar"
-                : "Copie um mês primeiro"}
+              title={copiedMonth && copiedMonth !== monthKey ? `Colar horário de ${copiedMonthLabel}` : copiedMonth === monthKey ? "Navegue para outro mês para colar" : "Copie um mês primeiro"}
               aria-label="Colar mês"
             >
               <IconClipboard size={16} />
             </button>
+
+            <div style={styles.toolDivider} />
+
+            {/* Email / Partilhar / Link */}
+            <button className="tool-btn" style={styles.toolBtn} onClick={handleNotify} title="Gerar PDF e notificar colaboradores por email" aria-label="Notificar">
+              <IconMail size={16} />
+            </button>
+            <button className="tool-btn" style={styles.toolBtn} onClick={handleExportEmployeePage} title="Gerar página HTML para colaboradores" aria-label="Partilhar">
+              <IconGlobe size={16} />
+            </button>
+            <button className="tool-btn" style={{ ...styles.toolBtn, color: scheduleLink ? "#B08A4E" : undefined }} onClick={handleEditScheduleLink} title={scheduleLink ? `Link: ${scheduleLink}` : "Definir link online (opcional)"} aria-label="Link">
+              <IconLink size={16} />
+            </button>
+
+            <div style={styles.toolDivider} />
+
+            {/* Excel */}
+            <button className="tool-btn" style={styles.toolBtn} onClick={handleExportExcel} title="Exportar para Excel (.csv)" aria-label="Excel">
+              <IconFileSpreadsheet size={16} />
+            </button>
+
+            {/* Menu impressão/PDF (dropdown) */}
+            <div style={{ position: "relative" as const }}>
+              <button
+                className="tool-btn"
+                style={{ ...styles.toolBtn, background: showPrintMenu ? "#EFEAE2" : undefined }}
+                onClick={() => setShowPrintMenu((v) => !v)}
+                title="Opções de impressão e PDF"
+                aria-label="Imprimir / PDF"
+              >
+                <IconPrinter size={16} />
+              </button>
+              {showPrintMenu && (
+                <>
+                  <div style={styles.printMenuOverlay} onClick={() => setShowPrintMenu(false)} />
+                  <div style={styles.printMenu}>
+                    <button style={styles.printMenuItem} onClick={() => { setShowPrintMenu(false); handlePrint(true); }}>
+                      <IconPrinter size={14} />
+                      <div>
+                        <div style={styles.printMenuItemTitle}>Imprimir — Administrador</div>
+                        <div style={styles.printMenuItemSub}>Com horas, faltas e totais</div>
+                      </div>
+                    </button>
+                    <button style={styles.printMenuItem} onClick={() => { setShowPrintMenu(false); handlePrint(false); }}>
+                      <IconUsers size={14} />
+                      <div>
+                        <div style={styles.printMenuItemTitle}>Imprimir — Colaboradores</div>
+                        <div style={styles.printMenuItemSub}>Só os turnos, sem dados pessoais</div>
+                      </div>
+                    </button>
+                    <div style={styles.printMenuDivider} />
+                    <div style={{ ...styles.printMenuItemSub, padding: "4px 12px 2px", color: "#A39B8E" }}>
+                      Para PDF: escolha "Guardar como PDF" na janela de impressão
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -1694,6 +1728,53 @@ const styles: { [key: string]: React.CSSProperties } = {
     background: "#E4DED3",
     margin: "0 4px",
     flexShrink: 0,
+  },
+  printMenuOverlay: {
+    position: "fixed" as const,
+    inset: 0,
+    zIndex: 10,
+  },
+  printMenu: {
+    position: "absolute" as const,
+    top: "calc(100% + 6px)",
+    right: 0,
+    background: "#FFFFFF",
+    border: "1px solid #E4DED3",
+    borderRadius: 12,
+    boxShadow: "0 8px 24px rgba(42,36,28,0.12)",
+    minWidth: 240,
+    zIndex: 20,
+    overflow: "hidden" as const,
+    padding: "6px 0",
+  },
+  printMenuItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    width: "100%",
+    border: "none",
+    background: "transparent",
+    padding: "10px 14px",
+    cursor: "pointer",
+    textAlign: "left" as const,
+    fontFamily: "'Inter', sans-serif",
+    color: "#2A241C",
+    transition: "background 0.1s",
+  },
+  printMenuItemTitle: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#2A241C",
+  },
+  printMenuItemSub: {
+    fontSize: 11,
+    color: "#A39B8E",
+    marginTop: 1,
+  },
+  printMenuDivider: {
+    height: 1,
+    background: "#EFEAE2",
+    margin: "4px 0",
   },
   summaryGrid: {
     display: "grid",
