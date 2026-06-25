@@ -1256,12 +1256,12 @@ export default function App() {
             <div style={{ position: "relative" as const }}>
               <button
                 className="tool-btn"
-                style={{ ...styles.toolBtn, background: showPrintMenu ? "#EFEAE2" : undefined }}
+                style={{ ...styles.toolBtn, background: showPrintMenu ? "#2A241C" : undefined, color: showPrintMenu ? "#FFFFFF" : undefined }}
                 onClick={() => setShowPrintMenu((v) => !v)}
                 title="Opções de impressão e PDF"
                 aria-label="Imprimir / PDF"
               >
-                <IconPrinter size={16} />
+                <IconPrinter size={18} />
               </button>
               {showPrintMenu && (
                 <>
