@@ -83,14 +83,6 @@ const IconClipboard = ({ size = 16, ...props }) => (
     <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
   </svg>
 );
-const IconCalendar = ({ size = 16, color = "currentColor", ...props }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <rect x="3" y="4" width="18" height="18" rx="2" />
-    <path d="M16 2v4M8 2v4M3 10h18" />
-    <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
-  </svg>
-);
-
 // Gera cor e iniciais para avatar de cada colaborador
 function getAvatar(name: string): { initials: string; bg: string; color: string } {
   const parts = name.replace(/\s*[-–]\s*RV\s*/i, "").trim().split(/\s+/);
@@ -1687,16 +1679,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     alignItems: "center",
     gap: 12,
-  },
-  logoIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    background: "#1A1612",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
   },
   logoTitle: {
     fontFamily: "'Space Grotesk', sans-serif",
