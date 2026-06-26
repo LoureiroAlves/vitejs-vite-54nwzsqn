@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -1618,6 +1619,7 @@ export default function App() {
   };
 
   const gridMinWidth = 190 + numDays * 44 + 260;
+  const isStockPage = (activePage as string) === "stock";
 
   // Dia de hoje neste mês/ano (null se estamos a ver outro mês)
   const todayDay = today.getFullYear() === year && today.getMonth() === month
@@ -1685,14 +1687,14 @@ export default function App() {
       `}</style>
 
       {/* Página de stock — renderiza em vez da escala quando ativa */}
-      {activePage === "stock" && (
+      {isStockPage && (
         <div style={{ margin: "-32px -24px", minHeight: "100vh" }}>
           {/* Botão de voltar integrado no header do stock */}
           <StockPage />
         </div>
       )}
 
-      {activePage === "schedule" && (<>
+      {!isStockPage && (<>
 
       <header style={styles.header}>
         {/* Logótipo */}
@@ -1724,9 +1726,9 @@ export default function App() {
             {/* Stock */}
             <button
               className="tool-btn"
-              style={{ ...styles.toolBtn, background: activePage === "stock" ? "#2A241C" : undefined, color: activePage === "stock" ? "#F5B944" : "#6B6358" }}
-              onClick={() => setActivePage(activePage === "stock" ? "schedule" : "stock")}
-              onMouseEnter={(e) => showTip(e, activePage === "stock" ? "Voltar à escala de turnos" : "Gestão de stock")}
+              style={{ ...styles.toolBtn, background: isStockPage ? "#2A241C" : undefined, color: isStockPage ? "#F5B944" : "#6B6358" }}
+              onClick={() => setActivePage((prev) => prev === "stock" ? "schedule" : "stock")}
+              onMouseEnter={(e) => showTip(e, isStockPage ? "Voltar à escala de turnos" : "Gestão de stock")}
               onMouseLeave={hideTip}
               aria-label="Gestão de stock"
             >
