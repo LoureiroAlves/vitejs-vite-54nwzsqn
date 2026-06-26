@@ -688,6 +688,7 @@ const stockStyles: { [key: string]: React.CSSProperties } = {
 
 export default function App() {
   const today = new Date();
+  const [activePage, setActivePage] = useState<"schedule" | "stock">("schedule");
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
 
@@ -1684,6 +1685,16 @@ export default function App() {
         input[type="number"] { -moz-appearance: textfield; }
       `}</style>
 
+      {/* Página de stock — renderiza em vez da escala quando ativa */}
+      {activePage === "stock" && (
+        <div style={{ margin: "-32px -24px", minHeight: "100vh" }}>
+          {/* Botão de voltar integrado no header do stock */}
+          <StockPage />
+        </div>
+      )}
+
+      {activePage === "schedule" && (<>
+
       <header style={styles.header}>
         {/* Logótipo */}
         <div style={styles.logoWrap}>
@@ -1711,7 +1722,18 @@ export default function App() {
           </div>
 
           <div style={styles.toolbar}>
-            {/* Borracha */}
+            {/* Stock */}
+            <button
+              className="tool-btn"
+              style={{ ...styles.toolBtn, background: activePage === "stock" ? "#2A241C" : undefined, color: activePage === "stock" ? "#F5B944" : "#6B6358" }}
+              onClick={() => setActivePage(activePage === "stock" ? "schedule" : "stock")}
+              onMouseEnter={(e) => showTip(e, activePage === "stock" ? "Voltar à escala de turnos" : "Gestão de stock")}
+              onMouseLeave={hideTip}
+              aria-label="Gestão de stock"
+            >
+              <IconBox size={16} />
+            </button>
+            <div style={styles.toolDivider} />
             <button
               className="tool-btn"
               style={{ ...styles.toolBtn, background: selectMode ? "#2A241C" : undefined, color: selectMode ? "#F5B944" : "#6B6358" }}
@@ -2160,6 +2182,8 @@ export default function App() {
           </div>
         </div>
       )}
+
+      </>)}
     </div>
   );
 }
