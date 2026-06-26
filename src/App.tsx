@@ -261,7 +261,7 @@ interface StockMovement {
   date: string;
 }
 
-function StockPage() {
+function StockPage({ onBack }: { onBack: () => void }) {
   const [products, setProducts] = useState<StockProduct[]>(() => loadStockData()?.products ?? []);
   const [movements, setMovements] = useState<StockMovement[]>(() => loadStockData()?.movements ?? []);
   const [activeTab, setActiveTab] = useState<"inventory" | "movement" | "history">("inventory");
@@ -386,6 +386,14 @@ function StockPage() {
       {/* Header */}
       <header style={stockStyles.header}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button
+            onClick={onBack}
+            style={{ ...stockStyles.toolBtn, gap: 6, padding: "7px 12px", display: "flex", alignItems: "center", fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: "#6B6358" }}
+            onMouseEnter={(e) => showTip2(e, "Voltar à escala de turnos")}
+            onMouseLeave={hideTip2}
+          >
+            <IconChevronLeft size={16} /> Voltar
+          </button>
           <div style={stockStyles.logoIcon}><IconBox size={20} color="#F5B944" /></div>
           <div>
             <div style={stockStyles.logoTitle}>Gestão de Stock</div>
@@ -1690,7 +1698,7 @@ export default function App() {
       {isStockPage && (
         <div style={{ margin: "-32px -24px", minHeight: "100vh" }}>
           {/* Botão de voltar integrado no header do stock */}
-          <StockPage />
+          <StockPage onBack={() => setActivePage("schedule")} />
         </div>
       )}
 
