@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -341,7 +340,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState<StockProduct | null>(null);
   const [moveType, setMoveType] = useState<"entrada" | "saida">("entrada");
-  const [moveQty, setMoveQty] = useState(1);
+  const [moveQty, setMoveQty] = useState<number | string>("");
   const [moveWho, setMoveWho] = useState("");
   const [moveNote, setMoveNote] = useState("");
   const [newProduct, setNewProduct] = useState({ name: "", category: "Alimentos", unit: "un", quantity: "", minQuantity: "" });
@@ -412,11 +411,12 @@ function StockPage({ onBack }: { onBack: () => void }) {
   };
 
   const registerMove = () => {
-    if (!showMoveModal || moveQty <= 0) return;
+    const qty = Number(moveQty);
+    if (!showMoveModal || !qty || qty <= 0) return;
     const prod = showMoveModal;
     const newQty = moveType === "entrada"
-      ? prod.quantity + moveQty
-      : Math.max(0, prod.quantity - moveQty);
+      ? prod.quantity + qty
+      : Math.max(0, prod.quantity - qty);
 
     setProducts((prev) => prev.map((p) => p.id === prod.id ? { ...p, quantity: newQty } : p));
 
@@ -425,14 +425,14 @@ function StockPage({ onBack }: { onBack: () => void }) {
       productId: prod.id,
       productName: prod.name,
       type: moveType,
-      quantity: moveQty,
+      quantity: qty,
       who: moveWho.trim() || "Administrador",
       note: moveNote.trim(),
       date: new Date().toISOString(),
     };
     setMovements((prev) => [mov, ...prev]);
     setShowMoveModal(null);
-    setMoveQty(1);
+    setMoveQty("");
     setMoveWho("");
     setMoveNote("");
   };
@@ -719,10 +719,10 @@ function StockPage({ onBack }: { onBack: () => void }) {
                       </div>
                     )}
                     <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                      <button style={{ ...stockStyles.moveBtn, flex: 1 }} onClick={() => { setShowMoveModal(prod); setMoveType("entrada"); setMoveQty(1); }}>
+                      <button style={{ ...stockStyles.moveBtn, flex: 1 }} onClick={() => { setShowMoveModal(prod); setMoveType("entrada"); setMoveQty(""); }}>
                         <IconPlus2 size={13} /> Entrada
                       </button>
-                      <button style={{ ...stockStyles.moveBtn, ...stockStyles.moveBtnOut, flex: 1 }} onClick={() => { setShowMoveModal(prod); setMoveType("saida"); setMoveQty(1); }}>
+                      <button style={{ ...stockStyles.moveBtn, ...stockStyles.moveBtnOut, flex: 1 }} onClick={() => { setShowMoveModal(prod); setMoveType("saida"); setMoveQty(""); }}>
                         <IconMinus size={13} /> Saída
                       </button>
                     </div>
@@ -787,7 +787,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
               </button>
             </div>
             <label style={stockStyles.label}>Quantidade ({showMoveModal.unit})</label>
-            <input style={{ ...stockStyles.input, marginBottom: 12 }} type="number" min="1" value={moveQty} onChange={(e) => setMoveQty(Math.max(1, Number(e.target.value)))} autoFocus />
+            <input style={{ ...stockStyles.input, marginBottom: 12 }} type="number" min="0" placeholder="Quantidade" value={moveQty} onChange={(e) => setMoveQty(e.target.value)} autoFocus />
             <label style={stockStyles.label}>Quem registou</label>
             <input style={{ ...stockStyles.input, marginBottom: 12 }} value={moveWho} onChange={(e) => setMoveWho(e.target.value)} placeholder="Nome (opcional)" />
             <label style={stockStyles.label}>Nota</label>
