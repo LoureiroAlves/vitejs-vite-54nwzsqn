@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -795,6 +794,7 @@ export default function App() {
     category?: string;
     schedule?: string;
     notes?: string;
+    files?: { name: string; type: string; data: string; uploadedAt: string }[];
   }>>(() => {
     const stored = loadStoredData();
     return stored?.employeeProfiles ?? {};
@@ -2372,6 +2372,113 @@ export default function App() {
               })}
             </div>
 
+              {/* Secção de ficheiros */}
+              <div style={{ marginTop: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "#6B6358", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
+                    Documentos
+                  </label>
+                  <button
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#F7F5F0", border: "1px solid #E4DED3", borderRadius: 7, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#2A241C", fontFamily: "'Inter', sans-serif" }}
+                    onClick={() => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = ".pdf,.jpg,.jpeg,.png,.doc,.docx";
+                      input.multiple = true;
+                      input.onchange = (e: Event) => {
+                        const files = Array.from((e.target as HTMLInputElement).files || []);
+                        files.forEach((file) => {
+                          if (file.size > 5 * 1024 * 1024) {
+                            alert(`"${file.name}" é maior que 5MB e não pode ser guardado. Use o Supabase para ficheiros maiores.`);
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            const fileData = ev.target?.result as string;
+                            setEmployeeProfiles((prev) => {
+                              const profile = { ...(prev[openProfile!] || {}) };
+                              const existing = profile.files || [];
+                              profile.files = [...existing, {
+                                name: file.name,
+                                type: file.type,
+                                data: fileData,
+                                uploadedAt: new Date().toISOString(),
+                              }];
+                              return { ...prev, [openProfile!]: profile };
+                            });
+                          };
+                          reader.readAsDataURL(file);
+                        });
+                      };
+                      document.body.appendChild(input);
+                      input.click();
+                      document.body.removeChild(input);
+                    }}
+                  >
+                    <IconUpload size={13} /> Adicionar ficheiro
+                  </button>
+                </div>
+
+                {(() => {
+                  const files = (employeeProfiles[openProfile!] || {}).files || [];
+                  if (files.length === 0) {
+                    return (
+                      <div style={{ background: "#F7F5F0", borderRadius: 8, padding: "12px 14px", fontSize: 13, color: "#A39B8E", textAlign: "center" as const }}>
+                        Nenhum documento ainda.<br />
+                        <span style={{ fontSize: 11 }}>Suporta PDF, imagens, Word (máx. 5MB)</span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
+                      {files.map((file, idx) => {
+                        const isImg = file.type.startsWith("image/");
+                        const isPdf = file.type === "application/pdf";
+                        const icon = isPdf ? "📄" : isImg ? "🖼️" : "📎";
+                        const date = new Date(file.uploadedAt).toLocaleDateString("pt-PT");
+                        return (
+                          <div key={idx} style={{ display: "flex", alignItems: "center", gap: 10, background: "#F7F5F0", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 12px" }}>
+                            <span style={{ fontSize: 20, flexShrink: 0 }}>{icon}</span>
+                            <div style={{ flex: 1, overflow: "hidden" }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{file.name}</div>
+                              <div style={{ fontSize: 11, color: "#A39B8E" }}>Adicionado em {date}</div>
+                            </div>
+                            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                              <button
+                                style={{ border: "none", background: "#FFFFFF", borderRadius: 6, padding: "5px 8px", cursor: "pointer", color: "#5B8DBE" }}
+                                title="Descarregar"
+                                onClick={() => {
+                                  const link = document.createElement("a");
+                                  link.href = file.data;
+                                  link.download = file.name;
+                                  link.click();
+                                }}
+                              >
+                                <IconDownload size={14} />
+                              </button>
+                              <button
+                                style={{ border: "none", background: "#FFFFFF", borderRadius: 6, padding: "5px 8px", cursor: "pointer", color: "#C2554A" }}
+                                title="Remover ficheiro"
+                                onClick={() => {
+                                  if (!window.confirm(`Remover "${file.name}"?`)) return;
+                                  setEmployeeProfiles((prev) => {
+                                    const profile = { ...(prev[openProfile!] || {}) };
+                                    profile.files = (profile.files || []).filter((_, i) => i !== idx);
+                                    return { ...prev, [openProfile!]: profile };
+                                  });
+                                }}
+                              >
+                                <IconX size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+
             {/* Footer com indicador de auto-save */}
             <div style={{ padding: "12px 24px", borderTop: "1px solid #EFEAE2", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={{ fontSize: 12, color: "#A39B8E" }}>✓ Guardado automaticamente</span>
@@ -3092,3 +3199,4 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
+
