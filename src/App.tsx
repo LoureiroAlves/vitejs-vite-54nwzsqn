@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -2285,14 +2284,14 @@ export default function App() {
 
       {/* Página inicial */}
       {isHomePage && (
-        <div style={{ maxWidth: 700, margin: "0 auto", padding: "40px 0" }}>
+        <div style={{ maxWidth: 680, margin: "0 auto", padding: "48px 0" }}>
           {/* Logo e título */}
-          <div style={{ textAlign: "center" as const, marginBottom: 48 }}>
-            <img src={COMPANY_LOGO} alt="Logótipo" style={{ width: 80, height: 80, objectFit: "contain", marginBottom: 16 }} />
-            <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 28, fontWeight: 700, margin: "0 0 8px", color: "#2A241C" }}>
+          <div style={{ textAlign: "center" as const, marginBottom: 52 }}>
+            <img src={COMPANY_LOGO} alt="Logótipo" style={{ width: 140, height: 140, objectFit: "contain", marginBottom: 20, borderRadius: 32 }} />
+            <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 700, margin: "0 0 8px", color: "#2A241C" }}>
               Associação Oliveirense de Socorros Mútuos
             </h1>
-            <p style={{ fontSize: 15, color: "#A39B8E", margin: 0 }}>Painel de gestão — selecione uma área</p>
+            <p style={{ fontSize: 14, color: "#A39B8E", margin: 0 }}>Painel de gestão — selecione uma área</p>
           </div>
 
           {/* 3 botões grandes */}
@@ -2300,66 +2299,47 @@ export default function App() {
             {/* Colaboradores */}
             <button
               onClick={() => setActivePage("schedule")}
-              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 20, padding: "36px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 14, transition: "all 0.15s", fontFamily: "'Inter', sans-serif" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E8B14A"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(232,177,74,0.15)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E8B14A"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(232,177,74,0.18)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; (e.currentTarget as HTMLElement).style.transform = "none"; }}
             >
-              <div style={{ width: 64, height: 64, borderRadius: 18, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <IconUsers size={32} color="#B08A4E" />
+              <div style={{ width: 72, height: 72, borderRadius: 22, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <IconUsers size={36} color="#B08A4E" />
               </div>
-              <div>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: "#2A241C", marginBottom: 4 }}>Colaboradores</div>
-                <div style={{ fontSize: 13, color: "#A39B8E" }}>Escala de turnos e fichas</div>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                Colaboradores
               </div>
             </button>
 
             {/* Utentes */}
             <button
               onClick={() => setActivePage("utentes")}
-              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 20, padding: "36px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 14, transition: "all 0.15s", fontFamily: "'Inter', sans-serif" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#5B8DBE"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(91,141,190,0.15)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#5B8DBE"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(91,141,190,0.18)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; (e.currentTarget as HTMLElement).style.transform = "none"; }}
             >
-              <div style={{ width: 64, height: 64, borderRadius: 18, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <IconUserCircle size={32} color="#3A5A70" />
+              <div style={{ width: 72, height: 72, borderRadius: 22, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <IconUserCircle size={36} color="#3A5A70" />
               </div>
-              <div>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: "#2A241C", marginBottom: 4 }}>Utentes</div>
-                <div style={{ fontSize: 13, color: "#A39B8E" }}>Fichas e documentos</div>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                Utentes
               </div>
             </button>
 
             {/* Stock */}
             <button
               onClick={() => setActivePage("stock")}
-              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 20, padding: "36px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 14, transition: "all 0.15s", fontFamily: "'Inter', sans-serif" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#6FA86F"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(111,168,111,0.15)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#6FA86F"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(111,168,111,0.18)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; (e.currentTarget as HTMLElement).style.transform = "none"; }}
             >
-              <div style={{ width: 64, height: 64, borderRadius: 18, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <IconBox size={32} color="#3B6D11" />
+              <div style={{ width: 72, height: 72, borderRadius: 22, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <IconBox size={36} color="#3B6D11" />
               </div>
-              <div>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: "#2A241C", marginBottom: 4 }}>Stock</div>
-                <div style={{ fontSize: 13, color: "#A39B8E" }}>Inventário e movimentos</div>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                Stock
               </div>
             </button>
-          </div>
-
-          {/* Resumo rápido */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 24 }}>
-            <div style={{ background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 12, padding: "14px 16px", textAlign: "center" as const }}>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700 }}>{Object.values(employeeTotals).reduce((acc, t) => acc + (t?.total ?? 0), 0)}h</div>
-              <div style={{ fontSize: 12, color: "#A39B8E" }}>horas este mês</div>
-            </div>
-            <div style={{ background: coverageAlerts.length > 0 ? "#FFF5F4" : "#FFFFFF", border: `1px solid ${coverageAlerts.length > 0 ? "#F2C4BC" : "#E4DED3"}`, borderRadius: 12, padding: "14px 16px", textAlign: "center" as const }}>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700, color: coverageAlerts.length > 0 ? "#C2554A" : "#2A241C" }}>{coverageAlerts.length}</div>
-              <div style={{ fontSize: 12, color: "#A39B8E" }}>alertas de cobertura</div>
-            </div>
-            <div style={{ background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 12, padding: "14px 16px", textAlign: "center" as const }}>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700 }}>{syncStatus === "synced" ? "✓" : syncStatus === "syncing" ? "⟳" : "⚠"}</div>
-              <div style={{ fontSize: 12, color: "#A39B8E" }}>{syncStatus === "synced" ? "sincronizado" : syncStatus === "syncing" ? "a sincronizar" : "sem ligação"}</div>
-            </div>
           </div>
         </div>
       )}
