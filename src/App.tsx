@@ -1458,6 +1458,24 @@ export default function App() {
       return;
     }
 
+    // Se não há link definido, pedir agora
+    let link = scheduleLink;
+    if (!link) {
+      const entered = window.prompt(
+        "Para incluir o link do horário no email, cole aqui o link do Netlify (gerado com o botão 🌐):\n\nSe ainda não gerou, cancele, clique no botão 🌐 para gerar e publicar a página, e depois volte a clicar no envelope.",
+        ""
+      );
+      if (entered === null) return; // cancelado
+      if (entered.trim()) {
+        link = entered.trim();
+        setScheduleLink(link);
+      }
+    }
+
+    // Gerar a página HTML dos colaboradores e publicar no Netlify
+    // (o utilizador já deve ter o link — geramos a página para que atualize o ficheiro)
+    handleExportEmployeePage();
+
     const prevMonth = lastPublished?.[monthKey] || {};
     const changesByEmployee: Record<string, string[]> = {};
 
@@ -1477,35 +1495,27 @@ export default function App() {
     let body = `Olá,\n\nO horário de ${MONTH_NAMES[month]} ${year} foi atualizado.\n\n`;
 
     if (hasChanges) {
-      body += "Alterações:\n";
+      body += "Alterações este mês:\n";
       Object.entries(changesByEmployee).forEach(([emp, list]) => {
-        body += `- ${emp}: ${list.join("; ")}\n`;
+        body += `• ${emp}: ${list.join("; ")}\n`;
       });
       body += "\n";
     } else {
       body += "Não há alterações desde a última notificação — esta mensagem confirma o horário atual.\n\n";
     }
 
-    body += `Segue em anexo o horário atualizado em PDF.\n\nObrigado.`;
-
-    if (scheduleLink) {
-      body += `\n\nTambém pode consultar online aqui:\n${scheduleLink}`;
+    if (link) {
+      body += `Pode consultar o horário atualizado aqui:\n👉 ${link}\n\n`;
     }
+
+    body += `Qualquer dúvida, não hesite em contactar.\n\nObrigado.`;
 
     const subject = `Horário atualizado — ${MONTH_NAMES[month]} ${year}`;
     const mailto = `mailto:?bcc=${encodeURIComponent(recipients.join(","))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
-    // 1) Gera e faz download automático do PDF (versão sem dados pessoais, para colaboradores)
-    handlePrint(false);
-
-    // 2) Abre o programa de email com tudo pronto, passado um pequeno intervalo
-    //    para dar tempo à janela de impressão a abrir primeiro
     setTimeout(() => {
       window.location.href = mailto;
-      alert(
-        "Foi aberta uma janela de impressão — escolha 'Guardar como PDF' e depois anexe esse ficheiro ao email que se abriu a seguir."
-      );
-    }, 400);
+    }, 500);
 
     setLastPublished((prev) => ({
       ...prev,
