@@ -264,6 +264,9 @@ interface StockMovement {
 function StockPage({ onBack }: { onBack: () => void }) {
   const [products, setProducts] = useState<StockProduct[]>(() => loadStockData()?.products ?? []);
   const [movements, setMovements] = useState<StockMovement[]>(() => loadStockData()?.movements ?? []);
+  const [customCategories, setCustomCategories] = useState<string[]>(() => loadStockData()?.customCategories ?? []);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
   const [activeTab, setActiveTab] = useState<"inventory" | "movement" | "history">("inventory");
   const [filterCategory, setFilterCategory] = useState<string>("Todos");
   const [showAddProduct, setShowAddProduct] = useState(false);
@@ -276,14 +279,33 @@ function StockPage({ onBack }: { onBack: () => void }) {
   const [tooltip2, setTooltip2] = useState<{ text: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
-    saveStockData({ products, movements });
-  }, [products, movements]);
+    saveStockData({ products, movements, customCategories });
+  }, [products, movements, customCategories]);
 
   const showTip2 = (e: React.MouseEvent, text: string) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setTooltip2({ text, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
   };
   const hideTip2 = () => setTooltip2(null);
+
+  const allCategories = [...STOCK_CATEGORIES, ...customCategories];
+
+  const addCategory = () => {
+    const trimmed = newCategoryName.trim();
+    if (!trimmed || allCategories.includes(trimmed)) return;
+    setCustomCategories((prev) => [...prev, trimmed]);
+    setNewCategoryName("");
+    setShowAddCategory(false);
+  };
+
+  const removeCategory = (cat: string) => {
+    if (products.some((p) => p.category === cat)) {
+      alert(`Não é possível remover "${cat}" — existem produtos nesta categoria.`);
+      return;
+    }
+    setCustomCategories((prev) => prev.filter((c) => c !== cat));
+    if (filterCategory === cat) setFilterCategory("Todos");
+  };
 
   const addProduct = () => {
     if (!newProduct.name.trim()) return;
@@ -474,20 +496,52 @@ function StockPage({ onBack }: { onBack: () => void }) {
         <div>
           {/* Filtro por categoria + botão adicionar */}
           <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" as const, alignItems: "center" }}>
-            {["Todos", ...STOCK_CATEGORIES].map((cat) => (
-              <button
-                key={cat}
-                style={{
-                  ...stockStyles.filterBtn,
-                  background: filterCategory === cat ? "#2A241C" : undefined,
-                  color: filterCategory === cat ? "#FBF9F5" : undefined,
-                  borderColor: filterCategory === cat ? "#2A241C" : undefined,
-                }}
-                onClick={() => setFilterCategory(cat)}
-              >
-                {cat}
-              </button>
+            {["Todos", ...allCategories].map((cat) => (
+              <div key={cat} style={{ position: "relative" as const, display: "inline-flex", alignItems: "center" }}>
+                <button
+                  style={{
+                    ...stockStyles.filterBtn,
+                    background: filterCategory === cat ? "#2A241C" : undefined,
+                    color: filterCategory === cat ? "#FBF9F5" : undefined,
+                    borderColor: filterCategory === cat ? "#2A241C" : undefined,
+                    paddingRight: customCategories.includes(cat) ? 24 : undefined,
+                  }}
+                  onClick={() => setFilterCategory(cat)}
+                >
+                  {cat}
+                </button>
+                {customCategories.includes(cat) && (
+                  <button
+                    onClick={() => removeCategory(cat)}
+                    style={{ position: "absolute" as const, right: 4, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", cursor: "pointer", color: filterCategory === cat ? "#FBF9F5" : "#C2BAAC", padding: 1, lineHeight: 1, fontSize: 12 }}
+                    title={`Remover categoria "${cat}"`}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             ))}
+
+            {/* Adicionar nova categoria */}
+            {showAddCategory ? (
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input
+                  autoFocus
+                  style={{ ...stockStyles.input, width: 160, padding: "6px 10px", fontSize: 13 }}
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") addCategory(); if (e.key === "Escape") { setShowAddCategory(false); setNewCategoryName(""); } }}
+                  placeholder="Nome do serviço"
+                />
+                <button style={{ ...stockStyles.addBtn, padding: "6px 10px" }} onClick={addCategory}>OK</button>
+                <button style={{ ...stockStyles.cancelBtn, padding: "6px 10px" }} onClick={() => { setShowAddCategory(false); setNewCategoryName(""); }}>✕</button>
+              </div>
+            ) : (
+              <button style={{ ...stockStyles.filterBtn, borderStyle: "dashed", color: "#A39B8E" }} onClick={() => setShowAddCategory(true)}>
+                + Serviço
+              </button>
+            )}
+
             <button style={{ ...stockStyles.addBtn, marginLeft: "auto" }} onClick={() => setShowAddProduct(true)}>
               <IconPlus2 size={14} /> Adicionar produto
             </button>
@@ -504,7 +558,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
                 <div>
                   <label style={stockStyles.label}>Categoria</label>
                   <select style={stockStyles.select} value={newProduct.category} onChange={(e) => setNewProduct((p) => ({ ...p, category: e.target.value }))}>
-                    {STOCK_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                    {allCategories.map((c) => <option key={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
@@ -1734,7 +1788,7 @@ export default function App() {
             {/* Stock */}
             <button
               className="tool-btn"
-              style={{ ...styles.toolBtn, background: isStockPage ? "#2A241C" : undefined, color: isStockPage ? "#F5B944" : "#6B6358" }}
+              style={{ ...styles.toolBtn, background: isStockPage ? "#EFEAE2" : undefined, color: isStockPage ? "#2A241C" : "#6B6358", fontWeight: isStockPage ? 700 : undefined }}
               onClick={() => setActivePage((prev) => prev === "stock" ? "schedule" : "stock")}
               onMouseEnter={(e) => showTip(e, isStockPage ? "Voltar à escala de turnos" : "Gestão de stock")}
               onMouseLeave={hideTip}
@@ -1745,7 +1799,7 @@ export default function App() {
             <div style={styles.toolDivider} />
             <button
               className="tool-btn"
-              style={{ ...styles.toolBtn, background: selectMode ? "#2A241C" : undefined, color: selectMode ? "#F5B944" : "#6B6358" }}
+              style={{ ...styles.toolBtn, background: selectMode ? "#EFEAE2" : undefined, color: selectMode ? "#B5483D" : "#6B6358" }}
               onClick={toggleSelectMode}
               onMouseEnter={(e) => showTip(e, selectMode ? "Cancelar seleção" : "Selecionar dias para apagar")}
               onMouseLeave={hideTip}
@@ -1804,7 +1858,7 @@ export default function App() {
             <div style={{ position: "relative" as const }}>
               <button
                 className="tool-btn"
-                style={{ ...styles.toolBtn, background: showPrintMenu ? "#2A241C" : undefined, color: showPrintMenu ? "#FFFFFF" : "#6B6358" }}
+                style={{ ...styles.toolBtn, background: showPrintMenu ? "#EFEAE2" : undefined, color: showPrintMenu ? "#2A241C" : "#6B6358" }}
                 onClick={() => setShowPrintMenu((v) => !v)}
                 onMouseEnter={(e) => showTip(e, "Opções de impressão e PDF")}
                 onMouseLeave={hideTip}
