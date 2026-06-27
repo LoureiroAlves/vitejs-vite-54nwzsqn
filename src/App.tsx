@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -1788,7 +1787,7 @@ export default function App() {
             {/* Stock */}
             <button
               className="tool-btn"
-              style={{ ...styles.toolBtn, background: isStockPage ? "#EFEAE2" : undefined, color: isStockPage ? "#2A241C" : "#6B6358", fontWeight: isStockPage ? 700 : undefined }}
+              style={{ ...styles.toolBtn, background: isStockPage ? "#F5B944" : undefined, color: isStockPage ? "#2A241C" : "#6B6358", fontWeight: isStockPage ? 700 : undefined }}
               onClick={() => setActivePage((prev) => prev === "stock" ? "schedule" : "stock")}
               onMouseEnter={(e) => showTip(e, isStockPage ? "Voltar à escala de turnos" : "Gestão de stock")}
               onMouseLeave={hideTip}
@@ -1799,7 +1798,7 @@ export default function App() {
             <div style={styles.toolDivider} />
             <button
               className="tool-btn"
-              style={{ ...styles.toolBtn, background: selectMode ? "#EFEAE2" : undefined, color: selectMode ? "#B5483D" : "#6B6358" }}
+              style={{ ...styles.toolBtn, background: selectMode ? "#F5B944" : undefined, color: selectMode ? "#2A241C" : "#6B6358" }}
               onClick={toggleSelectMode}
               onMouseEnter={(e) => showTip(e, selectMode ? "Cancelar seleção" : "Selecionar dias para apagar")}
               onMouseLeave={hideTip}
@@ -1858,7 +1857,7 @@ export default function App() {
             <div style={{ position: "relative" as const }}>
               <button
                 className="tool-btn"
-                style={{ ...styles.toolBtn, background: showPrintMenu ? "#EFEAE2" : undefined, color: showPrintMenu ? "#2A241C" : "#6B6358" }}
+                style={{ ...styles.toolBtn, background: showPrintMenu ? "#F5B944" : undefined, color: showPrintMenu ? "#2A241C" : "#6B6358" }}
                 onClick={() => setShowPrintMenu((v) => !v)}
                 onMouseEnter={(e) => showTip(e, "Opções de impressão e PDF")}
                 onMouseLeave={hideTip}
