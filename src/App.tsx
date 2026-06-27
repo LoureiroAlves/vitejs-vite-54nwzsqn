@@ -128,13 +128,6 @@ const IconUpload = ({ size = 16, ...props }) => (
     <line x1="12" y1="3" x2="12" y2="15" />
   </svg>
 );
-const IconUserCard = ({ size = 16, ...props }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <rect x="2" y="5" width="20" height="14" rx="2" />
-    <circle cx="8" cy="12" r="2" />
-    <path d="M14 9h4M14 12h4M14 15h2" />
-  </svg>
-);
 // Gera cor e iniciais para avatar de cada colaborador
 function getAvatar(name: string): { initials: string; bg: string; color: string } {
   const parts = name.replace(/\s*[-–]\s*RV\s*/i, "").trim().split(/\s+/);
