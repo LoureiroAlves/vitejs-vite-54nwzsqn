@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -908,6 +907,12 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     saveUtentesData({ utentes });
   }, [utentes]);
+
+  const showTip = (e: React.MouseEvent, text: string) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setTooltip({ text, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+  };
+  const hideTip = () => setTooltip(null);
 
   const exportExcelUtentes = () => {
     const header = ["Nome", "Data Nasc.", "Quarto", "Data Entrada", "Contacto Familiar", "Telefone Familiar", "Observações", "Documentos"];
