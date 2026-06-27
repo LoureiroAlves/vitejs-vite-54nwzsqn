@@ -899,7 +899,7 @@ export default function App() {
     Promise.all([
       loadFromSupabase("escala_data"),
       loadFromSupabase("stock_data"),
-    ]).then(([escala, stock]) => {
+    ]).then(([escala, _stock]) => {
       if (escala) {
         if (escala.employees?.length) setEmployees(escala.employees);
         if (escala.rv_employees?.length) setRvEmployees(escala.rv_employees);
