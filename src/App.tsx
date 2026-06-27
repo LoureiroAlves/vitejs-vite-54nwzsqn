@@ -1110,6 +1110,18 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
             <div style={{ flex: 1, overflowY: "auto" as const, padding: "20px 24px" }}>
               {UTENTE_FIELDS.map(({ key, label, placeholder, multiline }) => {
                 const value = (openUtente as any)[key] || "";
+                const isDate = key === "birthDate" || key === "entryDate";
+
+                const handleDateInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+                  // Remove tudo que não seja número
+                  const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
+                  // Formata automaticamente: DD/MM/AAAA
+                  let formatted = digits;
+                  if (digits.length > 2) formatted = digits.slice(0, 2) + "/" + digits.slice(2);
+                  if (digits.length > 4) formatted = digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4);
+                  updateUtente(openUtente.id, { [key]: formatted });
+                };
+
                 return (
                   <div key={key} style={{ marginBottom: 16 }}>
                     <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
@@ -1117,6 +1129,16 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                       <textarea rows={3} value={value} placeholder={placeholder}
                         onChange={(e) => updateUtente(openUtente.id, { [key]: e.target.value })}
                         style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }} />
+                    ) : isDate ? (
+                      <input
+                        type="text"
+                        value={value}
+                        placeholder="DD/MM/AAAA"
+                        inputMode="numeric"
+                        maxLength={10}
+                        onChange={handleDateInput}
+                        style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, colorScheme: "light" as const, letterSpacing: "0.05em" }}
+                      />
                     ) : (
                       <input type="text" value={value} placeholder={placeholder}
                         onChange={(e) => updateUtente(openUtente.id, { [key]: e.target.value })}
@@ -2261,6 +2283,37 @@ export default function App() {
   const gridMinWidth = 190 + numDays * 44 + 260;
   const isHomePage = (activePage as string) === "home";
   const isStockPage = (activePage as string) === "stock";
+
+  // ---------- Aniversários de utentes ----------
+  const birthdayAlerts = useMemo(() => {
+    const alerts: { name: string; age: number; isToday: boolean; isTomorrow: boolean }[] = [];
+    const now = today;
+    const todayDay = now.getDate();
+    const todayMonth = now.getMonth() + 1;
+    const tomorrowDate = new Date(now);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowDay = tomorrowDate.getDate();
+    const tomorrowMonth = tomorrowDate.getMonth() + 1;
+
+    // Aceder aos utentes do localStorage diretamente
+    const storedUtentes = loadUtentesData()?.utentes ?? [];
+    storedUtentes.forEach((u: any) => {
+      if (!u.birthDate) return;
+      const parts = u.birthDate.split("/");
+      if (parts.length !== 3) return;
+      const day = parseInt(parts[0]);
+      const month = parseInt(parts[1]);
+      const birthYear = parseInt(parts[2]);
+      if (isNaN(day) || isNaN(month) || isNaN(birthYear)) return;
+      const age = now.getFullYear() - birthYear + (month < todayMonth || (month === todayMonth && day <= todayDay) ? 0 : -1) + 1;
+      const isToday = day === todayDay && month === todayMonth;
+      const isTomorrow = day === tomorrowDay && month === tomorrowMonth;
+      if (isToday || isTomorrow) {
+        alerts.push({ name: u.name, age: isToday ? age : age, isToday, isTomorrow });
+      }
+    });
+    return alerts;
+  }, [today]);
   const isUtentesPage = (activePage as string) === "utentes";
   const isSchedulePage = (activePage as string) === "schedule";
 
@@ -2326,6 +2379,10 @@ export default function App() {
         .tool-btn-active { background: #F5B944 !important; color: #2A241C !important; }
         .tool-btn-active:hover { background: #F0AF30 !important; }
         .print-menu-item:hover { background: #F7F5F0; }
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
@@ -2342,6 +2399,64 @@ export default function App() {
             </h1>
             <p style={{ fontSize: 14, color: "#A39B8E", margin: 0 }}>Painel de gestão — selecione uma área</p>
           </div>
+
+          {/* Aniversários */}
+          {birthdayAlerts.length > 0 && (
+            <div style={{ marginBottom: 28 }}>
+              {birthdayAlerts.map((alert, idx) => (
+                <div key={idx} style={{
+                  background: alert.isToday
+                    ? "linear-gradient(135deg, #FFF8E1 0%, #FFF3E0 50%, #FCE4EC 100%)"
+                    : "linear-gradient(135deg, #F3F8FF 0%, #EDE7F6 100%)",
+                  border: `2px solid ${alert.isToday ? "#FFD54F" : "#B39DDB"}`,
+                  borderRadius: 20,
+                  padding: "20px 24px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 18,
+                  marginBottom: 12,
+                  boxShadow: alert.isToday ? "0 4px 20px rgba(255,213,79,0.3)" : "0 4px 20px rgba(179,157,219,0.2)",
+                }}>
+                  {/* Ícone animado */}
+                  <div style={{
+                    fontSize: 52,
+                    lineHeight: 1,
+                    flexShrink: 0,
+                    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))",
+                    animation: alert.isToday ? "bounce 1s infinite" : undefined,
+                  }}>
+                    {alert.isToday ? "🎂" : "🎁"}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontSize: 20,
+                      fontWeight: 700,
+                      color: "#2A241C",
+                      marginBottom: 4,
+                    }}>
+                      {alert.name}
+                    </div>
+                    <div style={{ fontSize: 14, color: "#6B6358", fontWeight: 500 }}>
+                      {alert.isToday
+                        ? `🎉 Hoje faz ${alert.age} anos! Parabéns!`
+                        : `🔔 Amanhã faz ${alert.age} anos`}
+                    </div>
+                  </div>
+                  <div style={{
+                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontSize: 36,
+                    fontWeight: 800,
+                    color: alert.isToday ? "#F9A825" : "#7E57C2",
+                    lineHeight: 1,
+                    flexShrink: 0,
+                  }}>
+                    {alert.age}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* 3 botões grandes */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
