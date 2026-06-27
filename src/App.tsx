@@ -344,7 +344,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
   const [moveQty, setMoveQty] = useState(1);
   const [moveWho, setMoveWho] = useState("");
   const [moveNote, setMoveNote] = useState("");
-  const [newProduct, setNewProduct] = useState({ name: "", category: "Alimentos", unit: "un", quantity: 0, minQuantity: 1 });
+  const [newProduct, setNewProduct] = useState({ name: "", category: "Alimentos", unit: "un", quantity: "", minQuantity: "" });
   const [tooltip2, setTooltip2] = useState<{ text: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -358,6 +358,21 @@ function StockPage({ onBack }: { onBack: () => void }) {
   const hideTip2 = () => setTooltip2(null);
 
   const allCategories = [...STOCK_CATEGORIES, ...customCategories];
+
+  // Calcular cor de cada categoria baseado no estado do stock
+  const getCategoryColor = (cat: string): string | undefined => {
+    const catProducts = products.filter((p) => p.category === cat);
+    if (catProducts.length === 0) return undefined;
+    const empty = catProducts.filter((p) => p.quantity <= 0).length;
+    const low = catProducts.filter((p) => p.quantity > 0 && p.quantity <= p.minQuantity).length;
+    const total = catProducts.length;
+    const ratio = (empty + low * 0.5) / total;
+    if (ratio === 0) return "#6FA86F"; // tudo OK — verde
+    if (ratio <= 0.25) return "#8FBC5A"; // maioria OK — verde amarelado
+    if (ratio <= 0.5) return "#E8B14A"; // metade em falta — amarelo
+    if (ratio <= 0.75) return "#E07A3A"; // maioria em falta — laranja
+    return "#C2554A"; // quase tudo em falta — vermelho
+  };
 
   const addCategory = () => {
     const trimmed = newCategoryName.trim();
@@ -384,10 +399,10 @@ function StockPage({ onBack }: { onBack: () => void }) {
       category: newProduct.category,
       unit: newProduct.unit || "un",
       quantity: Number(newProduct.quantity) || 0,
-      minQuantity: Number(newProduct.minQuantity) || 1,
+      minQuantity: Number(newProduct.minQuantity) || 0,
     };
     setProducts((prev) => [...prev, prod]);
-    setNewProduct({ name: "", category: "Alimentos", unit: "un", quantity: 0, minQuantity: 1 });
+    setNewProduct({ name: "", category: "Alimentos", unit: "un", quantity: "", minQuantity: "" });
     setShowAddProduct(false);
   };
 
@@ -565,31 +580,42 @@ function StockPage({ onBack }: { onBack: () => void }) {
         <div>
           {/* Filtro por categoria + botão adicionar */}
           <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" as const, alignItems: "center" }}>
-            {["Todos", ...allCategories].map((cat) => (
+            {["Todos", ...allCategories].map((cat) => {
+              const catColor = cat !== "Todos" ? getCategoryColor(cat) : undefined;
+              const isActive = filterCategory === cat;
+              return (
               <div key={cat} style={{ position: "relative" as const, display: "inline-flex", alignItems: "center" }}>
                 <button
                   style={{
                     ...stockStyles.filterBtn,
-                    background: filterCategory === cat ? "#2A241C" : undefined,
-                    color: filterCategory === cat ? "#FBF9F5" : undefined,
-                    borderColor: filterCategory === cat ? "#2A241C" : undefined,
+                    background: isActive ? "#2A241C" : catColor ? catColor + "22" : undefined,
+                    color: isActive ? "#FBF9F5" : catColor ? catColor : undefined,
+                    borderColor: isActive ? "#2A241C" : catColor ?? undefined,
+                    fontWeight: catColor ? 600 : undefined,
                     paddingRight: customCategories.includes(cat) ? 24 : undefined,
                   }}
                   onClick={() => setFilterCategory(cat)}
                 >
                   {cat}
+                  {catColor && cat !== "Todos" && !isActive && (
+                    <span style={{ marginLeft: 5, fontSize: 9, background: catColor, color: "#fff", borderRadius: 4, padding: "1px 4px", fontWeight: 700 }}>
+                      {products.filter((p) => p.category === cat && (p.quantity <= 0 || p.quantity <= p.minQuantity)).length > 0
+                        ? `${products.filter((p) => p.category === cat && (p.quantity <= 0 || p.quantity <= p.minQuantity)).length} ⚠`
+                        : "✓"}
+                    </span>
+                  )}
                 </button>
                 {customCategories.includes(cat) && (
                   <button
                     onClick={() => removeCategory(cat)}
-                    style={{ position: "absolute" as const, right: 4, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", cursor: "pointer", color: filterCategory === cat ? "#FBF9F5" : "#C2BAAC", padding: 1, lineHeight: 1, fontSize: 12 }}
+                    style={{ position: "absolute" as const, right: 4, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", cursor: "pointer", color: isActive ? "#FBF9F5" : "#C2BAAC", padding: 1, lineHeight: 1, fontSize: 12 }}
                     title={`Remover categoria "${cat}"`}
                   >
                     ×
                   </button>
                 )}
               </div>
-            ))}
+            );})}
 
             {/* Adicionar nova categoria */}
             {showAddCategory ? (
@@ -648,11 +674,11 @@ function StockPage({ onBack }: { onBack: () => void }) {
                 </div>
                 <div>
                   <label style={stockStyles.label}>Quantidade inicial</label>
-                  <input style={stockStyles.input} type="number" min="0" value={newProduct.quantity} onChange={(e) => setNewProduct((p) => ({ ...p, quantity: Number(e.target.value) }))} />
+                  <input style={stockStyles.input} type="number" min="0" placeholder="0" value={newProduct.quantity} onChange={(e) => setNewProduct((p) => ({ ...p, quantity: e.target.value }))} />
                 </div>
                 <div>
                   <label style={stockStyles.label}>Mínimo (alerta abaixo de)</label>
-                  <input style={stockStyles.input} type="number" min="0" value={newProduct.minQuantity} onChange={(e) => setNewProduct((p) => ({ ...p, minQuantity: Number(e.target.value) }))} />
+                  <input style={stockStyles.input} type="number" min="0" placeholder="1" value={newProduct.minQuantity} onChange={(e) => setNewProduct((p) => ({ ...p, minQuantity: e.target.value }))} />
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
