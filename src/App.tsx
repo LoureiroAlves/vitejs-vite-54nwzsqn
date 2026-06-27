@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -125,6 +126,13 @@ const IconUpload = ({ size = 16, ...props }) => (
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
     <polyline points="17 8 12 3 7 8" />
     <line x1="12" y1="3" x2="12" y2="15" />
+  </svg>
+);
+const IconUserCircle = ({ size = 16, color = "currentColor", ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="10" r="3" />
+    <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662" />
   </svg>
 );
 // Gera cor e iniciais para avatar de cada colaborador
@@ -855,9 +863,295 @@ const stockStyles: { [key: string]: React.CSSProperties } = {
 
 // ============================================================
 
+// ============================================================
+// PÁGINA DE UTENTES
+// ============================================================
+const UTENTES_STORAGE_KEY = "turnos-utentes-data-v1";
+
+function loadUtentesData(): any {
+  try {
+    const raw = window.localStorage?.getItem?.(UTENTES_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return null;
+}
+
+function saveUtentesData(data: any) {
+  try {
+    window.localStorage?.setItem?.(UTENTES_STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {}
+  saveToSupabase("utentes_data", data).catch(() => {});
+}
+
+interface Utente {
+  id: string;
+  name: string;
+  birthDate?: string;
+  familyContact?: string;
+  familyPhone?: string;
+  room?: string;
+  entryDate?: string;
+  notes?: string;
+  files?: { name: string; type: string; data: string; uploadedAt: string }[];
+}
+
+function UtentesPage({ onBack }: { onBack: () => void }) {
+  const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
+  const [openUtente, setOpenUtente] = useState<Utente | null>(null);
+  const [search, setSearch] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    saveUtentesData({ utentes });
+  }, [utentes]);
+
+  const showTip = (e: React.MouseEvent, text: string) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setTooltip({ text, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+  };
+  const hideTip = () => setTooltip(null);
+
+  const addUtente = () => {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    const utente: Utente = { id: Date.now().toString(), name: trimmed };
+    setUtentes((prev) => [...prev, utente]);
+    setNewName("");
+    setShowAdd(false);
+  };
+
+  const removeUtente = (id: string) => {
+    if (!window.confirm("Remover este utente e todos os seus dados?")) return;
+    setUtentes((prev) => prev.filter((u) => u.id !== id));
+    if (openUtente?.id === id) setOpenUtente(null);
+  };
+
+  const updateUtente = (id: string, updates: Partial<Utente>) => {
+    setUtentes((prev) => prev.map((u) => u.id === id ? { ...u, ...updates } : u));
+    if (openUtente?.id === id) setOpenUtente((prev) => prev ? { ...prev, ...updates } : prev);
+  };
+
+  const filteredUtentes = utentes.filter((u) =>
+    u.name.toLowerCase().includes(search.toLowerCase()) ||
+    (u.room && u.room.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const getInitials = (name: string) => {
+    const words = name.trim().split(/\s+/);
+    return words.length >= 2 ? (words[0][0] + words[words.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+  };
+
+  const UTENTE_FIELDS = [
+    { key: "birthDate", label: "Data de nascimento", placeholder: "Ex: 01/01/1940", type: "text" },
+    { key: "room", label: "Quarto", placeholder: "Ex: 12A" },
+    { key: "entryDate", label: "Data de entrada", placeholder: "Ex: 15/03/2022" },
+    { key: "familyContact", label: "Contacto familiar (nome)", placeholder: "Ex: João Silva (filho)" },
+    { key: "familyPhone", label: "Contacto familiar (telefone)", placeholder: "Ex: 912 345 678" },
+    { key: "notes", label: "Observações", placeholder: "Notas, necessidades especiais...", multiline: true },
+  ];
+
+  return (
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#FBF9F5", minHeight: "100vh", padding: "32px 24px 60px", color: "#2A241C" }}>
+      {tooltip && (
+        <div style={{ position: "fixed" as const, left: tooltip.x, top: tooltip.y, transform: "translateX(-50%)", background: "#2A241C", color: "#FBF9F5", fontSize: 12, fontWeight: 500, padding: "5px 10px", borderRadius: 7, pointerEvents: "none" as const, zIndex: 9999, whiteSpace: "nowrap" as const, boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>{tooltip.text}</div>
+      )}
+
+      {/* Header */}
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: 1300, margin: "0 auto 24px", flexWrap: "wrap" as const, gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "7px 12px", cursor: "pointer", color: "#6B6358", fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
+            onMouseEnter={(e) => showTip(e, "Voltar à escala de turnos")} onMouseLeave={hideTip}>
+            <IconChevronLeft size={16} /> Voltar
+          </button>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: "#1A1612", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <IconUserCircle size={20} color="#F5B944" />
+          </div>
+          <div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700 }}>Utentes</div>
+            <div style={{ fontSize: 12, color: "#A39B8E" }}>{utentes.length} utente(s) registado(s)</div>
+          </div>
+        </div>
+      </header>
+
+      {/* Barra de pesquisa + botão adicionar */}
+      <div style={{ display: "flex", gap: 10, maxWidth: 1300, margin: "0 auto 20px", alignItems: "center" }}>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Pesquisar por nome ou quarto..."
+          style={{ flex: 1, border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", colorScheme: "light" as const }}
+        />
+        {showAdd ? (
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              autoFocus
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addUtente(); if (e.key === "Escape") { setShowAdd(false); setNewName(""); } }}
+              placeholder="Nome do utente"
+              style={{ border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", colorScheme: "light" as const, width: 220 }}
+            />
+            <button onMouseDown={(e) => e.preventDefault()} onClick={addUtente} style={{ background: "#2A241C", color: "#FBF9F5", border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Adicionar</button>
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => { setShowAdd(false); setNewName(""); }} style={{ background: "transparent", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 14px", fontSize: 13, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
+          </div>
+        ) : (
+          <button onClick={() => setShowAdd(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#2A241C", color: "#FBF9F5", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}>
+            <IconPlus2 size={15} /> Adicionar utente
+          </button>
+        )}
+      </div>
+
+      {/* Grelha de utentes */}
+      {filteredUtentes.length === 0 ? (
+        <div style={{ textAlign: "center" as const, color: "#A39B8E", fontSize: 14, padding: "60px 20px", background: "#FFFFFF", borderRadius: 14, border: "1px solid #E4DED3", maxWidth: 1300, margin: "0 auto" }}>
+          {search ? `Nenhum utente encontrado para "${search}"` : "Nenhum utente registado ainda.\nClique em \"Adicionar utente\" para começar."}
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, maxWidth: 1300, margin: "0 auto" }}>
+          {filteredUtentes.map((utente) => (
+            <div
+              key={utente.id}
+              style={{ background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 14, padding: "20px 16px", cursor: "pointer", transition: "box-shadow 0.15s", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 10, position: "relative" as const }}
+              onClick={() => setOpenUtente(utente)}
+            >
+              <button
+                style={{ position: "absolute" as const, top: 10, right: 10, border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", padding: 4, borderRadius: 6 }}
+                onClick={(e) => { e.stopPropagation(); removeUtente(utente.id); }}
+                title="Remover utente"
+              >
+                <IconTrash2 size={13} />
+              </button>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif" }}>
+                {getInitials(utente.name)}
+              </div>
+              <div style={{ textAlign: "center" as const }}>
+                <div style={{ fontWeight: 600, fontSize: 14, color: "#2A241C" }}>{utente.name}</div>
+                {utente.room && <div style={{ fontSize: 12, color: "#A39B8E", marginTop: 3 }}>Quarto {utente.room}</div>}
+                {utente.birthDate && <div style={{ fontSize: 12, color: "#A39B8E" }}>{utente.birthDate}</div>}
+              </div>
+              {(utente.files?.length ?? 0) > 0 && (
+                <div style={{ fontSize: 11, color: "#5B8DBE", fontWeight: 600 }}>📎 {utente.files!.length} documento(s)</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Painel lateral da ficha do utente */}
+      {openUtente && (
+        <>
+          <div style={{ position: "fixed" as const, inset: 0, background: "rgba(42,36,28,0.3)", zIndex: 50 }} onClick={() => setOpenUtente(null)} />
+          <div style={{ position: "fixed" as const, top: 0, right: 0, bottom: 0, width: 400, maxWidth: "100vw", background: "#FFFFFF", boxShadow: "-4px 0 24px rgba(42,36,28,0.12)", zIndex: 51, display: "flex", flexDirection: "column" as const, overflow: "hidden" as const }}>
+            {/* Header do painel */}
+            <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #EFEAE2", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", flexShrink: 0 }}>
+                {getInitials(openUtente.name)}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{openUtente.name}</div>
+                <div style={{ fontSize: 12, color: "#A39B8E", marginTop: 2 }}>Ficha do utente</div>
+              </div>
+              <button style={{ border: "none", background: "transparent", cursor: "pointer", color: "#A39B8E", padding: 4 }} onClick={() => setOpenUtente(null)}>
+                <IconX size={20} />
+              </button>
+            </div>
+
+            {/* Campos */}
+            <div style={{ flex: 1, overflowY: "auto" as const, padding: "20px 24px" }}>
+              {UTENTE_FIELDS.map(({ key, label, placeholder, multiline }) => {
+                const value = (openUtente as any)[key] || "";
+                return (
+                  <div key={key} style={{ marginBottom: 16 }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
+                    {multiline ? (
+                      <textarea rows={3} value={value} placeholder={placeholder}
+                        onChange={(e) => updateUtente(openUtente.id, { [key]: e.target.value })}
+                        style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }} />
+                    ) : (
+                      <input type="text" value={value} placeholder={placeholder}
+                        onChange={(e) => updateUtente(openUtente.id, { [key]: e.target.value })}
+                        style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, colorScheme: "light" as const }} />
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Documentos */}
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "#6B6358", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>Documentos</label>
+                  <button
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#F7F5F0", border: "1px solid #E4DED3", borderRadius: 7, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#2A241C", fontFamily: "'Inter', sans-serif" }}
+                    onClick={() => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = ".pdf,.jpg,.jpeg,.png,.doc,.docx";
+                      input.multiple = true;
+                      input.onchange = (e: Event) => {
+                        Array.from((e.target as HTMLInputElement).files || []).forEach((file) => {
+                          if (file.size > 5 * 1024 * 1024) { alert(`"${file.name}" é maior que 5MB.`); return; }
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            const fileData = ev.target?.result as string;
+                            const newFile = { name: file.name, type: file.type, data: fileData, uploadedAt: new Date().toISOString() };
+                            updateUtente(openUtente.id, { files: [...(openUtente.files || []), newFile] });
+                          };
+                          reader.readAsDataURL(file);
+                        });
+                      };
+                      document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                    }}
+                  >
+                    <IconUpload size={13} /> Adicionar ficheiro
+                  </button>
+                </div>
+                {(openUtente.files || []).length === 0 ? (
+                  <div style={{ background: "#F7F5F0", borderRadius: 8, padding: "12px", fontSize: 13, color: "#A39B8E", textAlign: "center" as const }}>
+                    Nenhum documento ainda.<br /><span style={{ fontSize: 11 }}>PDF, imagens, Word (máx. 5MB)</span>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
+                    {(openUtente.files || []).map((file, idx) => (
+                      <div key={idx} style={{ display: "flex", alignItems: "center", gap: 10, background: "#F7F5F0", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 12px" }}>
+                        <span style={{ fontSize: 18 }}>{file.type.startsWith("image/") ? "🖼️" : file.type === "application/pdf" ? "📄" : "📎"}</span>
+                        <div style={{ flex: 1, overflow: "hidden" }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{file.name}</div>
+                          <div style={{ fontSize: 11, color: "#A39B8E" }}>{new Date(file.uploadedAt).toLocaleDateString("pt-PT")}</div>
+                        </div>
+                        <button style={{ border: "none", background: "#FFFFFF", borderRadius: 6, padding: "5px 8px", cursor: "pointer", color: "#5B8DBE" }}
+                          onClick={() => { const a = document.createElement("a"); a.href = file.data; a.download = file.name; a.click(); }}>
+                          <IconDownload size={14} />
+                        </button>
+                        <button style={{ border: "none", background: "#FFFFFF", borderRadius: 6, padding: "5px 8px", cursor: "pointer", color: "#C2554A" }}
+                          onClick={() => { if (!window.confirm(`Remover "${file.name}"?`)) return; updateUtente(openUtente.id, { files: (openUtente.files || []).filter((_, i) => i !== idx) }); }}>
+                          <IconX size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: "12px 24px", borderTop: "1px solid #EFEAE2", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 12, color: "#A39B8E" }}>✓ Guardado automaticamente</span>
+              <button style={{ background: "#2A241C", color: "#FBF9F5", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }} onClick={() => setOpenUtente(null)}>Fechar</button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+
 export default function App() {
   const today = new Date();
-  const [activePage, setActivePage] = useState<"schedule" | "stock">("schedule");
+  const [activePage, setActivePage] = useState<"home" | "schedule" | "stock" | "utentes">("home");
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
@@ -1917,7 +2211,10 @@ export default function App() {
   };
 
   const gridMinWidth = 190 + numDays * 44 + 260;
+  const isHomePage = (activePage as string) === "home";
   const isStockPage = (activePage as string) === "stock";
+  const isUtentesPage = (activePage as string) === "utentes";
+  const isSchedulePage = (activePage as string) === "schedule";
 
   // Dia de hoje neste mês/ano (null se estamos a ver outro mês)
   const todayDay = today.getFullYear() === year && today.getMonth() === month
@@ -1986,19 +2283,106 @@ export default function App() {
         input[type="number"] { -moz-appearance: textfield; }
       `}</style>
 
-      {/* Página de stock — renderiza em vez da escala quando ativa */}
-      {isStockPage && (
-        <div style={{ margin: "-32px -24px", minHeight: "100vh" }}>
-          {/* Botão de voltar integrado no header do stock */}
-          <StockPage onBack={() => setActivePage("schedule")} />
+      {/* Página inicial */}
+      {isHomePage && (
+        <div style={{ maxWidth: 700, margin: "0 auto", padding: "40px 0" }}>
+          {/* Logo e título */}
+          <div style={{ textAlign: "center" as const, marginBottom: 48 }}>
+            <img src={COMPANY_LOGO} alt="Logótipo" style={{ width: 80, height: 80, objectFit: "contain", marginBottom: 16 }} />
+            <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 28, fontWeight: 700, margin: "0 0 8px", color: "#2A241C" }}>
+              Associação Oliveirense de Socorros Mútuos
+            </h1>
+            <p style={{ fontSize: 15, color: "#A39B8E", margin: 0 }}>Painel de gestão — selecione uma área</p>
+          </div>
+
+          {/* 3 botões grandes */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+            {/* Colaboradores */}
+            <button
+              onClick={() => setActivePage("schedule")}
+              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 20, padding: "36px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 14, transition: "all 0.15s", fontFamily: "'Inter', sans-serif" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E8B14A"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(232,177,74,0.15)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+            >
+              <div style={{ width: 64, height: 64, borderRadius: 18, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <IconUsers size={32} color="#B08A4E" />
+              </div>
+              <div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: "#2A241C", marginBottom: 4 }}>Colaboradores</div>
+                <div style={{ fontSize: 13, color: "#A39B8E" }}>Escala de turnos e fichas</div>
+              </div>
+            </button>
+
+            {/* Utentes */}
+            <button
+              onClick={() => setActivePage("utentes")}
+              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 20, padding: "36px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 14, transition: "all 0.15s", fontFamily: "'Inter', sans-serif" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#5B8DBE"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(91,141,190,0.15)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+            >
+              <div style={{ width: 64, height: 64, borderRadius: 18, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <IconUserCircle size={32} color="#3A5A70" />
+              </div>
+              <div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: "#2A241C", marginBottom: 4 }}>Utentes</div>
+                <div style={{ fontSize: 13, color: "#A39B8E" }}>Fichas e documentos</div>
+              </div>
+            </button>
+
+            {/* Stock */}
+            <button
+              onClick={() => setActivePage("stock")}
+              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 20, padding: "36px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 14, transition: "all 0.15s", fontFamily: "'Inter', sans-serif" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#6FA86F"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(111,168,111,0.15)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+            >
+              <div style={{ width: 64, height: 64, borderRadius: 18, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <IconBox size={32} color="#3B6D11" />
+              </div>
+              <div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: "#2A241C", marginBottom: 4 }}>Stock</div>
+                <div style={{ fontSize: 13, color: "#A39B8E" }}>Inventário e movimentos</div>
+              </div>
+            </button>
+          </div>
+
+          {/* Resumo rápido */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 24 }}>
+            <div style={{ background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 12, padding: "14px 16px", textAlign: "center" as const }}>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700 }}>{Object.values(employeeTotals).reduce((acc, t) => acc + (t?.total ?? 0), 0)}h</div>
+              <div style={{ fontSize: 12, color: "#A39B8E" }}>horas este mês</div>
+            </div>
+            <div style={{ background: coverageAlerts.length > 0 ? "#FFF5F4" : "#FFFFFF", border: `1px solid ${coverageAlerts.length > 0 ? "#F2C4BC" : "#E4DED3"}`, borderRadius: 12, padding: "14px 16px", textAlign: "center" as const }}>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700, color: coverageAlerts.length > 0 ? "#C2554A" : "#2A241C" }}>{coverageAlerts.length}</div>
+              <div style={{ fontSize: 12, color: "#A39B8E" }}>alertas de cobertura</div>
+            </div>
+            <div style={{ background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 12, padding: "14px 16px", textAlign: "center" as const }}>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700 }}>{syncStatus === "synced" ? "✓" : syncStatus === "syncing" ? "⟳" : "⚠"}</div>
+              <div style={{ fontSize: 12, color: "#A39B8E" }}>{syncStatus === "synced" ? "sincronizado" : syncStatus === "syncing" ? "a sincronizar" : "sem ligação"}</div>
+            </div>
+          </div>
         </div>
       )}
 
-      {!isStockPage && (<>
+      {/* Página de stock */}
+      {isStockPage && (
+        <div style={{ margin: "-32px -24px", minHeight: "100vh" }}>
+          <StockPage onBack={() => setActivePage("home")} />
+        </div>
+      )}
+
+      {/* Página de utentes */}
+      {isUtentesPage && (
+        <div style={{ margin: "-32px -24px", minHeight: "100vh" }}>
+          <UtentesPage onBack={() => setActivePage("home")} />
+        </div>
+      )}
+
+      {isSchedulePage && (<>
 
       <header style={styles.header}>
-        {/* Logótipo */}
-        <div style={styles.logoWrap}>
+        {/* Logótipo — clicável para voltar à home */}
+        <div style={{ ...styles.logoWrap, cursor: "pointer" }} onClick={() => setActivePage("home")}>
           <img
             src={COMPANY_LOGO}
             alt="Logótipo Associação Oliveirense de Socorros Mútuos"
@@ -2009,7 +2393,7 @@ export default function App() {
             <div style={styles.logoSub}>
               {syncStatus === "syncing" && <span style={{ color: "#E8B14A" }}>⟳ A sincronizar...</span>}
               {syncStatus === "synced" && <span style={{ color: "#6FA86F" }}>✓ Sincronizado</span>}
-              {syncStatus === "error" && <span style={{ color: "#C2554A" }}>⚠ Sem ligação ao servidor</span>}
+              {syncStatus === "error" && <span style={{ color: "#C2554A" }}>⚠ Sem ligação</span>}
               {syncStatus === "idle" && <span>Painel do administrador</span>}
             </div>
           </div>
@@ -2027,7 +2411,7 @@ export default function App() {
             </button>
           </div>
 
-          {/* Botão stock — separado, do lado direito da navegação de mês */}
+          {/* Botão stock */}
           <button
             className={`tool-btn${isStockPage ? " tool-btn-active" : ""}`}
             style={{ ...styles.toolBtn, border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "7px 12px", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif", color: "#6B6358" }}
@@ -2038,6 +2422,19 @@ export default function App() {
           >
             <IconBox size={16} />
             Stock
+          </button>
+
+          {/* Botão utentes */}
+          <button
+            className={`tool-btn${isUtentesPage ? " tool-btn-active" : ""}`}
+            style={{ ...styles.toolBtn, border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "7px 12px", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif", color: "#6B6358" }}
+            onClick={() => setActivePage((prev) => prev === "utentes" ? "schedule" : "utentes")}
+            onMouseEnter={(e) => showTip(e, "Gestão de utentes")}
+            onMouseLeave={hideTip}
+            aria-label="Utentes"
+          >
+            <IconUserCircle size={16} />
+            Utentes
           </button>
 
           <div style={styles.toolbar}>
