@@ -2491,10 +2491,9 @@ export default function App() {
                   </div>
                 );
               })}
-            </div>
 
               {/* Secção de ficheiros */}
-              <div style={{ marginTop: 8 }}>
+              <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                   <label style={{ fontSize: 12, fontWeight: 600, color: "#6B6358", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
                     Documentos
@@ -2599,6 +2598,7 @@ export default function App() {
                   );
                 })()}
               </div>
+            </div>
 
             {/* Footer com indicador de auto-save */}
             <div style={{ padding: "12px 24px", borderTop: "1px solid #EFEAE2", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
