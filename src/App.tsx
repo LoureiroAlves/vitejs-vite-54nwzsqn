@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -204,6 +205,41 @@ function daysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
 }
 
+// ---------- Supabase ----------
+const SUPABASE_URL = "https://kfbuvbtdsfrkzrcrwifs.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmYnV2YnRkc2Zya3pyY3J3aWZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NjIyMDQsImV4cCI6MjA5ODEzODIwNH0.lzaWuW_-aS7OQ9kzxOVw1msqFKkip85QeVRknE1tDMw";
+
+const sbHeaders = {
+  "Content-Type": "application/json",
+  "apikey": SUPABASE_KEY,
+  "Authorization": `Bearer ${SUPABASE_KEY}`,
+  "Prefer": "return=minimal",
+};
+
+async function loadFromSupabase(table: string): Promise<any> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.main`, {
+      headers: { ...sbHeaders, "Prefer": "return=representation" },
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows?.[0] ?? null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function saveToSupabase(table: string, data: any): Promise<void> {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: "POST",
+      headers: { ...sbHeaders, "Prefer": "resolution=merge-duplicates" },
+      body: JSON.stringify({ id: "main", ...data, updated_at: new Date().toISOString() }),
+    });
+  } catch (e) {}
+}
+
+// ---------- localStorage (fallback e cache local) ----------
 const STORAGE_KEY = "turnos-app-data-v2";
 
 function loadStoredData(): any {
@@ -218,6 +254,17 @@ function saveStoredData(data: any) {
   try {
     window.localStorage?.setItem?.(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {}
+  // Guardar também no Supabase (sem bloquear)
+  saveToSupabase("escala_data", {
+    employees: data.employees,
+    rv_employees: data.rvEmployees,
+    schedule: data.schedule,
+    extra_hours: data.extraHours,
+    employee_emails: data.employeeEmails,
+    employee_profiles: data.employeeProfiles,
+    schedule_link: data.scheduleLink,
+    last_published: data.lastPublished,
+  }).catch(() => {});
 }
 
 // ---------- Logótipo da empresa ----------
@@ -242,6 +289,12 @@ function saveStockData(data: any) {
   try {
     window.localStorage?.setItem?.(STOCK_STORAGE_KEY, JSON.stringify(data));
   } catch (e) {}
+  // Guardar também no Supabase
+  saveToSupabase("stock_data", {
+    products: data.products,
+    movements: data.movements,
+    custom_categories: data.customCategories,
+  }).catch(() => {});
 }
 
 const STOCK_CATEGORIES = ["Alimentos", "Limpeza", "Higiene", "Escritório", "Outros"];
@@ -766,6 +819,7 @@ export default function App() {
   const [activePage, setActivePage] = useState<"schedule" | "stock">("schedule");
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
+  const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
 
   const [employees, setEmployees] = useState<string[]>(() => {
     const stored = loadStoredData();
@@ -823,6 +877,23 @@ export default function App() {
     setTooltip({ text, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
   };
   const hideTip = () => setTooltip(null);
+
+  // Carregar do Supabase ao iniciar (sincronização em background)
+  useEffect(() => {
+    setSyncStatus("syncing");
+    loadFromSupabase("escala_data").then((row) => {
+      if (!row) { setSyncStatus("idle"); return; }
+      if (row.employees?.length) setEmployees(row.employees);
+      if (row.rv_employees?.length) setRvEmployees(row.rv_employees);
+      if (row.schedule && Object.keys(row.schedule).length) setSchedule(row.schedule);
+      if (row.extra_hours && Object.keys(row.extra_hours).length) setExtraHours(row.extra_hours);
+      if (row.employee_emails && Object.keys(row.employee_emails).length) setEmployeeEmails(row.employee_emails);
+      if (row.employee_profiles && Object.keys(row.employee_profiles).length) setEmployeeProfiles(row.employee_profiles);
+      if (row.schedule_link) setScheduleLink(row.schedule_link);
+      if (row.last_published && Object.keys(row.last_published).length) setLastPublished(row.last_published);
+      setSyncStatus("synced");
+    }).catch(() => setSyncStatus("error"));
+  }, []);
 
   // Guardar tudo automaticamente
   useEffect(() => {
@@ -1890,7 +1961,12 @@ export default function App() {
           />
           <div>
             <div style={styles.logoTitle}>Escala de turnos</div>
-            <div style={styles.logoSub}>Painel do administrador</div>
+            <div style={styles.logoSub}>
+              {syncStatus === "syncing" && <span style={{ color: "#E8B14A" }}>⟳ A sincronizar...</span>}
+              {syncStatus === "synced" && <span style={{ color: "#6FA86F" }}>✓ Sincronizado</span>}
+              {syncStatus === "error" && <span style={{ color: "#C2554A" }}>⚠ Sem ligação ao servidor</span>}
+              {syncStatus === "idle" && <span>Painel do administrador</span>}
+            </div>
           </div>
         </div>
 
@@ -3199,4 +3275,3 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
-
