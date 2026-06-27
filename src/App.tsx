@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -2397,7 +2398,7 @@ export default function App() {
             <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 700, margin: "0 0 8px", color: "#2A241C" }}>
               Associação Oliveirense de Socorros Mútuos
             </h1>
-            <p style={{ fontSize: 14, color: "#A39B8E", margin: 0 }}>Painel de gestão — selecione uma área</p>
+            <p style={{ fontSize: 14, color: "#A39B8E", margin: 0 }}>Complexo Intergeracional Quinta dos Avós</p>
           </div>
 
           {/* Aniversários */}
