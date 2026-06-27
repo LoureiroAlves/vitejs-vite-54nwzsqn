@@ -516,11 +516,11 @@ function StockPage({ onBack }: { onBack: () => void }) {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "7px 10px", cursor: "pointer", display: "flex", alignItems: "center", color: "#6B6358" }}
-            onClick={exportExcelUtentes} onMouseEnter={(e) => showTip(e, "Exportar para Excel")} onMouseLeave={hideTip}>
+            onClick={exportExcel} onMouseEnter={(e) => showTip2(e, "Exportar para Excel")} onMouseLeave={hideTip2}>
             <IconFileSpreadsheet size={16} />
           </button>
           <button style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "7px 10px", cursor: "pointer", display: "flex", alignItems: "center", color: "#6B6358" }}
-            onClick={exportPDFUtentes} onMouseEnter={(e) => showTip(e, "Imprimir / Guardar PDF")} onMouseLeave={hideTip}>
+            onClick={exportPDF} onMouseEnter={(e) => showTip2(e, "Imprimir / Guardar PDF")} onMouseLeave={hideTip2}>
             <IconPrinter size={16} />
           </button>
         </div>
@@ -909,14 +909,6 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
     saveUtentesData({ utentes });
   }, [utentes]);
 
-  const showTip = (e: React.MouseEvent, text: string) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setTooltip({ text, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
-  };
-  const hideTip = () => setTooltip(null);
-
-  const hideTip = () => setTooltip(null);
-
   const exportExcelUtentes = () => {
     const header = ["Nome", "Data Nasc.", "Quarto", "Data Entrada", "Contacto Familiar", "Telefone Familiar", "Observações", "Documentos"];
     const rows = utentes.map((u) => [
@@ -1016,9 +1008,17 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
             <div style={{ fontSize: 12, color: "#A39B8E" }}>{utentes.length} utente(s) registado(s)</div>
           </div>
         </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "7px 10px", cursor: "pointer", display: "flex", alignItems: "center", color: "#6B6358" }}
+            onClick={exportExcelUtentes} onMouseEnter={(e) => showTip(e, "Exportar para Excel")} onMouseLeave={hideTip}>
+            <IconFileSpreadsheet size={16} />
+          </button>
+          <button style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "7px 10px", cursor: "pointer", display: "flex", alignItems: "center", color: "#6B6358" }}
+            onClick={exportPDFUtentes} onMouseEnter={(e) => showTip(e, "Imprimir / Guardar PDF")} onMouseLeave={hideTip}>
+            <IconPrinter size={16} />
+          </button>
+        </div>
       </header>
-
-      {/* Barra de pesquisa + botão adicionar */}
       <div style={{ display: "flex", gap: 10, maxWidth: 1300, margin: "0 auto 20px", alignItems: "center" }}>
         <input
           value={search}
