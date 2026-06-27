@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -1741,6 +1742,8 @@ export default function App() {
         .add-btn:hover { background: #1F1B16; }
         .nav-btn:hover { background: #EFEAE2; border-radius: 6px; }
         .tool-btn:hover { background: #EFEAE2 !important; }
+        .tool-btn-active { background: #F5B944 !important; color: #2A241C !important; }
+        .tool-btn-active:hover { background: #F0AF30 !important; }
         .print-menu-item:hover { background: #F7F5F0; }
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -1786,8 +1789,8 @@ export default function App() {
           <div style={styles.toolbar}>
             {/* Stock */}
             <button
-              className="tool-btn"
-              style={{ ...styles.toolBtn, background: isStockPage ? "#F5B944" : undefined, color: isStockPage ? "#2A241C" : "#6B6358", fontWeight: isStockPage ? 700 : undefined }}
+              className={`tool-btn${isStockPage ? " tool-btn-active" : ""}`}
+              style={{ ...styles.toolBtn }}
               onClick={() => setActivePage((prev) => prev === "stock" ? "schedule" : "stock")}
               onMouseEnter={(e) => showTip(e, isStockPage ? "Voltar à escala de turnos" : "Gestão de stock")}
               onMouseLeave={hideTip}
@@ -1797,8 +1800,8 @@ export default function App() {
             </button>
             <div style={styles.toolDivider} />
             <button
-              className="tool-btn"
-              style={{ ...styles.toolBtn, background: selectMode ? "#F5B944" : undefined, color: selectMode ? "#2A241C" : "#6B6358" }}
+              className={`tool-btn${selectMode ? " tool-btn-active" : ""}`}
+              style={{ ...styles.toolBtn }}
               onClick={toggleSelectMode}
               onMouseEnter={(e) => showTip(e, selectMode ? "Cancelar seleção" : "Selecionar dias para apagar")}
               onMouseLeave={hideTip}
@@ -1856,8 +1859,8 @@ export default function App() {
             {/* Menu impressão/PDF (dropdown) */}
             <div style={{ position: "relative" as const }}>
               <button
-                className="tool-btn"
-                style={{ ...styles.toolBtn, background: showPrintMenu ? "#F5B944" : undefined, color: showPrintMenu ? "#2A241C" : "#6B6358" }}
+                className={`tool-btn${showPrintMenu ? " tool-btn-active" : ""}`}
+                style={{ ...styles.toolBtn }}
                 onClick={() => setShowPrintMenu((v) => !v)}
                 onMouseEnter={(e) => showTip(e, "Opções de impressão e PDF")}
                 onMouseLeave={hideTip}
