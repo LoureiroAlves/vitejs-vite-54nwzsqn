@@ -330,7 +330,10 @@ interface StockMovement {
 function StockPage({ onBack }: { onBack: () => void }) {
   const [products, setProducts] = useState<StockProduct[]>(() => loadStockData()?.products ?? []);
   const [movements, setMovements] = useState<StockMovement[]>(() => loadStockData()?.movements ?? []);
-  const [customCategories, setCustomCategories] = useState<string[]>(() => loadStockData()?.customCategories ?? []);
+  const [customCategories, setCustomCategories] = useState<string[]>(() => {
+    const stored = loadStockData();
+    return stored?.customCategories ?? stored?.custom_categories ?? [];
+  });
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [activeTab, setActiveTab] = useState<"inventory" | "movement" | "history">("inventory");
@@ -599,8 +602,20 @@ function StockPage({ onBack }: { onBack: () => void }) {
                   onKeyDown={(e) => { if (e.key === "Enter") addCategory(); if (e.key === "Escape") { setShowAddCategory(false); setNewCategoryName(""); } }}
                   placeholder="Nome do serviço"
                 />
-                <button style={{ ...stockStyles.addBtn, padding: "6px 10px" }} onClick={addCategory}>OK</button>
-                <button style={{ ...stockStyles.cancelBtn, padding: "6px 10px" }} onClick={() => { setShowAddCategory(false); setNewCategoryName(""); }}>✕</button>
+                <button
+                  style={{ ...stockStyles.addBtn, padding: "6px 10px" }}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={addCategory}
+                >
+                  OK
+                </button>
+                <button
+                  style={{ ...stockStyles.cancelBtn, padding: "6px 10px" }}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => { setShowAddCategory(false); setNewCategoryName(""); }}
+                >
+                  ✕
+                </button>
               </div>
             ) : (
               <button style={{ ...stockStyles.filterBtn, borderStyle: "dashed", color: "#A39B8E" }} onClick={() => setShowAddCategory(true)}>
@@ -881,17 +896,21 @@ export default function App() {
   // Carregar do Supabase ao iniciar (sincronização em background)
   useEffect(() => {
     setSyncStatus("syncing");
-    loadFromSupabase("escala_data").then((row) => {
-      if (!row) { setSyncStatus("idle"); return; }
-      if (row.employees?.length) setEmployees(row.employees);
-      if (row.rv_employees?.length) setRvEmployees(row.rv_employees);
-      if (row.schedule && Object.keys(row.schedule).length) setSchedule(row.schedule);
-      if (row.extra_hours && Object.keys(row.extra_hours).length) setExtraHours(row.extra_hours);
-      if (row.employee_emails && Object.keys(row.employee_emails).length) setEmployeeEmails(row.employee_emails);
-      if (row.employee_profiles && Object.keys(row.employee_profiles).length) setEmployeeProfiles(row.employee_profiles);
-      if (row.schedule_link) setScheduleLink(row.schedule_link);
-      if (row.last_published && Object.keys(row.last_published).length) setLastPublished(row.last_published);
-      setSyncStatus("synced");
+    Promise.all([
+      loadFromSupabase("escala_data"),
+      loadFromSupabase("stock_data"),
+    ]).then(([escala, stock]) => {
+      if (escala) {
+        if (escala.employees?.length) setEmployees(escala.employees);
+        if (escala.rv_employees?.length) setRvEmployees(escala.rv_employees);
+        if (escala.schedule && Object.keys(escala.schedule).length) setSchedule(escala.schedule);
+        if (escala.extra_hours && Object.keys(escala.extra_hours).length) setExtraHours(escala.extra_hours);
+        if (escala.employee_emails && Object.keys(escala.employee_emails).length) setEmployeeEmails(escala.employee_emails);
+        if (escala.employee_profiles && Object.keys(escala.employee_profiles).length) setEmployeeProfiles(escala.employee_profiles);
+        if (escala.schedule_link) setScheduleLink(escala.schedule_link);
+        if (escala.last_published && Object.keys(escala.last_published).length) setLastPublished(escala.last_published);
+      }
+      setSyncStatus(escala ? "synced" : "idle");
     }).catch(() => setSyncStatus("error"));
   }, []);
 
