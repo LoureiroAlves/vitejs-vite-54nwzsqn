@@ -114,6 +114,20 @@ const IconAlertTriangle = ({ size = 16, ...props }) => (
     <line x1="12" y1="17" x2="12.01" y2="17" />
   </svg>
 );
+const IconDownload = ({ size = 16, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+const IconUpload = ({ size = 16, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="17 8 12 3 7 8" />
+    <line x1="12" y1="3" x2="12" y2="15" />
+  </svg>
+);
 // Gera cor e iniciais para avatar de cada colaborador
 function getAvatar(name: string): { initials: string; bg: string; color: string } {
   const parts = name.replace(/\s*[-–]\s*RV\s*/i, "").trim().split(/\s+/);
@@ -1437,6 +1451,81 @@ export default function App() {
     ? `${MONTH_NAMES[parseInt(copiedMonth.split("-")[1]) - 1]} ${copiedMonth.split("-")[0]}`
     : "";
 
+  // ---------- Backup / Restauro ----------
+  const handleExportBackup = () => {
+    const data = {
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      employees,
+      rvEmployees,
+      schedule,
+      extraHours,
+      employeeEmails,
+      scheduleLink,
+      lastPublished,
+    };
+
+    // Incluir também os dados de stock
+    const stockRaw = window.localStorage?.getItem?.("turnos-stock-data-v1");
+    if (stockRaw) {
+      try { (data as any).stock = JSON.parse(stockRaw); } catch (e) {}
+    }
+
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: "application/json;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    link.download = `backup-escala-turnos-${dateStr}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportBackup = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target?.result as string);
+          if (!data.employees || !data.schedule) {
+            alert("Ficheiro de backup inválido ou incompatível.");
+            return;
+          }
+          if (!window.confirm(`Restaurar backup de ${data.exportedAt ? new Date(data.exportedAt).toLocaleDateString("pt-PT") : "data desconhecida"}?\n\nISTO VAI SUBSTITUIR TODOS OS DADOS ATUAIS.`)) return;
+
+          if (data.employees) setEmployees(data.employees);
+          if (data.rvEmployees) setRvEmployees(data.rvEmployees);
+          if (data.schedule) setSchedule(data.schedule);
+          if (data.extraHours) setExtraHours(data.extraHours);
+          if (data.employeeEmails) setEmployeeEmails(data.employeeEmails);
+          if (data.scheduleLink) setScheduleLink(data.scheduleLink);
+          if (data.lastPublished) setLastPublished(data.lastPublished);
+
+          // Restaurar dados de stock
+          if (data.stock) {
+            window.localStorage?.setItem?.("turnos-stock-data-v1", JSON.stringify(data.stock));
+          }
+
+          alert("✅ Backup restaurado com sucesso! Recarregue a página para ver tudo atualizado.");
+        } catch (err) {
+          alert("Erro ao ler o ficheiro. Certifique-se que é um ficheiro de backup válido.");
+        }
+      };
+      reader.readAsText(file);
+    };
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
+  };
+
   const handleEditScheduleLink = () => {
     const entered = window.prompt(
       "Link do horário online (opcional, incluído no email aos colaboradores):",
@@ -1866,6 +1955,16 @@ export default function App() {
             <button className="tool-btn" style={{ ...styles.toolBtn, color: "#6B6358" }} onClick={handleExportExcel}
               onMouseEnter={(e) => showTip(e, "Exportar para Excel (.csv)")} onMouseLeave={hideTip} aria-label="Excel">
               <IconFileSpreadsheet size={16} />
+            </button>
+
+            {/* Backup / Restauro */}
+            <button className="tool-btn" style={{ ...styles.toolBtn, color: "#6B6358" }} onClick={handleExportBackup}
+              onMouseEnter={(e) => showTip(e, "Exportar backup completo (turnos + stock)")} onMouseLeave={hideTip} aria-label="Exportar backup">
+              <IconDownload size={16} />
+            </button>
+            <button className="tool-btn" style={{ ...styles.toolBtn, color: "#6B6358" }} onClick={handleImportBackup}
+              onMouseEnter={(e) => showTip(e, "Importar backup (restaurar dados)")} onMouseLeave={hideTip} aria-label="Importar backup">
+              <IconUpload size={16} />
             </button>
 
             {/* Menu impressão/PDF (dropdown) */}
