@@ -128,6 +128,13 @@ const IconUpload = ({ size = 16, ...props }) => (
     <line x1="12" y1="3" x2="12" y2="15" />
   </svg>
 );
+const IconUserCard = ({ size = 16, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="2" y="5" width="20" height="14" rx="2" />
+    <circle cx="8" cy="12" r="2" />
+    <path d="M14 9h4M14 12h4M14 15h2" />
+  </svg>
+);
 // Gera cor e iniciais para avatar de cada colaborador
 function getAvatar(name: string): { initials: string; bg: string; color: string } {
   const parts = name.replace(/\s*[-–]\s*RV\s*/i, "").trim().split(/\s+/);
@@ -788,6 +795,18 @@ export default function App() {
     const stored = loadStoredData();
     return stored?.employeeEmails ?? {};
   });
+  const [employeeProfiles, setEmployeeProfiles] = useState<Record<string, {
+    fullName?: string;
+    contact?: string;
+    email?: string;
+    category?: string;
+    schedule?: string;
+    notes?: string;
+  }>>(() => {
+    const stored = loadStoredData();
+    return stored?.employeeProfiles ?? {};
+  });
+  const [openProfile, setOpenProfile] = useState<string | null>(null);
   const [scheduleLink, setScheduleLink] = useState<string>(() => {
     const stored = loadStoredData();
     return stored?.scheduleLink ?? "";
@@ -820,6 +839,7 @@ export default function App() {
       schedule,
       extraHours,
       employeeEmails,
+      employeeProfiles,
       scheduleLink,
       lastPublished,
     });
@@ -1461,6 +1481,7 @@ export default function App() {
       schedule,
       extraHours,
       employeeEmails,
+      employeeProfiles,
       scheduleLink,
       lastPublished,
     };
@@ -1506,6 +1527,7 @@ export default function App() {
           if (data.schedule) setSchedule(data.schedule);
           if (data.extraHours) setExtraHours(data.extraHours);
           if (data.employeeEmails) setEmployeeEmails(data.employeeEmails);
+          if (data.employeeProfiles) setEmployeeProfiles(data.employeeProfiles);
           if (data.scheduleLink) setScheduleLink(data.scheduleLink);
           if (data.lastPublished) setLastPublished(data.lastPublished);
 
@@ -1750,7 +1772,13 @@ export default function App() {
             }}>
               {av.initials}
             </div>
-            <span style={styles.nameText}>{emp}</span>
+            <button
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 500, color: "#2A241C", textAlign: "left" as const, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}
+              onClick={() => setOpenProfile(emp)}
+              title="Ver ficha do colaborador"
+            >
+              {emp}
+            </button>
           </div>
           <div style={styles.nameActions}>
             <button
@@ -2273,6 +2301,96 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Ficha do colaborador — painel lateral */}
+      {openProfile && (
+        <>
+          <div
+            style={{ position: "fixed" as const, inset: 0, background: "rgba(42,36,28,0.3)", zIndex: 50 }}
+            onClick={() => setOpenProfile(null)}
+          />
+          <div style={{
+            position: "fixed" as const,
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 380,
+            maxWidth: "100vw",
+            background: "#FFFFFF",
+            boxShadow: "-4px 0 24px rgba(42,36,28,0.12)",
+            zIndex: 51,
+            display: "flex",
+            flexDirection: "column" as const,
+            overflow: "hidden" as const,
+          }}>
+            {/* Header do painel */}
+            <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #EFEAE2", display: "flex", alignItems: "center", gap: 12 }}>
+              {(() => { const av = getAvatar(openProfile); return (
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: av.bg, color: av.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", flexShrink: 0 }}>
+                  {av.initials}
+                </div>
+              ); })()}
+              <div style={{ flex: 1, overflow: "hidden" }}>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#2A241C", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{openProfile}</div>
+                <div style={{ fontSize: 12, color: "#A39B8E", marginTop: 2 }}>Ficha do colaborador</div>
+              </div>
+              <button style={{ border: "none", background: "transparent", cursor: "pointer", color: "#A39B8E", padding: 4 }} onClick={() => setOpenProfile(null)}>
+                <IconX size={20} />
+              </button>
+            </div>
+
+            {/* Campos da ficha */}
+            <div style={{ flex: 1, overflowY: "auto" as const, padding: "20px 24px" }}>
+              {[
+                { key: "fullName", label: "Nome completo", placeholder: "Nome completo do colaborador" },
+                { key: "contact", label: "Contacto telefónico", placeholder: "Ex: 912 345 678" },
+                { key: "email", label: "Email", placeholder: "email@exemplo.com" },
+                { key: "category", label: "Categoria profissional", placeholder: "Ex: Auxiliar de ação direta, Enfermeiro..." },
+                { key: "schedule", label: "Horário contratual", placeholder: "Ex: 40h/semana, Part-time 20h..." },
+                { key: "notes", label: "Observações", placeholder: "Notas adicionais...", multiline: true },
+              ].map(({ key, label, placeholder, multiline }) => {
+                const profile = employeeProfiles[openProfile] || {};
+                const value = (profile as any)[key] || "";
+                return (
+                  <div key={key} style={{ marginBottom: 16 }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
+                      {label}
+                    </label>
+                    {multiline ? (
+                      <textarea
+                        value={value}
+                        onChange={(e) => setEmployeeProfiles((prev) => ({ ...prev, [openProfile]: { ...(prev[openProfile] || {}), [key]: e.target.value } }))}
+                        placeholder={placeholder}
+                        rows={3}
+                        style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }}
+                      />
+                    ) : (
+                      <input
+                        type={key === "email" ? "email" : "text"}
+                        value={value}
+                        onChange={(e) => setEmployeeProfiles((prev) => ({ ...prev, [openProfile]: { ...(prev[openProfile] || {}), [key]: e.target.value } }))}
+                        placeholder={placeholder}
+                        style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, colorScheme: "light" as const }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Footer com indicador de auto-save */}
+            <div style={{ padding: "12px 24px", borderTop: "1px solid #EFEAE2", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 12, color: "#A39B8E" }}>✓ Guardado automaticamente</span>
+              <button
+                style={{ background: "#2A241C", color: "#FBF9F5", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+                onClick={() => setOpenProfile(null)}
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Tooltip flutuante */}
