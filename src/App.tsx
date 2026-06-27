@@ -1796,19 +1796,21 @@ export default function App() {
             </button>
           </div>
 
+          {/* Botão stock — separado, do lado direito da navegação de mês */}
+          <button
+            className={`tool-btn${isStockPage ? " tool-btn-active" : ""}`}
+            style={{ ...styles.toolBtn, border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "7px 12px", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif", color: "#6B6358" }}
+            onClick={() => setActivePage((prev) => prev === "stock" ? "schedule" : "stock")}
+            onMouseEnter={(e) => showTip(e, "Gestão de stock")}
+            onMouseLeave={hideTip}
+            aria-label="Gestão de stock"
+          >
+            <IconBox size={16} />
+            Stock
+          </button>
+
           <div style={styles.toolbar}>
-            {/* Stock */}
-            <button
-              className={`tool-btn${isStockPage ? " tool-btn-active" : ""}`}
-              style={{ ...styles.toolBtn }}
-              onClick={() => setActivePage((prev) => prev === "stock" ? "schedule" : "stock")}
-              onMouseEnter={(e) => showTip(e, isStockPage ? "Voltar à escala de turnos" : "Gestão de stock")}
-              onMouseLeave={hideTip}
-              aria-label="Gestão de stock"
-            >
-              <IconBox size={16} />
-            </button>
-            <div style={styles.toolDivider} />
+            {/* Borracha */}
             <button
               className={`tool-btn${selectMode ? " tool-btn-active" : ""}`}
               style={{ ...styles.toolBtn }}
