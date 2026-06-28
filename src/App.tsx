@@ -2397,22 +2397,33 @@ export default function App() {
             body { background: #B0A99F !important; }
           `}</style>
 
-          {/* Logo como marca de água */}
-          <div style={{
-            position: "absolute" as const,
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 400,
-            height: 400,
-            backgroundImage: `url(${COMPANY_LOGO})`,
-            backgroundSize: "contain",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "center",
-            opacity: 0.08,
-            pointerEvents: "none" as const,
-            zIndex: 0,
-          }} />
+          {/* Logo marca de água ESQUERDA — canto superior esquerdo */}
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
+            style={{ position: "absolute" as const, top: -60, left: -60, width: 300, height: 300, opacity: 0.12, pointerEvents: "none" as const, zIndex: 0 }}>
+            <circle cx="50" cy="50" r="48" fill="#2D6A2D"/>
+            <rect x="46" y="62" width="8" height="22" rx="3" fill="white"/>
+            <path d="M46 80 Q36 82 30 88" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
+            <path d="M54 80 Q64 82 70 88" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
+            <ellipse cx="50" cy="40" rx="16" ry="20" fill="white"/>
+            <ellipse cx="34" cy="47" rx="13" ry="16" fill="white" transform="rotate(-15 34 47)"/>
+            <ellipse cx="66" cy="47" rx="13" ry="16" fill="white" transform="rotate(15 66 47)"/>
+            <ellipse cx="50" cy="24" rx="10" ry="14" fill="white"/>
+            <ellipse cx="50" cy="39" rx="8" ry="10" fill="#2D6A2D" opacity="0.3"/>
+          </svg>
+
+          {/* Logo marca de água DIREITA — canto inferior direito */}
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
+            style={{ position: "absolute" as const, bottom: -60, right: -60, width: 300, height: 300, opacity: 0.12, pointerEvents: "none" as const, zIndex: 0 }}>
+            <circle cx="50" cy="50" r="48" fill="#2D6A2D"/>
+            <rect x="46" y="62" width="8" height="22" rx="3" fill="white"/>
+            <path d="M46 80 Q36 82 30 88" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
+            <path d="M54 80 Q64 82 70 88" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
+            <ellipse cx="50" cy="40" rx="16" ry="20" fill="white"/>
+            <ellipse cx="34" cy="47" rx="13" ry="16" fill="white" transform="rotate(-15 34 47)"/>
+            <ellipse cx="66" cy="47" rx="13" ry="16" fill="white" transform="rotate(15 66 47)"/>
+            <ellipse cx="50" cy="24" rx="10" ry="14" fill="white"/>
+            <ellipse cx="50" cy="39" rx="8" ry="10" fill="#2D6A2D" opacity="0.3"/>
+          </svg>
           {/* Título */}
           <div style={{ textAlign: "center" as const, marginBottom: 52 }}>
             <div style={{ width: 80, height: 80, borderRadius: 24, background: "#2A241C", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
