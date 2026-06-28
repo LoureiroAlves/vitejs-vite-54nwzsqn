@@ -2391,15 +2391,45 @@ export default function App() {
 
       {/* Página inicial */}
       {isHomePage && (
-        <div style={{ maxWidth: 680, margin: "0 auto", padding: "48px 0" }}>
-          {/* Logo e título */}
+        <div style={{ maxWidth: 680, margin: "0 auto", padding: "48px 0", position: "relative" as const }}>
+          {/* Fundo cinzento na página toda */}
+          <style>{`
+            body { background: #B0A99F !important; }
+          `}</style>
+
+          {/* Logo como marca de água */}
+          <div style={{
+            position: "absolute" as const,
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 400,
+            height: 400,
+            backgroundImage: `url(${COMPANY_LOGO})`,
+            backgroundSize: "contain",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+            opacity: 0.08,
+            pointerEvents: "none" as const,
+            zIndex: 0,
+          }} />
+          {/* Título */}
           <div style={{ textAlign: "center" as const, marginBottom: 52 }}>
-            <img src={COMPANY_LOGO} alt="Logótipo" style={{ width: 140, height: 140, objectFit: "contain", marginBottom: 20, borderRadius: 32 }} />
+            <div style={{ width: 80, height: 80, borderRadius: 24, background: "#2A241C", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F5B944" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 21V7l9-4 9 4v14" />
+                <path d="M9 21V13h6v8" />
+                <path d="M9 9h.01M12 9h.01M15 9h.01M9 13h.01M15 13h.01" />
+              </svg>
+            </div>
             <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 700, margin: "0 0 8px", color: "#2A241C" }}>
               Associação Oliveirense de Socorros Mútuos
             </h1>
-            <p style={{ fontSize: 14, color: "#A39B8E", margin: 0 }}>Complexo Intergeracional Quinta dos Avós</p>
+            <p style={{ fontSize: 14, color: "#6B6358", margin: 0 }}>Complexo Intergeracional Quinta dos Avós</p>
           </div>
+
+          {/* Conteúdo por cima da marca de água */}
+          <div style={{ position: "relative" as const, zIndex: 1 }}>
 
           {/* Aniversários */}
           {birthdayAlerts.length > 0 && (
@@ -2464,9 +2494,9 @@ export default function App() {
             {/* Colaboradores */}
             <button
               onClick={() => setActivePage("schedule")}
-              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E8B14A"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(232,177,74,0.18)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; (e.currentTarget as HTMLElement).style.transform = "none"; }}
+              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 2px 12px rgba(42,36,28,0.06)" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E8B14A"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(232,177,74,0.22)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px rgba(42,36,28,0.06)"; (e.currentTarget as HTMLElement).style.transform = "none"; }}
             >
               <div style={{ width: 72, height: 72, borderRadius: 22, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <IconUsers size={36} color="#B08A4E" />
@@ -2479,9 +2509,9 @@ export default function App() {
             {/* Utentes */}
             <button
               onClick={() => setActivePage("utentes")}
-              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#5B8DBE"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(91,141,190,0.18)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; (e.currentTarget as HTMLElement).style.transform = "none"; }}
+              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 2px 12px rgba(42,36,28,0.06)" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#5B8DBE"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(91,141,190,0.22)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px rgba(42,36,28,0.06)"; (e.currentTarget as HTMLElement).style.transform = "none"; }}
             >
               <div style={{ width: 72, height: 72, borderRadius: 22, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <IconUserCircle size={36} color="#3A5A70" />
@@ -2494,9 +2524,9 @@ export default function App() {
             {/* Stock */}
             <button
               onClick={() => setActivePage("stock")}
-              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#6FA86F"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(111,168,111,0.18)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; (e.currentTarget as HTMLElement).style.transform = "none"; }}
+              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 2px 12px rgba(42,36,28,0.06)" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#6FA86F"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(111,168,111,0.22)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px rgba(42,36,28,0.06)"; (e.currentTarget as HTMLElement).style.transform = "none"; }}
             >
               <div style={{ width: 72, height: 72, borderRadius: 22, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <IconBox size={36} color="#3B6D11" />
@@ -2505,6 +2535,7 @@ export default function App() {
                 Stock
               </div>
             </button>
+          </div>
           </div>
         </div>
       )}
