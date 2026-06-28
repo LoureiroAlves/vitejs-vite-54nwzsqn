@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -2496,7 +2495,7 @@ export default function App() {
               <div style={{ width: 72, height: 72, borderRadius: 22, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <IconUsers size={36} color="#B08A4E" />
               </div>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                 Colaboradores
               </div>
             </button>
@@ -2511,7 +2510,7 @@ export default function App() {
               <div style={{ width: 72, height: 72, borderRadius: 22, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <IconUserCircle size={36} color="#3A5A70" />
               </div>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                 Utentes
               </div>
             </button>
@@ -2526,7 +2525,7 @@ export default function App() {
               <div style={{ width: 72, height: 72, borderRadius: 22, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <IconBox size={36} color="#3B6D11" />
               </div>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                 Stock
               </div>
             </button>
@@ -3868,3 +3867,4 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
+                                    
