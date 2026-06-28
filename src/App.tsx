@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
