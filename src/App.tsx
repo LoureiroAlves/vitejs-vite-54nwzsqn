@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -2389,28 +2390,14 @@ export default function App() {
       {/* Página inicial */}
       {isHomePage && (
         <div style={{ maxWidth: 680, margin: "0 auto", padding: "48px 0", position: "relative" as const }}>
-          {/* Fundo cinzento na página toda */}
+          {/* Fundo verde escuro na página toda */}
           <style>{`
-            body { background: #B0A99F !important; }
+            body { background: #1E3A1E !important; }
           `}</style>
 
           {/* Logo marca de água ESQUERDA — canto superior esquerdo */}
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
-            style={{ position: "absolute" as const, top: -60, left: -60, width: 300, height: 300, opacity: 0.12, pointerEvents: "none" as const, zIndex: 0 }}>
-            <circle cx="50" cy="50" r="48" fill="#2D6A2D"/>
-            <rect x="46" y="62" width="8" height="22" rx="3" fill="white"/>
-            <path d="M46 80 Q36 82 30 88" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
-            <path d="M54 80 Q64 82 70 88" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
-            <ellipse cx="50" cy="40" rx="16" ry="20" fill="white"/>
-            <ellipse cx="34" cy="47" rx="13" ry="16" fill="white" transform="rotate(-15 34 47)"/>
-            <ellipse cx="66" cy="47" rx="13" ry="16" fill="white" transform="rotate(15 66 47)"/>
-            <ellipse cx="50" cy="24" rx="10" ry="14" fill="white"/>
-            <ellipse cx="50" cy="39" rx="8" ry="10" fill="#2D6A2D" opacity="0.3"/>
-          </svg>
-
-          {/* Logo marca de água DIREITA — canto inferior direito */}
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
-            style={{ position: "absolute" as const, bottom: -60, right: -60, width: 300, height: 300, opacity: 0.12, pointerEvents: "none" as const, zIndex: 0 }}>
+            style={{ position: "absolute" as const, top: -60, left: -60, width: 300, height: 300, opacity: 0.15, pointerEvents: "none" as const, zIndex: 0 }}>
             <circle cx="50" cy="50" r="48" fill="#2D6A2D"/>
             <rect x="46" y="62" width="8" height="22" rx="3" fill="white"/>
             <path d="M46 80 Q36 82 30 88" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
@@ -2430,10 +2417,10 @@ export default function App() {
                 <path d="M9 9h.01M12 9h.01M15 9h.01M9 13h.01M15 13h.01" />
               </svg>
             </div>
-            <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 700, margin: "0 0 8px", color: "#2A241C" }}>
+            <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 700, margin: "0 0 8px", color: "#F5F5F0" }}>
               Associação Oliveirense de Socorros Mútuos
             </h1>
-            <p style={{ fontSize: 14, color: "#6B6358", margin: 0 }}>Complexo Intergeracional Quinta dos Avós</p>
+            <p style={{ fontSize: 14, color: "#A8C5A0", margin: 0 }}>Complexo Intergeracional Quinta dos Avós</p>
           </div>
 
           {/* Conteúdo por cima da marca de água */}
