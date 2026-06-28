@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -448,7 +449,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
         } catch {}
 
         // Analisar com Claude
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
+        const response = await fetch("/api/claude", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1173,7 +1174,7 @@ Devolve APENAS um objeto JSON com os campos que encontrares (null se não encont
 Exemplo: {"birthDate":null,"familyContact":"João Silva","familyPhone":"912345678","notes":"Hipertensão. Medicação: Amlodipina 5mg. Alergia à penicilina."}` }
             ];
 
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
+        const response = await fetch("/api/claude", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1299,7 +1300,7 @@ Exemplo: {"birthDate":null,"familyContact":"João Silva","familyPhone":"91234567
           reader.readAsDataURL(file);
         });
         const mediaType = file.type as "image/jpeg" | "image/png" | "image/webp";
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
+        const response = await fetch("/api/claude", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1422,7 +1423,7 @@ ${text}`
           }];
         }
 
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
+        const response = await fetch("/api/claude", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
