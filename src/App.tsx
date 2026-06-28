@@ -403,7 +403,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
-    if (useCamera) input.capture = "environment";
+    if (useCamera) input.setAttribute("capture", "environment");
     input.onchange = async (e: Event) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
@@ -703,7 +703,7 @@ Se não conseguires identificar produtos, devolve [].`
       )}
 
       {/* Summary cards */}
-      <div style={stockStyles.summaryGrid}>
+      <div className="summary-grid-mobile" style={stockStyles.summaryGrid}>
         <div style={stockStyles.card}>
           <div style={stockStyles.cardLabel}>Produtos</div>
           <div style={stockStyles.cardValue}>{totalProducts}</div>
@@ -878,7 +878,7 @@ Se não conseguires identificar produtos, devolve [].`
           {filteredProducts.length === 0 ? (
             <div style={stockStyles.empty}>Nenhum produto {filterCategory !== "Todos" ? `na categoria "${filterCategory}"` : "em inventário"}.<br />Clique em "Adicionar produto" para começar.</div>
           ) : (
-            <div style={stockStyles.productGrid}>
+            <div className="stock-grid" style={stockStyles.productGrid}>
               {filteredProducts.map((prod) => {
                 const isLow = prod.quantity > 0 && prod.quantity <= prod.minQuantity;
                 const isEmpty = prod.quantity <= 0;
@@ -1374,7 +1374,7 @@ ${text}`
           {search ? `Nenhum utente encontrado para "${search}"` : "Nenhum utente registado ainda.\nClique em \"Adicionar utente\" para começar."}
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, maxWidth: 1300, margin: "0 auto" }}>
+        <div className="utentes-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, maxWidth: 1300, margin: "0 auto" }}>
           {filteredUtentes.map((utente) => (
             <div
               key={utente.id}
@@ -1408,7 +1408,7 @@ ${text}`
       {openUtente && (
         <>
           <div style={{ position: "fixed" as const, inset: 0, background: "rgba(42,36,28,0.3)", zIndex: 50 }} onClick={() => setOpenUtente(null)} />
-          <div style={{ position: "fixed" as const, top: 0, right: 0, bottom: 0, width: 400, maxWidth: "100vw", background: "#FFFFFF", boxShadow: "-4px 0 24px rgba(42,36,28,0.12)", zIndex: 51, display: "flex", flexDirection: "column" as const, overflow: "hidden" as const }}>
+          <div className="side-panel-mobile" style={{ position: "fixed" as const, top: 0, right: 0, bottom: 0, width: 400, maxWidth: "100vw", background: "#FFFFFF", boxShadow: "-4px 0 24px rgba(42,36,28,0.12)", zIndex: 51, display: "flex", flexDirection: "column" as const, overflow: "hidden" as const }}>
             {/* Header do painel */}
             <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #EFEAE2", display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", flexShrink: 0 }}>
@@ -2703,11 +2703,21 @@ export default function App() {
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
+
+        /* ===== RESPONSIVO MOBILE ===== */
+        @media (max-width: 768px) {
+          .home-grid { grid-template-columns: 1fr !important; max-width: 300px !important; margin: 0 auto !important; gap: 14px !important; }
+          .summary-grid-mobile { grid-template-columns: repeat(2, 1fr) !important; }
+          .utentes-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .stock-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .side-panel-mobile { width: 100vw !important; }
+          .header-right-mobile { width: 100% !important; flex-wrap: wrap !important; gap: 6px !important; }
+        }
       `}</style>
 
       {/* Página inicial */}
       {isHomePage && (
-        <div style={{ position: "fixed" as const, inset: 0, background: "#1E3A1E", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        <div style={{ position: "fixed" as const, inset: 0, background: "#1E3A1E", display: "flex", alignItems: "center", justifyContent: "center", overflow: "auto" }}>
 
           {/* Logo SVG marca de água — canto superior esquerdo, bem contido */}
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
@@ -2761,7 +2771,7 @@ export default function App() {
             )}
 
             {/* 3 botões */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+            <div className="home-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
               <button onClick={() => setActivePage("utentes")}
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(91,141,190,0.4)"; }}
@@ -2844,7 +2854,7 @@ export default function App() {
         </div>
 
         {/* Navegação de mês + toolbar */}
-        <div style={styles.headerRight} className="no-print">
+        <div style={styles.headerRight} className="no-print header-right-mobile">
           <div style={styles.monthNav}>
             <button className="nav-btn" style={styles.navBtnCompact} onClick={goPrevMonth} aria-label="Mês anterior">
               <IconChevronLeft size={16} />
