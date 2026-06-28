@@ -1147,6 +1147,71 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
 
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
+  const [importingPhotoU, setImportingPhotoU] = useState(false);
+
+  const handleImportFromPhoto = (useCamera: boolean) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    if (useCamera) input.setAttribute("capture", "environment");
+    input.onchange = async (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      setImportingPhotoU(true);
+      setImportResult(null);
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => resolve((ev.target?.result as string).split(",")[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const mediaType = file.type as "image/jpeg" | "image/png" | "image/webp";
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 1000,
+            messages: [{
+              role: "user",
+              content: [
+                { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+                { type: "text", text: `Analisa esta imagem e extrai informação de utentes/residentes de um lar de idosos.
+Para cada utente encontrado devolve um array JSON com os campos (null se não encontrar):
+name, birthDate (DD/MM/AAAA), room, entryDate (DD/MM/AAAA), familyContact, familyPhone, notes
+Responde APENAS com o array JSON, sem mais texto. Ex: [{"name":"Maria","birthDate":"01/01/1940","room":"12A","entryDate":null,"familyContact":null,"familyPhone":null,"notes":null}]` }
+              ]
+            }]
+          })
+        });
+        const data = await response.json();
+        const raw = data.content?.map((c: any) => c.text || "").join("") || "";
+        const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          setImportResult("⚠️ Não foi possível identificar utentes na imagem.");
+          setImportingPhotoU(false);
+          return;
+        }
+        const novos: Utente[] = parsed.map((u: any) => ({
+          id: Date.now().toString() + Math.random().toString(36).slice(2),
+          name: u.name || "Nome desconhecido",
+          birthDate: u.birthDate || undefined,
+          room: u.room || undefined,
+          entryDate: u.entryDate || undefined,
+          familyContact: u.familyContact || undefined,
+          familyPhone: u.familyPhone || undefined,
+          notes: u.notes || undefined,
+        }));
+        setUtentes((prev) => [...prev, ...novos]);
+        setImportResult(`✅ ${novos.length} utente(s) importado(s) da foto!`);
+      } catch {
+        setImportResult("❌ Erro ao processar a imagem.");
+      }
+      setImportingPhotoU(false);
+    };
+    document.body.appendChild(input); input.click(); document.body.removeChild(input);
+  };
 
   const handleImportFromDoc = () => {
     const input = document.createElement("input");
@@ -1337,12 +1402,36 @@ ${text}`
         />
         <button
           onClick={handleImportFromDoc}
-          disabled={importing}
+          disabled={importing || importingPhotoU}
           style={{ display: "inline-flex", alignItems: "center", gap: 6, background: importing ? "#A39B8E" : "#5B8DBE", color: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 600, cursor: importing ? "default" : "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
           onMouseEnter={(e) => showTip(e, "Importar utentes de PDF com IA")}
           onMouseLeave={hideTip}
         >
-          {importing ? "⏳ A processar..." : "✨ Importar de PDF"}
+          {importing ? "⏳ A processar..." : "✨ PDF"}
+        </button>
+        {/* Botão câmara */}
+        <button
+          onClick={() => !importingPhotoU && handleImportFromPhoto(true)}
+          disabled={importingPhotoU || importing}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: importingPhotoU ? "#A39B8E" : "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: importingPhotoU ? "default" : "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
+          onMouseEnter={(e) => showTip(e, "Tirar foto a documento (câmara)")}
+          onMouseLeave={hideTip}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          {importingPhotoU ? "⏳" : "📷"}
+        </button>
+        {/* Botão galeria */}
+        <button
+          onClick={() => !importingPhotoU && handleImportFromPhoto(false)}
+          disabled={importingPhotoU || importing}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: importingPhotoU ? "default" : "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
+          onMouseEnter={(e) => showTip(e, "Escolher foto da galeria")}
+          onMouseLeave={hideTip}
+        >
+          🖼️
         </button>
         {showAdd ? (
           <div style={{ display: "flex", gap: 8 }}>
@@ -2706,7 +2795,15 @@ export default function App() {
 
         /* ===== RESPONSIVO MOBILE ===== */
         @media (max-width: 768px) {
-          .home-grid { grid-template-columns: 1fr !important; max-width: 300px !important; margin: 0 auto !important; gap: 14px !important; }
+          .home-grid { grid-template-columns: 1fr !important; max-width: 280px !important; margin: 0 auto !important; gap: 12px !important; }
+          .home-btn { padding: 20px 16px !important; border-radius: 18px !important; flex-direction: row !important; gap: 14px !important; justify-content: flex-start !important; }
+          .home-btn-icon { width: 48px !important; height: 48px !important; border-radius: 14px !important; flex-shrink: 0 !important; }
+          .home-btn-icon svg { width: 24px !important; height: 24px !important; }
+          .home-btn-label { font-size: 16px !important; }
+          .home-title { font-size: 16px !important; }
+          .home-icon-wrap { width: 56px !important; height: 56px !important; }
+          .home-icon-wrap svg { width: 28px !important; height: 28px !important; }
+          .home-center { margin-bottom: 28px !important; }
           .summary-grid-mobile { grid-template-columns: repeat(2, 1fr) !important; }
           .utentes-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .stock-grid { grid-template-columns: repeat(2, 1fr) !important; }
@@ -2736,15 +2833,15 @@ export default function App() {
           <div style={{ position: "relative" as const, zIndex: 1, width: "100%", maxWidth: 680, padding: "0 24px" }}>
 
             {/* Título */}
-            <div style={{ textAlign: "center" as const, marginBottom: 48 }}>
-              <div style={{ width: 80, height: 80, borderRadius: 24, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+            <div className="home-center" style={{ textAlign: "center" as const, marginBottom: 48 }}>
+              <div className="home-icon-wrap" style={{ width: 80, height: 80, borderRadius: 24, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F5B944" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 21V7l9-4 9 4v14"/>
                   <path d="M9 21V13h6v8"/>
                   <path d="M9 9h.01M12 9h.01M15 9h.01M9 13h.01M15 13h.01"/>
                 </svg>
               </div>
-              <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 700, margin: "0 0 8px", color: "#FFFFFF" }}>
+              <h1 className="home-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 700, margin: "0 0 8px", color: "#FFFFFF" }}>
                 Associação Oliveirense de Socorros Mútuos
               </h1>
               <p style={{ fontSize: 14, color: "#8FBF8F", margin: 0 }}>Complexo Intergeracional Quinta dos Avós</p>
@@ -2772,38 +2869,38 @@ export default function App() {
 
             {/* 3 botões */}
             <div className="home-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-              <button onClick={() => setActivePage("utentes")}
+              <button onClick={() => setActivePage("utentes")} className="home-btn"
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(91,141,190,0.4)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
                 <div style={{ width: 72, height: 72, borderRadius: 22, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <IconUserCircle size={36} color="#3A5A70" />
                 </div>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Utentes
                 </div>
               </button>
 
-              <button onClick={() => setActivePage("schedule")}
+              <button onClick={() => setActivePage("schedule")} className="home-btn"
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(232,177,74,0.4)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
                 <div style={{ width: 72, height: 72, borderRadius: 22, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <IconUsers size={36} color="#B08A4E" />
                 </div>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Colaboradores
                 </div>
               </button>
 
-              <button onClick={() => setActivePage("stock")}
+              <button onClick={() => setActivePage("stock")} className="home-btn"
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(111,168,111,0.4)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
                 <div style={{ width: 72, height: 72, borderRadius: 22, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <IconBox size={36} color="#3B6D11" />
                 </div>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Stock
                 </div>
               </button>
