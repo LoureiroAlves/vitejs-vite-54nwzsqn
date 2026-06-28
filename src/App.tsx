@@ -814,7 +814,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
 }
 
 const stockStyles: { [key: string]: React.CSSProperties } = {
-  page: { fontFamily: "'Inter', sans-serif", background: "#FBF9F5", minHeight: "100vh", padding: "32px 24px 60px", color: "#2A241C" },
+  page: { fontFamily: "'Inter', sans-serif", background: "#E8F0E8", minHeight: "100vh", padding: "32px 24px 60px", color: "#2A241C" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: 1300, margin: "0 auto 20px", flexWrap: "wrap", gap: 12 },
   logoIcon: { width: 40, height: 40, borderRadius: 12, background: "#1A1612", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   logoTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: "#2A241C" },
@@ -992,7 +992,7 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
   ];
 
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif", background: "#FBF9F5", minHeight: "100vh", padding: "32px 24px 60px", color: "#2A241C" }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#E8EEF5", minHeight: "100vh", padding: "32px 24px 60px", color: "#2A241C" }}>
       {tooltip && (
         <div style={{ position: "fixed" as const, left: tooltip.x, top: tooltip.y, transform: "translateX(-50%)", background: "#2A241C", color: "#FBF9F5", fontSize: 12, fontWeight: 500, padding: "5px 10px", borderRadius: 7, pointerEvents: "none" as const, zIndex: 9999, whiteSpace: "nowrap" as const, boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>{tooltip.text}</div>
       )}
@@ -2444,18 +2444,6 @@ export default function App() {
 
             {/* 3 botões */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-              <button onClick={() => setActivePage("schedule")}
-                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(232,177,74,0.4)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 72, height: 72, borderRadius: 22, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <IconUsers size={36} color="#B08A4E" />
-                </div>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
-                  Colaboradores
-                </div>
-              </button>
-
               <button onClick={() => setActivePage("utentes")}
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(91,141,190,0.4)"; }}
@@ -2465,6 +2453,18 @@ export default function App() {
                 </div>
                 <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Utentes
+                </div>
+              </button>
+
+              <button onClick={() => setActivePage("schedule")}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(232,177,74,0.4)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
+                <div style={{ width: 72, height: 72, borderRadius: 22, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconUsers size={36} color="#B08A4E" />
+                </div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                  Colaboradores
                 </div>
               </button>
 
@@ -3203,7 +3203,7 @@ export default function App() {
 const styles: { [key: string]: React.CSSProperties } = {
   page: {
     fontFamily: "'Inter', sans-serif",
-    background: "#FBF9F5",
+    background: "#F5EDD8",
     minHeight: "100vh",
     padding: "32px 24px 60px",
     color: "#2A241C",
