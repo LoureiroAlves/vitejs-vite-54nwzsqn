@@ -1116,6 +1116,98 @@ interface Utente {
 function UtentesPage({ onBack }: { onBack: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
+  const [importingMedical, setImportingMedical] = useState(false);
+  const [medicalImportResult, setMedicalImportResult] = useState<string | null>(null);
+
+  const handleImportMedicalReport = (useCamera: boolean) => {
+    if (!openUtente) return;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*,.pdf";
+    if (useCamera) input.setAttribute("capture", "environment");
+    input.onchange = async (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      setImportingMedical(true);
+      setMedicalImportResult(null);
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => resolve((ev.target?.result as string).split(",")[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const isPDF = file.type === "application/pdf";
+        const mediaType = file.type as "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+
+        // Guardar o documento na ficha do utente
+        const now = new Date();
+        const dateStr = now.toLocaleDateString("pt-PT").replace(/\//g, "-");
+        const timeStr = now.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" }).replace(":", "h");
+        const docName = `relatorio_${dateStr}_${timeStr}.${file.name.split(".").pop() || "jpg"}`;
+        const fileData = `data:${file.type};base64,${base64}`;
+        const newFile = { name: docName, type: file.type, data: fileData, uploadedAt: now.toISOString() };
+        updateUtente(openUtente.id, { files: [...(openUtente.files || []), newFile] });
+
+        // Analisar com Claude
+        const msgContent: any[] = isPDF
+          ? [
+              { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
+              { type: "text", text: `Analisa este relatório médico e extrai informação relevante para a ficha de um utente de lar de idosos.
+Devolve APENAS um objeto JSON com os campos que encontrares (null se não encontrar):
+- birthDate: data de nascimento (DD/MM/AAAA)
+- familyContact: nome do familiar/responsável
+- familyPhone: telefone do familiar
+- notes: observações médicas relevantes (diagnósticos, medicação, alergias, necessidades especiais — resumido)
+Exemplo: {"birthDate":null,"familyContact":"João Silva","familyPhone":"912345678","notes":"Hipertensão. Medicação: Amlodipina 5mg. Alergia à penicilina."}` }
+            ]
+          : [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+              { type: "text", text: `Analisa este relatório médico/documento e extrai informação relevante para a ficha de um utente de lar de idosos.
+Devolve APENAS um objeto JSON com os campos que encontrares (null se não encontrar):
+- birthDate: data de nascimento (DD/MM/AAAA)
+- familyContact: nome do familiar/responsável
+- familyPhone: telefone do familiar
+- notes: observações médicas relevantes (diagnósticos, medicação, alergias, necessidades especiais — resumido)
+Exemplo: {"birthDate":null,"familyContact":"João Silva","familyPhone":"912345678","notes":"Hipertensão. Medicação: Amlodipina 5mg. Alergia à penicilina."}` }
+            ];
+
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 800,
+            messages: [{ role: "user", content: msgContent }]
+          })
+        });
+
+        const data = await response.json();
+        const raw = data.content?.map((c: any) => c.text || "").join("") || "";
+        const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+
+        // Atualizar ficha com os dados extraídos (só os campos não vazios)
+        const updates: Partial<Utente> = {};
+        if (parsed.birthDate && !openUtente.birthDate) updates.birthDate = parsed.birthDate;
+        if (parsed.familyContact && !openUtente.familyContact) updates.familyContact = parsed.familyContact;
+        if (parsed.familyPhone && !openUtente.familyPhone) updates.familyPhone = parsed.familyPhone;
+        if (parsed.notes) {
+          updates.notes = openUtente.notes
+            ? `${openUtente.notes}\n\n--- Relatório ${dateStr} ---\n${parsed.notes}`
+            : `--- Relatório ${dateStr} ---\n${parsed.notes}`;
+        }
+        if (Object.keys(updates).length > 0) updateUtente(openUtente.id, updates);
+
+        const camposAtualizados = Object.keys(updates).length;
+        setMedicalImportResult(`✅ Documento guardado${camposAtualizados > 0 ? ` e ${camposAtualizados} campo(s) atualizado(s)` : " (nenhum campo novo encontrado)"}!`);
+      } catch {
+        setMedicalImportResult("❌ Erro ao processar o documento.");
+      }
+      setImportingMedical(false);
+    };
+    document.body.appendChild(input); input.click(); document.body.removeChild(input);
+  };
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState("");
@@ -1598,9 +1690,27 @@ ${text}`
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                   <label style={{ fontSize: 12, fontWeight: 600, color: "#6B6358", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>Documentos</label>
-                  <button
-                    style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#F7F5F0", border: "1px solid #E4DED3", borderRadius: 7, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#2A241C", fontFamily: "'Inter', sans-serif" }}
-                    onClick={() => {
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {/* Câmara — relatório médico */}
+                    <button
+                      style={{ display: "inline-flex", alignItems: "center", gap: 4, background: importingMedical ? "#A39B8E" : "#2A241C", color: "#F5B944", border: "none", borderRadius: 7, padding: "5px 8px", fontSize: 11, fontWeight: 600, cursor: importingMedical ? "default" : "pointer", fontFamily: "'Inter', sans-serif" }}
+                      onClick={() => !importingMedical && handleImportMedicalReport(true)}
+                      title="Fotografar relatório médico"
+                    >
+                      {importingMedical ? "⏳" : "📷"}
+                    </button>
+                    {/* Galeria */}
+                    <button
+                      style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 7, padding: "5px 8px", fontSize: 11, fontWeight: 600, cursor: importingMedical ? "default" : "pointer", fontFamily: "'Inter', sans-serif" }}
+                      onClick={() => !importingMedical && handleImportMedicalReport(false)}
+                      title="Importar de galeria ou PDF"
+                    >
+                      🖼️
+                    </button>
+                    {/* Adicionar ficheiro normal */}
+                    <button
+                      style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#F7F5F0", border: "1px solid #E4DED3", borderRadius: 7, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#2A241C", fontFamily: "'Inter', sans-serif" }}
+                      onClick={() => {
                       const input = document.createElement("input");
                       input.type = "file";
                       input.accept = ".pdf,.jpg,.jpeg,.png,.doc,.docx";
@@ -1620,9 +1730,19 @@ ${text}`
                       document.body.appendChild(input); input.click(); document.body.removeChild(input);
                     }}
                   >
-                    <IconUpload size={13} /> Adicionar ficheiro
+                    <IconUpload size={13} /> Ficheiro
                   </button>
+                  </div>
                 </div>
+
+                {/* Resultado da importação médica */}
+                {medicalImportResult && (
+                  <div style={{ background: medicalImportResult.startsWith("✅") ? "#E8F5E9" : "#FFF5F4", border: `1px solid ${medicalImportResult.startsWith("✅") ? "#A5D6A7" : "#F2C4BC"}`, borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 500, color: medicalImportResult.startsWith("✅") ? "#2E7D32" : "#9B3A2F", marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
+                    <span>{medicalImportResult}</span>
+                    <button onClick={() => setMedicalImportResult(null)} style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 14, color: "#A39B8E" }}>✕</button>
+                  </div>
+                )}
+
                 {(openUtente.files || []).length === 0 ? (
                   <div style={{ background: "#F7F5F0", borderRadius: 8, padding: "12px", fontSize: 13, color: "#A39B8E", textAlign: "center" as const }}>
                     Nenhum documento ainda.<br /><span style={{ fontSize: 11 }}>PDF, imagens, Word (máx. 5MB)</span>
