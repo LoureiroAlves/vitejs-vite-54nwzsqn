@@ -396,6 +396,147 @@ function StockPage({ onBack }: { onBack: () => void }) {
     if (filterCategory === cat) setFilterCategory("Todos");
   };
 
+  const [importingPhoto, setImportingPhoto] = useState(false);
+  const [photoImportResult, setPhotoImportResult] = useState<string | null>(null);
+
+  const handleImportFromPhoto = (useCamera: boolean) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    if (useCamera) input.capture = "environment";
+    input.onchange = async (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      setImportingPhoto(true);
+      setPhotoImportResult(null);
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => resolve((ev.target?.result as string).split(",")[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const mediaType = file.type as "image/jpeg" | "image/png" | "image/webp";
+
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 1500,
+            messages: [{
+              role: "user",
+              content: [
+                {
+                  type: "image",
+                  source: { type: "base64", media_type: mediaType, data: base64 }
+                },
+                {
+                  type: "text",
+                  text: `Analisa esta imagem de uma fatura ou documento de compra de produtos para um lar de idosos.
+Para cada produto encontrado, extrai a informação e categoriza-o.
+Categorias disponíveis: Alimentos, Limpeza, Higiene, Escritório, Outros.
+
+Devolve APENAS um array JSON válido, sem mais nenhum texto. Cada objeto deve ter:
+- name: nome do produto
+- category: uma das categorias acima
+- quantity: quantidade (número)
+- unit: unidade (ex: "un", "kg", "L", "cx", "pack")
+- note: observação opcional (ex: referência, marca)
+
+Exemplo:
+[{"name":"Detergente Roupa","category":"Limpeza","quantity":5,"unit":"L","note":"Marca X"},{"name":"Arroz","category":"Alimentos","quantity":10,"unit":"kg","note":null}]
+
+Se não conseguires identificar produtos, devolve [].`
+                }
+              ]
+            }]
+          })
+        });
+
+        const data = await response.json();
+        const rawText = data.content?.map((c: any) => c.text || "").join("") || "";
+        const clean = rawText.replace(/```json|```/g, "").trim();
+        const parsed = JSON.parse(clean);
+
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          setPhotoImportResult("⚠️ Não foi possível identificar produtos na imagem.");
+          setImportingPhoto(false);
+          return;
+        }
+
+        // Para cada produto — adicionar ao stock ou fazer entrada se já existir
+        let novos = 0;
+        let entradas = 0;
+
+        parsed.forEach((item: any) => {
+          const nome = item.name || "Produto desconhecido";
+          const qty = Number(item.quantity) || 1;
+          const unit = item.unit || "un";
+          const category = item.category || "Outros";
+          const note = item.note || "";
+
+          // Verificar se o produto já existe
+          const existing = products.find((p) =>
+            p.name.toLowerCase().includes(nome.toLowerCase()) ||
+            nome.toLowerCase().includes(p.name.toLowerCase())
+          );
+
+          if (existing) {
+            // Fazer entrada
+            setProducts((prev) => prev.map((p) =>
+              p.id === existing.id ? { ...p, quantity: p.quantity + qty } : p
+            ));
+            const mov: StockMovement = {
+              id: Date.now().toString() + Math.random().toString(36).slice(2),
+              productId: existing.id,
+              productName: existing.name,
+              type: "entrada",
+              quantity: qty,
+              who: "Importação por foto",
+              note: note || "Importado automaticamente de fatura",
+              date: new Date().toISOString(),
+            };
+            setMovements((prev) => [mov, ...prev]);
+            entradas++;
+          } else {
+            // Criar produto novo
+            const novoProd: StockProduct = {
+              id: Date.now().toString() + Math.random().toString(36).slice(2),
+              name: nome,
+              category,
+              unit,
+              quantity: qty,
+              minQuantity: 1,
+            };
+            setProducts((prev) => [...prev, novoProd]);
+            const mov: StockMovement = {
+              id: Date.now().toString() + Math.random().toString(36).slice(2),
+              productId: novoProd.id,
+              productName: nome,
+              type: "entrada",
+              quantity: qty,
+              who: "Importação por foto",
+              note: note || "Criado automaticamente de fatura",
+              date: new Date().toISOString(),
+            };
+            setMovements((prev) => [mov, ...prev]);
+            novos++;
+          }
+        });
+
+        setPhotoImportResult(`✅ ${novos} produto(s) criado(s) e ${entradas} entrada(s) registada(s)!`);
+      } catch (err) {
+        setPhotoImportResult("❌ Erro ao processar a imagem. Tente novamente.");
+      }
+      setImportingPhoto(false);
+    };
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
+  };
+
   const addProduct = () => {
     if (!newProduct.name.trim()) return;
     const prod: StockProduct = {
@@ -512,7 +653,36 @@ function StockPage({ onBack }: { onBack: () => void }) {
             <div style={stockStyles.logoSub}>Inventário e movimentos</div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {/* Botão câmara */}
+          <button
+            style={{ border: "none", background: importingPhoto ? "#A39B8E" : "#2A241C", borderRadius: 8, padding: "7px 12px", cursor: importingPhoto ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6, color: "#F5B944", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
+            onClick={() => !importingPhoto && handleImportFromPhoto(true)}
+            onMouseEnter={(e) => showTip2(e, "Tirar foto a uma fatura (câmara)")}
+            onMouseLeave={hideTip2}
+            disabled={importingPhoto}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            {importingPhoto ? "⏳" : "Fatura"}
+          </button>
+          {/* Botão galeria */}
+          <button
+            style={{ border: "none", background: "#F0E8D5", borderRadius: 8, padding: "7px 12px", cursor: importingPhoto ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6, color: "#B08A4E", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
+            onClick={() => !importingPhoto && handleImportFromPhoto(false)}
+            onMouseEnter={(e) => showTip2(e, "Escolher imagem de fatura da galeria")}
+            onMouseLeave={hideTip2}
+            disabled={importingPhoto}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            Galeria
+          </button>
+          <div style={{ width: 1, height: 24, background: "#E4DED3" }} />
           <button style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "7px 10px", cursor: "pointer", display: "flex", alignItems: "center", color: "#6B6358" }}
             onClick={exportExcel} onMouseEnter={(e) => showTip2(e, "Exportar para Excel")} onMouseLeave={hideTip2}>
             <IconFileSpreadsheet size={16} />
@@ -523,6 +693,14 @@ function StockPage({ onBack }: { onBack: () => void }) {
           </button>
         </div>
       </header>
+
+      {/* Resultado da importação por foto */}
+      {photoImportResult && (
+        <div style={{ maxWidth: 1300, margin: "0 auto 16px", background: photoImportResult.startsWith("✅") ? "#E8F5E9" : "#FFF5F4", border: `1px solid ${photoImportResult.startsWith("✅") ? "#A5D6A7" : "#F2C4BC"}`, borderRadius: 10, padding: "12px 16px", fontSize: 14, fontWeight: 500, color: photoImportResult.startsWith("✅") ? "#2E7D32" : "#9B3A2F", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{photoImportResult}</span>
+          <button onClick={() => setPhotoImportResult(null)} style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 16, color: "#A39B8E" }}>✕</button>
+        </div>
+      )}
 
       {/* Summary cards */}
       <div style={stockStyles.summaryGrid}>
@@ -967,6 +1145,133 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
     if (openUtente?.id === id) setOpenUtente(null);
   };
 
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
+
+  const handleImportFromDoc = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".pdf,.doc,.docx,.txt";
+    input.onchange = async (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      setImporting(true);
+      setImportResult(null);
+      try {
+        // Converter ficheiro para base64
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const result = ev.target?.result as string;
+            resolve(result.split(",")[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const isPDF = file.type === "application/pdf";
+        const isWord = file.name.endsWith(".docx") || file.name.endsWith(".doc");
+        const isText = file.type === "text/plain";
+
+        let messages: any[];
+
+        if (isPDF) {
+          messages = [{
+            role: "user",
+            content: [
+              {
+                type: "document",
+                source: { type: "base64", media_type: "application/pdf", data: base64 }
+              },
+              {
+                type: "text",
+                text: `Analisa este documento e extrai informação de utentes/residentes de um lar de idosos.
+Para cada utente encontrado, devolve um objeto JSON com estes campos (usa null se não encontrares):
+- name: nome completo
+- birthDate: data de nascimento no formato DD/MM/AAAA
+- room: número ou nome do quarto
+- entryDate: data de entrada no lar no formato DD/MM/AAAA
+- familyContact: nome do familiar/contacto de emergência
+- familyPhone: telefone do familiar
+- notes: observações relevantes
+
+Responde APENAS com um array JSON válido, sem mais nenhum texto. Exemplo:
+[{"name":"Maria Silva","birthDate":"01/01/1940","room":"12A","entryDate":null,"familyContact":"João Silva","familyPhone":"912345678","notes":null}]`
+              }
+            ]
+          }];
+        } else {
+          // Para Word/texto, pedir ao utilizador para copiar o texto
+          const text = isText
+            ? atob(base64)
+            : "Não foi possível ler o conteúdo do ficheiro Word diretamente. Por favor converta para PDF ou texto.";
+
+          if (isWord) {
+            setImportResult("⚠️ Para ficheiros Word, por favor guarde como PDF e tente novamente.");
+            setImporting(false);
+            return;
+          }
+
+          messages = [{
+            role: "user",
+            content: `Analisa este texto e extrai informação de utentes/residentes de um lar de idosos.
+Para cada utente encontrado, devolve um objeto JSON com estes campos (usa null se não encontrares):
+- name, birthDate (DD/MM/AAAA), room, entryDate (DD/MM/AAAA), familyContact, familyPhone, notes
+
+Responde APENAS com um array JSON válido, sem mais nenhum texto.
+
+Texto:
+${text}`
+          }];
+        }
+
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 1000,
+            messages,
+          })
+        });
+
+        const data = await response.json();
+        const rawText = data.content?.map((c: any) => c.text || "").join("") || "";
+
+        // Limpar e parsear JSON
+        const clean = rawText.replace(/```json|```/g, "").trim();
+        const parsed = JSON.parse(clean);
+
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          setImportResult("⚠️ Não foi possível encontrar utentes no documento.");
+          setImporting(false);
+          return;
+        }
+
+        // Adicionar utentes extraídos
+        const novos: Utente[] = parsed.map((u: any) => ({
+          id: Date.now().toString() + Math.random().toString(36).slice(2),
+          name: u.name || "Nome desconhecido",
+          birthDate: u.birthDate || undefined,
+          room: u.room || undefined,
+          entryDate: u.entryDate || undefined,
+          familyContact: u.familyContact || undefined,
+          familyPhone: u.familyPhone || undefined,
+          notes: u.notes || undefined,
+        }));
+
+        setUtentes((prev) => [...prev, ...novos]);
+        setImportResult(`✅ ${novos.length} utente(s) importado(s) com sucesso!`);
+      } catch (err) {
+        setImportResult("❌ Erro ao processar o documento. Tente novamente.");
+      }
+      setImporting(false);
+    };
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
+  };
+
   const updateUtente = (id: string, updates: Partial<Utente>) => {
     setUtentes((prev) => prev.map((u) => u.id === id ? { ...u, ...updates } : u));
     if (openUtente?.id === id) setOpenUtente((prev) => prev ? { ...prev, ...updates } : prev);
@@ -1023,23 +1328,28 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
           </button>
         </div>
       </header>
-      <div style={{ display: "flex", gap: 10, maxWidth: 1300, margin: "0 auto 20px", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 10, maxWidth: 1300, margin: "0 auto 12px", alignItems: "center", flexWrap: "wrap" as const }}>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Pesquisar por nome ou quarto..."
           style={{ flex: 1, border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", colorScheme: "light" as const }}
         />
+        <button
+          onClick={handleImportFromDoc}
+          disabled={importing}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: importing ? "#A39B8E" : "#5B8DBE", color: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 600, cursor: importing ? "default" : "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
+          onMouseEnter={(e) => showTip(e, "Importar utentes de PDF com IA")}
+          onMouseLeave={hideTip}
+        >
+          {importing ? "⏳ A processar..." : "✨ Importar de PDF"}
+        </button>
         {showAdd ? (
           <div style={{ display: "flex", gap: 8 }}>
-            <input
-              autoFocus
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+            <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") addUtente(); if (e.key === "Escape") { setShowAdd(false); setNewName(""); } }}
               placeholder="Nome do utente"
-              style={{ border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", colorScheme: "light" as const, width: 220 }}
-            />
+              style={{ border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", colorScheme: "light" as const, width: 220 }} />
             <button onMouseDown={(e) => e.preventDefault()} onClick={addUtente} style={{ background: "#2A241C", color: "#FBF9F5", border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Adicionar</button>
             <button onMouseDown={(e) => e.preventDefault()} onClick={() => { setShowAdd(false); setNewName(""); }} style={{ background: "transparent", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 14px", fontSize: 13, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
           </div>
@@ -1049,6 +1359,14 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
           </button>
         )}
       </div>
+
+      {/* Resultado da importação */}
+      {importResult && (
+        <div style={{ maxWidth: 1300, margin: "0 auto 16px", background: importResult.startsWith("✅") ? "#E8F5E9" : "#FFF5F4", border: `1px solid ${importResult.startsWith("✅") ? "#A5D6A7" : "#F2C4BC"}`, borderRadius: 10, padding: "12px 16px", fontSize: 14, fontWeight: 500, color: importResult.startsWith("✅") ? "#2E7D32" : "#9B3A2F", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{importResult}</span>
+          <button onClick={() => setImportResult(null)} style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 16, color: "#A39B8E" }}>✕</button>
+        </div>
+      )}
 
       {/* Grelha de utentes */}
       {filteredUtentes.length === 0 ? (
