@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -2388,16 +2389,12 @@ export default function App() {
 
       {/* Página inicial */}
       {isHomePage && (
-        <div style={{ maxWidth: 680, margin: "0 auto", padding: "48px 0", position: "relative" as const }}>
-          {/* Fundo verde escuro na página toda */}
-          <style>{`
-            body { background: #1E3A1E !important; }
-          `}</style>
+        <div style={{ position: "fixed" as const, inset: 0, background: "#1E3A1E", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
 
-          {/* Logo marca de água ESQUERDA — canto superior esquerdo */}
+          {/* Logo SVG marca de água — canto superior esquerdo, bem contido */}
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
-            style={{ position: "absolute" as const, top: -60, left: -60, width: 300, height: 300, opacity: 0.15, pointerEvents: "none" as const, zIndex: 0 }}>
-            <circle cx="50" cy="50" r="48" fill="#2D6A2D"/>
+            style={{ position: "absolute" as const, top: -40, left: -40, width: 260, height: 260, opacity: 0.15, pointerEvents: "none" as const }}>
+            <circle cx="50" cy="50" r="48" fill="#4A8A4A"/>
             <rect x="46" y="62" width="8" height="22" rx="3" fill="white"/>
             <path d="M46 80 Q36 82 30 88" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
             <path d="M54 80 Q64 82 70 88" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
@@ -2405,131 +2402,84 @@ export default function App() {
             <ellipse cx="34" cy="47" rx="13" ry="16" fill="white" transform="rotate(-15 34 47)"/>
             <ellipse cx="66" cy="47" rx="13" ry="16" fill="white" transform="rotate(15 66 47)"/>
             <ellipse cx="50" cy="24" rx="10" ry="14" fill="white"/>
-            <ellipse cx="50" cy="39" rx="8" ry="10" fill="#2D6A2D" opacity="0.3"/>
           </svg>
-          {/* Título */}
-          <div style={{ textAlign: "center" as const, marginBottom: 52 }}>
-            <div style={{ width: 80, height: 80, borderRadius: 24, background: "#2A241C", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F5B944" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 21V7l9-4 9 4v14" />
-                <path d="M9 21V13h6v8" />
-                <path d="M9 9h.01M12 9h.01M15 9h.01M9 13h.01M15 13h.01" />
-              </svg>
+
+          {/* Conteúdo centrado */}
+          <div style={{ position: "relative" as const, zIndex: 1, width: "100%", maxWidth: 680, padding: "0 24px" }}>
+
+            {/* Título */}
+            <div style={{ textAlign: "center" as const, marginBottom: 48 }}>
+              <div style={{ width: 80, height: 80, borderRadius: 24, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F5B944" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 21V7l9-4 9 4v14"/>
+                  <path d="M9 21V13h6v8"/>
+                  <path d="M9 9h.01M12 9h.01M15 9h.01M9 13h.01M15 13h.01"/>
+                </svg>
+              </div>
+              <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 700, margin: "0 0 8px", color: "#FFFFFF" }}>
+                Associação Oliveirense de Socorros Mútuos
+              </h1>
+              <p style={{ fontSize: 14, color: "#8FBF8F", margin: 0 }}>Complexo Intergeracional Quinta dos Avós</p>
             </div>
-            <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 700, margin: "0 0 8px", color: "#F5F5F0" }}>
-              Associação Oliveirense de Socorros Mútuos
-            </h1>
-            <p style={{ fontSize: 14, color: "#A8C5A0", margin: 0 }}>Complexo Intergeracional Quinta dos Avós</p>
-          </div>
 
-          {/* Conteúdo por cima da marca de água */}
-          <div style={{ position: "relative" as const, zIndex: 1 }}>
+            {/* Aniversários */}
+            {birthdayAlerts.length > 0 && (
+              <div style={{ marginBottom: 28 }}>
+                {birthdayAlerts.map((alert, idx) => (
+                  <div key={idx} style={{
+                    background: alert.isToday ? "linear-gradient(135deg, #FFF8E1, #FCE4EC)" : "linear-gradient(135deg, #F3F8FF, #EDE7F6)",
+                    border: `2px solid ${alert.isToday ? "#FFD54F" : "#B39DDB"}`,
+                    borderRadius: 20, padding: "20px 24px", display: "flex", alignItems: "center", gap: 18, marginBottom: 12,
+                  }}>
+                    <div style={{ fontSize: 52, lineHeight: 1, flexShrink: 0 }}>{alert.isToday ? "🎂" : "🎁"}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, color: "#2A241C", marginBottom: 4 }}>{alert.name}</div>
+                      <div style={{ fontSize: 14, color: "#6B6358", fontWeight: 500 }}>{alert.isToday ? `🎉 Hoje faz ${alert.age} anos! Parabéns!` : `🔔 Amanhã faz ${alert.age} anos`}</div>
+                    </div>
+                    <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 36, fontWeight: 800, color: alert.isToday ? "#F9A825" : "#7E57C2", lineHeight: 1, flexShrink: 0 }}>{alert.age}</div>
+                  </div>
+                ))}
+              </div>
+            )}
 
-          {/* Aniversários */}
-          {birthdayAlerts.length > 0 && (
-            <div style={{ marginBottom: 28 }}>
-              {birthdayAlerts.map((alert, idx) => (
-                <div key={idx} style={{
-                  background: alert.isToday
-                    ? "linear-gradient(135deg, #FFF8E1 0%, #FFF3E0 50%, #FCE4EC 100%)"
-                    : "linear-gradient(135deg, #F3F8FF 0%, #EDE7F6 100%)",
-                  border: `2px solid ${alert.isToday ? "#FFD54F" : "#B39DDB"}`,
-                  borderRadius: 20,
-                  padding: "20px 24px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 18,
-                  marginBottom: 12,
-                  boxShadow: alert.isToday ? "0 4px 20px rgba(255,213,79,0.3)" : "0 4px 20px rgba(179,157,219,0.2)",
-                }}>
-                  {/* Ícone animado */}
-                  <div style={{
-                    fontSize: 52,
-                    lineHeight: 1,
-                    flexShrink: 0,
-                    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))",
-                    animation: alert.isToday ? "bounce 1s infinite" : undefined,
-                  }}>
-                    {alert.isToday ? "🎂" : "🎁"}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{
-                      fontFamily: "'Space Grotesk', sans-serif",
-                      fontSize: 20,
-                      fontWeight: 700,
-                      color: "#2A241C",
-                      marginBottom: 4,
-                    }}>
-                      {alert.name}
-                    </div>
-                    <div style={{ fontSize: 14, color: "#6B6358", fontWeight: 500 }}>
-                      {alert.isToday
-                        ? `🎉 Hoje faz ${alert.age} anos! Parabéns!`
-                        : `🔔 Amanhã faz ${alert.age} anos`}
-                    </div>
-                  </div>
-                  <div style={{
-                    fontFamily: "'Space Grotesk', sans-serif",
-                    fontSize: 36,
-                    fontWeight: 800,
-                    color: alert.isToday ? "#F9A825" : "#7E57C2",
-                    lineHeight: 1,
-                    flexShrink: 0,
-                  }}>
-                    {alert.age}
-                  </div>
+            {/* 3 botões */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+              <button onClick={() => setActivePage("schedule")}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(232,177,74,0.4)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
+                <div style={{ width: 72, height: 72, borderRadius: 22, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconUsers size={36} color="#B08A4E" />
                 </div>
-              ))}
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                  Colaboradores
+                </div>
+              </button>
+
+              <button onClick={() => setActivePage("utentes")}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(91,141,190,0.4)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
+                <div style={{ width: 72, height: 72, borderRadius: 22, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconUserCircle size={36} color="#3A5A70" />
+                </div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                  Utentes
+                </div>
+              </button>
+
+              <button onClick={() => setActivePage("stock")}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(111,168,111,0.4)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
+                <div style={{ width: 72, height: 72, borderRadius: 22, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconBox size={36} color="#3B6D11" />
+                </div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                  Stock
+                </div>
+              </button>
             </div>
-          )}
-
-          {/* 3 botões grandes */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-            {/* Colaboradores */}
-            <button
-              onClick={() => setActivePage("schedule")}
-              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 2px 12px rgba(42,36,28,0.06)" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E8B14A"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(232,177,74,0.22)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px rgba(42,36,28,0.06)"; (e.currentTarget as HTMLElement).style.transform = "none"; }}
-            >
-              <div style={{ width: 72, height: 72, borderRadius: 22, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <IconUsers size={36} color="#B08A4E" />
-              </div>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
-                Colaboradores
-              </div>
-            </button>
-
-            {/* Utentes */}
-            <button
-              onClick={() => setActivePage("utentes")}
-              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 2px 12px rgba(42,36,28,0.06)" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#5B8DBE"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(91,141,190,0.22)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px rgba(42,36,28,0.06)"; (e.currentTarget as HTMLElement).style.transform = "none"; }}
-            >
-              <div style={{ width: 72, height: 72, borderRadius: 22, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <IconUserCircle size={36} color="#3A5A70" />
-              </div>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
-                Utentes
-              </div>
-            </button>
-
-            {/* Stock */}
-            <button
-              onClick={() => setActivePage("stock")}
-              style={{ background: "#FFFFFF", border: "2px solid #E4DED3", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 2px 12px rgba(42,36,28,0.06)" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#6FA86F"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(111,168,111,0.22)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E4DED3"; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px rgba(42,36,28,0.06)"; (e.currentTarget as HTMLElement).style.transform = "none"; }}
-            >
-              <div style={{ width: 72, height: 72, borderRadius: 22, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <IconBox size={36} color="#3B6D11" />
-              </div>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
-                Stock
-              </div>
-            </button>
-          </div>
           </div>
         </div>
       )}
@@ -3867,4 +3817,3 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
-                                    
