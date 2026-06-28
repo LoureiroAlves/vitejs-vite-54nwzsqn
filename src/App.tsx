@@ -398,6 +398,10 @@ function StockPage({ onBack }: { onBack: () => void }) {
 
   const [importingPhoto, setImportingPhoto] = useState(false);
   const [photoImportResult, setPhotoImportResult] = useState<string | null>(null);
+  const [faturas, setFaturas] = useState<{ nome: string; url: string; data: string; produtos: number }[]>(() => {
+    try { return JSON.parse(window.localStorage?.getItem?.("turnos-faturas-v1") || "[]"); } catch { return []; }
+  });
+  const [showFaturas, setShowFaturas] = useState(false);
 
   const handleImportFromPhoto = (useCamera: boolean) => {
     const input = document.createElement("input");
@@ -416,9 +420,35 @@ function StockPage({ onBack }: { onBack: () => void }) {
           reader.onerror = reject;
           reader.readAsDataURL(file);
         });
-
         const mediaType = file.type as "image/jpeg" | "image/png" | "image/webp";
+        const now = new Date();
+        const dateStr = now.toLocaleDateString("pt-PT").replace(/\//g, "-");
+        const timeStr = now.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" }).replace(":", "h");
+        const ext = file.name.split(".").pop() || "jpg";
+        const imgFileName = `fatura_${dateStr}_${timeStr}.${ext}`;
 
+        // Upload da imagem para Supabase Storage
+        let faturaUrl = "";
+        try {
+          const uploadRes = await fetch(
+            `${SUPABASE_URL}/storage/v1/object/faturas/${imgFileName}`,
+            {
+              method: "POST",
+              headers: {
+                "apikey": SUPABASE_KEY,
+                "Authorization": `Bearer ${SUPABASE_KEY}`,
+                "Content-Type": file.type,
+                "x-upsert": "true",
+              },
+              body: file,
+            }
+          );
+          if (uploadRes.ok) {
+            faturaUrl = `${SUPABASE_URL}/storage/v1/object/public/faturas/${imgFileName}`;
+          }
+        } catch {}
+
+        // Analisar com Claude
         const response = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -428,28 +458,11 @@ function StockPage({ onBack }: { onBack: () => void }) {
             messages: [{
               role: "user",
               content: [
-                {
-                  type: "image",
-                  source: { type: "base64", media_type: mediaType, data: base64 }
-                },
-                {
-                  type: "text",
-                  text: `Analisa esta imagem de uma fatura ou documento de compra de produtos para um lar de idosos.
-Para cada produto encontrado, extrai a informação e categoriza-o.
-Categorias disponíveis: Alimentos, Limpeza, Higiene, Escritório, Outros.
-
-Devolve APENAS um array JSON válido, sem mais nenhum texto. Cada objeto deve ter:
-- name: nome do produto
-- category: uma das categorias acima
-- quantity: quantidade (número)
-- unit: unidade (ex: "un", "kg", "L", "cx", "pack")
-- note: observação opcional (ex: referência, marca)
-
-Exemplo:
-[{"name":"Detergente Roupa","category":"Limpeza","quantity":5,"unit":"L","note":"Marca X"},{"name":"Arroz","category":"Alimentos","quantity":10,"unit":"kg","note":null}]
-
-Se não conseguires identificar produtos, devolve [].`
-                }
+                { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+                { type: "text", text: `Analisa esta fatura e extrai os produtos para um lar de idosos.
+Categorias: Alimentos, Limpeza, Higiene, Escritório, Outros.
+Responde APENAS com array JSON: [{"name":"...","category":"...","quantity":1,"unit":"un","note":null}]
+Se não houver produtos, devolve [].` }
               ]
             }]
           })
@@ -457,8 +470,7 @@ Se não conseguires identificar produtos, devolve [].`
 
         const data = await response.json();
         const rawText = data.content?.map((c: any) => c.text || "").join("") || "";
-        const clean = rawText.replace(/```json|```/g, "").trim();
-        const parsed = JSON.parse(clean);
+        const parsed = JSON.parse(rawText.replace(/```json|```/g, "").trim());
 
         if (!Array.isArray(parsed) || parsed.length === 0) {
           setPhotoImportResult("⚠️ Não foi possível identificar produtos na imagem.");
@@ -466,69 +478,56 @@ Se não conseguires identificar produtos, devolve [].`
           return;
         }
 
-        // Para cada produto — adicionar ao stock ou fazer entrada se já existir
         let novos = 0;
         let entradas = 0;
+        const notaFatura = `Fatura ${dateStr} ${timeStr}`;
 
         parsed.forEach((item: any) => {
           const nome = item.name || "Produto desconhecido";
           const qty = Number(item.quantity) || 1;
           const unit = item.unit || "un";
           const category = item.category || "Outros";
-          const note = item.note || "";
+          const note = item.note ? `${item.note} · ${notaFatura}` : notaFatura;
 
-          // Verificar se o produto já existe
           const existing = products.find((p) =>
             p.name.toLowerCase().includes(nome.toLowerCase()) ||
             nome.toLowerCase().includes(p.name.toLowerCase())
           );
 
           if (existing) {
-            // Fazer entrada
             setProducts((prev) => prev.map((p) =>
               p.id === existing.id ? { ...p, quantity: p.quantity + qty } : p
             ));
-            const mov: StockMovement = {
+            setMovements((prev) => [{
               id: Date.now().toString() + Math.random().toString(36).slice(2),
-              productId: existing.id,
-              productName: existing.name,
-              type: "entrada",
-              quantity: qty,
-              who: "Importação por foto",
-              note: note || "Importado automaticamente de fatura",
-              date: new Date().toISOString(),
-            };
-            setMovements((prev) => [mov, ...prev]);
+              productId: existing.id, productName: existing.name,
+              type: "entrada" as const, quantity: qty, who: "Fatura (foto)", note, date: new Date().toISOString(),
+            }, ...prev]);
             entradas++;
           } else {
-            // Criar produto novo
             const novoProd: StockProduct = {
               id: Date.now().toString() + Math.random().toString(36).slice(2),
-              name: nome,
-              category,
-              unit,
-              quantity: qty,
-              minQuantity: 1,
+              name: nome, category, unit, quantity: qty, minQuantity: 1,
             };
             setProducts((prev) => [...prev, novoProd]);
-            const mov: StockMovement = {
+            setMovements((prev) => [{
               id: Date.now().toString() + Math.random().toString(36).slice(2),
-              productId: novoProd.id,
-              productName: nome,
-              type: "entrada",
-              quantity: qty,
-              who: "Importação por foto",
-              note: note || "Criado automaticamente de fatura",
-              date: new Date().toISOString(),
-            };
-            setMovements((prev) => [mov, ...prev]);
+              productId: novoProd.id, productName: nome,
+              type: "entrada" as const, quantity: qty, who: "Fatura (foto)", note, date: new Date().toISOString(),
+            }, ...prev]);
             novos++;
           }
         });
 
-        setPhotoImportResult(`✅ ${novos} produto(s) criado(s) e ${entradas} entrada(s) registada(s)!`);
-      } catch (err) {
-        setPhotoImportResult("❌ Erro ao processar a imagem. Tente novamente.");
+        // Guardar no histórico de faturas
+        const novaFatura = { nome: imgFileName, url: faturaUrl, data: now.toISOString(), produtos: novos + entradas };
+        const novasFaturas = [novaFatura, ...faturas];
+        setFaturas(novasFaturas);
+        try { window.localStorage?.setItem?.("turnos-faturas-v1", JSON.stringify(novasFaturas)); } catch {}
+
+        setPhotoImportResult(`✅ ${novos} produto(s) criado(s), ${entradas} entrada(s)${faturaUrl ? " · 📎 Fatura guardada" : ""}!`);
+      } catch {
+        setPhotoImportResult("❌ Erro ao processar. Tente novamente.");
       }
       setImportingPhoto(false);
     };
@@ -536,7 +535,6 @@ Se não conseguires identificar produtos, devolve [].`
     input.click();
     document.body.removeChild(input);
   };
-
   const addProduct = () => {
     if (!newProduct.name.trim()) return;
     const prod: StockProduct = {
@@ -682,6 +680,17 @@ Se não conseguires identificar produtos, devolve [].`
             </svg>
             Galeria
           </button>
+          {/* Botão histórico de faturas */}
+          {faturas.length > 0 && (
+            <button
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, background: showFaturas ? "#2A241C" : "#F7F5F0", color: showFaturas ? "#F5B944" : "#6B6358", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
+              onClick={() => setShowFaturas((v) => !v)}
+              onMouseEnter={(e) => showTip2(e, `${faturas.length} fatura(s) arquivada(s)`)}
+              onMouseLeave={hideTip2}
+            >
+              📋 {faturas.length}
+            </button>
+          )}
           <div style={{ width: 1, height: 24, background: "#E4DED3" }} />
           <button style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "7px 10px", cursor: "pointer", display: "flex", alignItems: "center", color: "#6B6358" }}
             onClick={exportExcel} onMouseEnter={(e) => showTip2(e, "Exportar para Excel")} onMouseLeave={hideTip2}>
@@ -741,6 +750,38 @@ Se não conseguires identificar produtos, devolve [].`
                 </span>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Painel de faturas arquivadas */}
+      {showFaturas && faturas.length > 0 && (
+        <div style={{ maxWidth: 1300, margin: "0 auto 20px", background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 14, overflow: "hidden" }}>
+          <div style={{ padding: "14px 16px", borderBottom: "1px solid #EFEAE2", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 14 }}>📋 Arquivo de Faturas</span>
+            <button onClick={() => setShowFaturas(false)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#A39B8E", fontSize: 16 }}>✕</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column" as const }}>
+            {faturas.map((f, idx) => {
+              const d = new Date(f.data);
+              return (
+                <div key={idx} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", borderBottom: "1px solid #EFEAE2" }}>
+                  <span style={{ fontSize: 20 }}>🧾</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#2A241C" }}>{f.nome}</div>
+                    <div style={{ fontSize: 11, color: "#A39B8E" }}>
+                      {d.toLocaleDateString("pt-PT")} às {d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })} · {f.produtos} produto(s)
+                    </div>
+                  </div>
+                  {f.url && (
+                    <a href={f.url} target="_blank" rel="noopener noreferrer"
+                      style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#F7F5F0", border: "1px solid #E4DED3", borderRadius: 7, padding: "5px 10px", fontSize: 12, fontWeight: 600, color: "#5B8DBE", textDecoration: "none" }}>
+                      <IconDownload size={13} /> Ver
+                    </a>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -1631,6 +1672,7 @@ export default function App() {
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
+  const [syncDone, setSyncDone] = useState(false);
 
   const [employees, setEmployees] = useState<string[]>(() => {
     const stored = loadStoredData();
@@ -1695,7 +1737,8 @@ export default function App() {
     Promise.all([
       loadFromSupabase("escala_data"),
       loadFromSupabase("stock_data"),
-    ]).then(([escala, _stock]) => {
+      loadFromSupabase("utentes_data"),
+    ]).then(([escala, stock, utentesRow]) => {
       if (escala) {
         if (escala.employees?.length) setEmployees(escala.employees);
         if (escala.rv_employees?.length) setRvEmployees(escala.rv_employees);
@@ -1706,7 +1749,26 @@ export default function App() {
         if (escala.schedule_link) setScheduleLink(escala.schedule_link);
         if (escala.last_published && Object.keys(escala.last_published).length) setLastPublished(escala.last_published);
       }
+      // Não temos acesso direto aos estados do StockPage e UtentesPage aqui,
+      // mas podemos guardar no localStorage para que sejam carregados por eles
+      if (stock) {
+        try {
+          window.localStorage?.setItem?.("turnos-stock-data-v1", JSON.stringify({
+            products: stock.products ?? [],
+            movements: stock.movements ?? [],
+            customCategories: stock.custom_categories ?? [],
+          }));
+        } catch (e) {}
+      }
+      if (utentesRow?.utentes?.length) {
+        try {
+          window.localStorage?.setItem?.("turnos-utentes-data-v1", JSON.stringify({
+            utentes: utentesRow.utentes,
+          }));
+        } catch (e) {}
+      }
       setSyncStatus(escala ? "synced" : "idle");
+      setSyncDone(true);
     }).catch(() => setSyncStatus("error"));
   }, []);
 
@@ -2912,14 +2974,14 @@ export default function App() {
       {/* Página de stock */}
       {isStockPage && (
         <div style={{ margin: "-32px -24px", minHeight: "100vh" }}>
-          <StockPage onBack={() => setActivePage("home")} />
+          <StockPage key={`stock-${syncDone}`} onBack={() => setActivePage("home")} />
         </div>
       )}
 
       {/* Página de utentes */}
       {isUtentesPage && (
         <div style={{ margin: "-32px -24px", minHeight: "100vh" }}>
-          <UtentesPage onBack={() => setActivePage("home")} />
+          <UtentesPage key={`utentes-${syncDone}`} onBack={() => setActivePage("home")} />
         </div>
       )}
 
