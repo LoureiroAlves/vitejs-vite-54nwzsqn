@@ -2203,25 +2203,25 @@ export default function App() {
             alert("❌ Ficheiro JSON inválido. Certifique-se que foi gerado pelo Claude.");
             return;
           }
-          const mes = Number(data.mes) - 1; // 0-indexed
+          const mes = Number(data.mes); // mês real 1-12
           const ano = Number(data.ano);
+          const key = `${ano}-${String(mes).padStart(2, "0")}`;
           let total = 0;
           setSchedule((prev) => {
             const next = { ...prev };
+            if (!next[key]) next[key] = {};
             Object.entries(data.turnos).forEach(([nome, dias]: [string, any]) => {
+              if (!next[key][nome]) next[key][nome] = {};
               Object.entries(dias).forEach(([dia, turno]: [string, any]) => {
-                const key = `${ano}-${mes}`;
-                if (!next[key]) next[key] = {};
-                if (!next[key][nome]) next[key][nome] = {};
                 next[key][nome][Number(dia)] = String(turno);
                 total++;
               });
             });
             return next;
           });
-          // Navegar para o mês importado
+          // Navegar para o mês importado (month é 0-indexed na app)
           setYear(ano);
-          setMonth(mes);
+          setMonth(mes - 1);
           alert(`✅ Escala importada! ${Object.keys(data.turnos).length} colaborador(es), ${total} turnos para ${data.mes}/${data.ano}.`);
         } catch {
           alert("❌ Erro ao ler o ficheiro. Certifique-se que é um JSON válido.");
