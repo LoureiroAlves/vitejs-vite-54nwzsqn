@@ -893,8 +893,10 @@ function StockPage({ onBack }: { onBack: () => void }) {
                         <span style={{ fontSize: 11, color: "#A39B8E" }}>mín.</span>
                         <input
                           type="number"
-                          value={prod.minQuantity}
-                          onChange={(e) => setProducts((prev) => prev.map((p) => p.id === prod.id ? { ...p, minQuantity: Number(e.target.value) || 0 } : p))}
+                          min="0"
+                          placeholder="0"
+                          value={prod.minQuantity === 0 ? "" : prod.minQuantity}
+                          onChange={(e) => setProducts((prev) => prev.map((p) => p.id === prod.id ? { ...p, minQuantity: e.target.value === "" ? 0 : Number(e.target.value) } : p))}
                           style={{ width: 60, border: "1px solid #E4DED3", borderRadius: 6, padding: "3px 6px", fontSize: 11, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#A39B8E" }}
                         />
                         <span style={{ fontSize: 11, color: "#A39B8E" }}>{prod.unit}</span>
