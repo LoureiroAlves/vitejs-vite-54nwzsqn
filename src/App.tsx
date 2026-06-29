@@ -2188,6 +2188,52 @@ export default function App() {
     : "";
 
   // ---------- Backup / Restauro ----------
+  const handleImportScheduleJSON = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target?.result as string);
+          if (!data.turnos || !data.mes || !data.ano) {
+            alert("❌ Ficheiro JSON inválido. Certifique-se que foi gerado pelo Claude.");
+            return;
+          }
+          const mes = Number(data.mes) - 1; // 0-indexed
+          const ano = Number(data.ano);
+          let total = 0;
+          setSchedule((prev) => {
+            const next = { ...prev };
+            Object.entries(data.turnos).forEach(([nome, dias]: [string, any]) => {
+              Object.entries(dias).forEach(([dia, turno]: [string, any]) => {
+                const key = `${ano}-${mes}`;
+                if (!next[key]) next[key] = {};
+                if (!next[key][nome]) next[key][nome] = {};
+                next[key][nome][Number(dia)] = String(turno);
+                total++;
+              });
+            });
+            return next;
+          });
+          // Navegar para o mês importado
+          setYear(ano);
+          setMonth(mes);
+          alert(`✅ Escala importada! ${Object.keys(data.turnos).length} colaborador(es), ${total} turnos para ${data.mes}/${data.ano}.`);
+        } catch {
+          alert("❌ Erro ao ler o ficheiro. Certifique-se que é um JSON válido.");
+        }
+      };
+      reader.readAsText(file);
+    };
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
+  };
+
   const handleExportBackup = () => {
     const data = {
       version: 2,
@@ -2859,6 +2905,10 @@ export default function App() {
             <button className="tool-btn" style={{ ...styles.toolBtn, color: "#6B6358" }} onClick={handleImportBackup}
               onMouseEnter={(e) => showTip(e, "Importar backup (restaurar dados)")} onMouseLeave={hideTip} aria-label="Importar backup">
               <IconUpload size={16} />
+            </button>
+            <button className="tool-btn" style={{ ...styles.toolBtn, color: "#5B8DBE", fontWeight: 700, fontSize: 12 }} onClick={handleImportScheduleJSON}
+              onMouseEnter={(e) => showTip(e, "Importar escala de JSON (gerado pelo Claude)")} onMouseLeave={hideTip} aria-label="Importar escala JSON">
+              <IconDownload size={14} />&nbsp;JSON
             </button>
 
             {/* Menu impressão/PDF (dropdown) */}
