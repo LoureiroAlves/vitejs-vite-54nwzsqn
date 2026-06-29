@@ -47,22 +47,10 @@ const IconFileSpreadsheet = ({ size = 16, ...props }) => (
     <path d="M8 13h8M8 17h8M11 13v8" />
   </svg>
 );
-const IconGlobe = ({ size = 16, ...props }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <circle cx="12" cy="12" r="10" />
-    <path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z" />
-  </svg>
-);
 const IconMail = ({ size = 16, ...props }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <rect x="2" y="4" width="20" height="16" rx="2" />
     <path d="m22 6-10 7L2 6" />
-  </svg>
-);
-const IconLink = ({ size = 16, ...props }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
   </svg>
 );
 const IconEraser = ({ size = 16, ...props }) => (
@@ -396,147 +384,12 @@ function StockPage({ onBack }: { onBack: () => void }) {
     if (filterCategory === cat) setFilterCategory("Todos");
   };
 
-  const [importingPhoto, setImportingPhoto] = useState(false);
-  const [photoImportResult, setPhotoImportResult] = useState<string | null>(null);
   const [faturas, setFaturas] = useState<{ nome: string; url: string; data: string; produtos: number }[]>(() => {
     try { return JSON.parse(window.localStorage?.getItem?.("turnos-faturas-v1") || "[]"); } catch { return []; }
   });
   const [showFaturas, setShowFaturas] = useState(false);
 
-  const _handleImportFromPhotoStock = (useCamera: boolean) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    if (useCamera) input.setAttribute("capture", "environment");
-    input.onchange = async (e: Event) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      setImportingPhoto(true);
-      setPhotoImportResult(null);
-      try {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => resolve((ev.target?.result as string).split(",")[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        const mediaType = file.type as "image/jpeg" | "image/png" | "image/webp";
-        const now = new Date();
-        const dateStr = now.toLocaleDateString("pt-PT").replace(/\//g, "-");
-        const timeStr = now.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" }).replace(":", "h");
-        const ext = file.name.split(".").pop() || "jpg";
-        const imgFileName = `fatura_${dateStr}_${timeStr}.${ext}`;
-
-        // Upload da imagem para Supabase Storage
-        let faturaUrl = "";
-        try {
-          const uploadRes = await fetch(
-            `${SUPABASE_URL}/storage/v1/object/faturas/${imgFileName}`,
-            {
-              method: "POST",
-              headers: {
-                "apikey": SUPABASE_KEY,
-                "Authorization": `Bearer ${SUPABASE_KEY}`,
-                "Content-Type": file.type,
-                "x-upsert": "true",
-              },
-              body: file,
-            }
-          );
-          if (uploadRes.ok) {
-            faturaUrl = `${SUPABASE_URL}/storage/v1/object/public/faturas/${imgFileName}`;
-          }
-        } catch {}
-
-        // Analisar com Claude
-        // Enviar para análise manual
-        throw new Error("manual");
-        const response = await fetch("/api/claude", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-6",
-            max_tokens: 1500,
-            messages: [{
-              role: "user",
-              content: [
-                { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-                { type: "text", text: `Analisa esta fatura e extrai os produtos para um lar de idosos.
-Categorias: Alimentos, Limpeza, Higiene, Escritório, Outros.
-Responde APENAS com array JSON: [{"name":"...","category":"...","quantity":1,"unit":"un","note":null}]
-Se não houver produtos, devolve [].` }
-              ]
-            }]
-          })
-        });
-
-        const data = await response.json();
-        const rawText = data.content?.map((c: any) => c.text || "").join("") || "";
-        const parsed = JSON.parse(rawText.replace(/```json|```/g, "").trim());
-
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-          setPhotoImportResult("⚠️ Não foi possível identificar produtos na imagem.");
-          setImportingPhoto(false);
-          return;
-        }
-
-        let novos = 0;
-        let entradas = 0;
-        const notaFatura = `Fatura ${dateStr} ${timeStr}`;
-
-        parsed.forEach((item: any) => {
-          const nome = item.name || "Produto desconhecido";
-          const qty = Number(item.quantity) || 1;
-          const unit = item.unit || "un";
-          const category = item.category || "Outros";
-          const note = item.note ? `${item.note} · ${notaFatura}` : notaFatura;
-
-          const existing = products.find((p) =>
-            p.name.toLowerCase().includes(nome.toLowerCase()) ||
-            nome.toLowerCase().includes(p.name.toLowerCase())
-          );
-
-          if (existing) {
-            setProducts((prev) => prev.map((p) =>
-              p.id === existing.id ? { ...p, quantity: p.quantity + qty } : p
-            ));
-            setMovements((prev) => [{
-              id: Date.now().toString() + Math.random().toString(36).slice(2),
-              productId: existing.id, productName: existing.name,
-              type: "entrada" as const, quantity: qty, who: "Fatura (foto)", note, date: new Date().toISOString(),
-            }, ...prev]);
-            entradas++;
-          } else {
-            const novoProd: StockProduct = {
-              id: Date.now().toString() + Math.random().toString(36).slice(2),
-              name: nome, category, unit, quantity: qty, minQuantity: 1,
-            };
-            setProducts((prev) => [...prev, novoProd]);
-            setMovements((prev) => [{
-              id: Date.now().toString() + Math.random().toString(36).slice(2),
-              productId: novoProd.id, productName: nome,
-              type: "entrada" as const, quantity: qty, who: "Fatura (foto)", note, date: new Date().toISOString(),
-            }, ...prev]);
-            novos++;
-          }
-        });
-
-        // Guardar no histórico de faturas
-        const novaFatura = { nome: imgFileName, url: faturaUrl, data: now.toISOString(), produtos: novos + entradas };
-        const novasFaturas = [novaFatura, ...faturas];
-        setFaturas(novasFaturas);
-        try { window.localStorage?.setItem?.("turnos-faturas-v1", JSON.stringify(novasFaturas)); } catch {}
-
-        setPhotoImportResult(`✅ ${novos} produto(s) criado(s), ${entradas} entrada(s)${faturaUrl ? " · 📎 Fatura guardada" : ""}!`);
-      } catch {
-        setPhotoImportResult("📸 Foto guardada! Envie-a no chat do Claude para eu extrair os produtos automaticamente.");
-      }
-      setImportingPhoto(false);
-    };
-    document.body.appendChild(input);
-    input.click();
-    document.body.removeChild(input);
-  };
+;
   const handleImportJSON = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -1313,201 +1166,10 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
     if (openUtente?.id === id) setOpenUtente(null);
   };
 
-  const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<string | null>(null);
-  const [importingPhotoU, setImportingPhotoU] = useState(false);
 
-  const handleImportFromPhoto = (useCamera: boolean) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    if (useCamera) input.setAttribute("capture", "environment");
-    input.onchange = async (e: Event) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      setImportingPhotoU(true);
-      setImportResult(null);
-      try {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => resolve((ev.target?.result as string).split(",")[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        const mediaType = file.type as "image/jpeg" | "image/png" | "image/webp";
-        // Enviar para análise manual
-        throw new Error("manual");
-        const response = await fetch("/api/claude", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-6",
-            max_tokens: 1000,
-            messages: [{
-              role: "user",
-              content: [
-                { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-                { type: "text", text: `Analisa esta imagem e extrai informação de utentes/residentes de um lar de idosos.
-Para cada utente encontrado devolve um array JSON com os campos (null se não encontrar):
-name, birthDate (DD/MM/AAAA), room, entryDate (DD/MM/AAAA), familyContact, familyPhone, notes
-Responde APENAS com o array JSON, sem mais texto. Ex: [{"name":"Maria","birthDate":"01/01/1940","room":"12A","entryDate":null,"familyContact":null,"familyPhone":null,"notes":null}]` }
-              ]
-            }]
-          })
-        });
-        const data = await response.json();
-        const raw = data.content?.map((c: any) => c.text || "").join("") || "";
-        const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-          setImportResult("⚠️ Não foi possível identificar utentes na imagem.");
-          setImportingPhotoU(false);
-          return;
-        }
-        const novos: Utente[] = parsed.map((u: any) => ({
-          id: Date.now().toString() + Math.random().toString(36).slice(2),
-          name: u.name || "Nome desconhecido",
-          birthDate: u.birthDate || undefined,
-          room: u.room || undefined,
-          entryDate: u.entryDate || undefined,
-          familyContact: u.familyContact || undefined,
-          familyPhone: u.familyPhone || undefined,
-          notes: u.notes || undefined,
-        }));
-        setUtentes((prev) => [...prev, ...novos]);
-        setImportResult(`✅ ${novos.length} utente(s) importado(s) da foto!`);
-      } catch {
-        setImportResult("📸 Imagem recebida! Envie-a no chat do Claude para eu extrair os dados dos utentes.");
-      }
-      setImportingPhotoU(false);
-    };
-    document.body.appendChild(input); input.click(); document.body.removeChild(input);
-  };
 
-  const _handleImportFromDoc = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".pdf,.doc,.docx,.txt";
-    input.onchange = async (e: Event) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      setImporting(true);
-      setImportResult(null);
-      try {
-        // Converter ficheiro para base64
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const result = ev.target?.result as string;
-            resolve(result.split(",")[1]);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
 
-        const isPDF = file.type === "application/pdf";
-        const isWord = file.name.endsWith(".docx") || file.name.endsWith(".doc");
-        const isText = file.type === "text/plain";
 
-        let messages: any[];
-
-        if (isPDF) {
-          messages = [{
-            role: "user",
-            content: [
-              {
-                type: "document",
-                source: { type: "base64", media_type: "application/pdf", data: base64 }
-              },
-              {
-                type: "text",
-                text: `Analisa este documento e extrai informação de utentes/residentes de um lar de idosos.
-Para cada utente encontrado, devolve um objeto JSON com estes campos (usa null se não encontrares):
-- name: nome completo
-- birthDate: data de nascimento no formato DD/MM/AAAA
-- room: número ou nome do quarto
-- entryDate: data de entrada no lar no formato DD/MM/AAAA
-- familyContact: nome do familiar/contacto de emergência
-- familyPhone: telefone do familiar
-- notes: observações relevantes
-
-Responde APENAS com um array JSON válido, sem mais nenhum texto. Exemplo:
-[{"name":"Maria Silva","birthDate":"01/01/1940","room":"12A","entryDate":null,"familyContact":"João Silva","familyPhone":"912345678","notes":null}]`
-              }
-            ]
-          }];
-        } else {
-          // Para Word/texto, pedir ao utilizador para copiar o texto
-          const text = isText
-            ? atob(base64)
-            : "Não foi possível ler o conteúdo do ficheiro Word diretamente. Por favor converta para PDF ou texto.";
-
-          if (isWord) {
-            setImportResult("⚠️ Para ficheiros Word, por favor guarde como PDF e tente novamente.");
-            setImporting(false);
-            return;
-          }
-
-          messages = [{
-            role: "user",
-            content: `Analisa este texto e extrai informação de utentes/residentes de um lar de idosos.
-Para cada utente encontrado, devolve um objeto JSON com estes campos (usa null se não encontrares):
-- name, birthDate (DD/MM/AAAA), room, entryDate (DD/MM/AAAA), familyContact, familyPhone, notes
-
-Responde APENAS com um array JSON válido, sem mais nenhum texto.
-
-Texto:
-${text}`
-          }];
-        }
-
-        // Enviar para análise manual
-        throw new Error("manual");
-        const response = await fetch("/api/claude", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-6",
-            max_tokens: 1000,
-            messages,
-          })
-        });
-
-        const data = await response.json();
-        const rawText = data.content?.map((c: any) => c.text || "").join("") || "";
-
-        // Limpar e parsear JSON
-        const clean = rawText.replace(/```json|```/g, "").trim();
-        const parsed = JSON.parse(clean);
-
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-          setImportResult("⚠️ Não foi possível encontrar utentes no documento.");
-          setImporting(false);
-          return;
-        }
-
-        // Adicionar utentes extraídos
-        const novos: Utente[] = parsed.map((u: any) => ({
-          id: Date.now().toString() + Math.random().toString(36).slice(2),
-          name: u.name || "Nome desconhecido",
-          birthDate: u.birthDate || undefined,
-          room: u.room || undefined,
-          entryDate: u.entryDate || undefined,
-          familyContact: u.familyContact || undefined,
-          familyPhone: u.familyPhone || undefined,
-          notes: u.notes || undefined,
-        }));
-
-        setUtentes((prev) => [...prev, ...novos]);
-        setImportResult(`✅ ${novos.length} utente(s) importado(s) com sucesso!`);
-      } catch (err) {
-        setImportResult("❌ Erro ao processar o documento. Tente novamente.");
-      }
-      setImporting(false);
-    };
-    document.body.appendChild(input);
-    input.click();
-    document.body.removeChild(input);
-  };
 
   const updateUtente = (id: string, updates: Partial<Utente>) => {
     setUtentes((prev) => prev.map((u) => u.id === id ? { ...u, ...updates } : u));
@@ -2359,72 +2021,7 @@ export default function App() {
   };
 
   // ---------- Página HTML partilhável (sem dados pessoais) ----------
-  const _handleExportEmployeePage = () => {
-    const rvTable = buildTableHTML(rvEmployees, {
-      showStats: false,
-      showCoverage: false,
-      sectionTitle: "Colaboradores — Recibo Verde",
-    });
-    const mainTable = buildTableHTML(employees, {
-      showStats: false,
-      showCoverage: true,
-      sectionTitle: "Equipa",
-    });
 
-    const now = new Date();
-    const updatedStr = `${now.toLocaleDateString("pt-PT")} às ${now.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}`;
-
-    const html = `
-<!DOCTYPE html>
-<html lang="pt">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Horário — ${MONTH_NAMES[month]} ${year}</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&display=swap');
-  * { box-sizing: border-box; }
-  body { font-family: 'Inter', Arial, sans-serif; background: #FBF9F5; color: #2A241C; margin: 0; padding: 20px 16px 40px; }
-  h1 { font-family: 'Space Grotesk', sans-serif; font-size: 22px; margin: 0 0 4px; text-align: center; }
-  h2.section-title { font-family: 'Space Grotesk', sans-serif; font-size: 14px; margin: 24px 0 8px; color: #6B6358; text-align: center; }
-  .updated { text-align: center; font-size: 12px; color: #A39B8E; margin: 0 0 16px; }
-  .scroll { overflow-x: auto; border: 1px solid #E4DED3; border-radius: 12px; background: #FFFFFF; max-width: 100%; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border-bottom: 1px solid #EFEAE2; border-right: 1px solid #EFEAE2; text-align: center; font-size: 13px; padding: 8px 4px; min-width: 38px; white-space: nowrap; }
-  th.name, td.name { text-align: left; padding-left: 12px; font-weight: 600; min-width: 130px; position: sticky; left: 0; background: #FFFFFF; z-index: 2; }
-  thead th.name { background: #FBF9F5; z-index: 3; }
-  thead th { background: #FBF9F5; font-size: 11px; color: #A39B8E; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
-  th.weekend, td.weekend { background: #F4EFE6; }
-  thead th.weekend { background: #F0E9DC; }
-  .dnum { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; color: #2A241C; }
-  .dletter { font-size: 9px; color: #A39B8E; margin-top: 2px; }
-  td.coverage { background: #FBF9F5; font-weight: 700; font-size: 11px; font-family: 'Space Grotesk', sans-serif; }
-  tr.coverage-row td.name { color: #6B6358; background: #FBF9F5; }
-  .sep { color: #D9D4CC; margin: 0 1px; }
-  .legend { margin-top: 16px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; font-size: 12px; color: #6B6358; }
-  .legend-item { display: flex; align-items: center; gap: 6px; }
-  .dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid rgba(0,0,0,0.06); }
-</style>
-</head>
-<body>
-  <h1>Horário — ${MONTH_NAMES[month]} ${year}</h1>
-  <p class="updated">Atualizado em ${updatedStr}</p>
-  <div class="scroll">${rvTable}</div>
-  <div class="scroll" style="margin-top:16px">${mainTable}</div>
-  <div class="legend">${legendHTML()}</div>
-</body>
-</html>`;
-
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `horario-${monthKey}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
 
   // ---------- Notificar colaboradores por email ----------
   const toggleSelectMode = () => {
@@ -2625,14 +2222,7 @@ export default function App() {
     document.body.removeChild(input);
   };
 
-  const _handleEditScheduleLink = () => {
-    const entered = window.prompt(
-      "Link do horário online (opcional, incluído no email aos colaboradores):",
-      scheduleLink
-    );
-    if (entered === null) return;
-    setScheduleLink(entered.trim());
-  };
+
 
   const handleNotify = () => {
     const recipients = allEmployees
@@ -2662,7 +2252,7 @@ export default function App() {
 
     // Gerar a página HTML dos colaboradores e publicar no Netlify
     // (o utilizador já deve ter o link — geramos a página para que atualize o ficheiro)
-    handleExportEmployeePage();
+    // handleExportEmployeePage removida
 
     const prevMonth = lastPublished?.[monthKey] || {};
     const changesByEmployee: Record<string, string[]> = {};
