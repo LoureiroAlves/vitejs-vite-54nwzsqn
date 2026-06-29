@@ -1270,19 +1270,22 @@ Exemplo: {"birthDate":null,"familyContact":"João Silva","familyPhone":"91234567
         const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
 
         // Atualizar ficha com os dados extraídos (só os campos não vazios)
-        const updates: Partial<Utente> = {};
-        if (parsed.birthDate && !openUtente?.birthDate) updates.birthDate = parsed.birthDate;
-        if (parsed.familyContact && !openUtente?.familyContact) updates.familyContact = parsed.familyContact;
-        if (parsed.familyPhone && !openUtente?.familyPhone) updates.familyPhone = parsed.familyPhone;
-        if (parsed.notes) {
-          updates.notes = openUtente?.notes
-            ? `${openUtente.notes}\n\n--- Relatório ${dateStr} ---\n${parsed.notes}`
-            : `--- Relatório ${dateStr} ---\n${parsed.notes}`;
+        if (openUtente) {
+          const updates: Partial<Utente> = {};
+          if (parsed.birthDate && !openUtente.birthDate) updates.birthDate = parsed.birthDate;
+          if (parsed.familyContact && !openUtente.familyContact) updates.familyContact = parsed.familyContact;
+          if (parsed.familyPhone && !openUtente.familyPhone) updates.familyPhone = parsed.familyPhone;
+          if (parsed.notes) {
+            updates.notes = openUtente.notes
+              ? `${openUtente.notes}\n\n--- Relatório ${dateStr} ---\n${parsed.notes}`
+              : `--- Relatório ${dateStr} ---\n${parsed.notes}`;
+          }
+          if (Object.keys(updates).length > 0) updateUtente(openUtente.id, updates);
+          const camposAtualizados = Object.keys(updates).length;
+          setMedicalImportResult(`✅ Documento guardado${camposAtualizados > 0 ? ` e ${camposAtualizados} campo(s) atualizado(s)` : " (nenhum campo novo encontrado)"}!`);
+        } else {
+          setMedicalImportResult("✅ Documento guardado!");
         }
-        if (Object.keys(updates).length > 0 && openUtente) updateUtente(openUtente.id, updates);
-
-        const camposAtualizados = Object.keys(updates).length;
-        setMedicalImportResult(`✅ Documento guardado${camposAtualizados > 0 ? ` e ${camposAtualizados} campo(s) atualizado(s)` : " (nenhum campo novo encontrado)"}!`);
       } catch {
         setMedicalImportResult("📸 Documento guardado! Envie-o no chat do Claude para eu extrair a informação médica.");
       }
