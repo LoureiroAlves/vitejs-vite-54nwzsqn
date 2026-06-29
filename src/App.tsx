@@ -1016,6 +1016,7 @@ interface Utente {
   room?: string;
   entryDate?: string;
   notes?: string;
+  photo?: string;
   files?: { name: string; type: string; data: string; uploadedAt: string }[];
 }
 
@@ -1290,8 +1291,28 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
               >
                 <IconTrash2 size={13} />
               </button>
-              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif" }}>
-                {getInitials(utente.name)}
+              <div
+                style={{ width: 56, height: 56, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", overflow: "hidden", flexShrink: 0 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "image/*";
+                  input.onchange = (ev: Event) => {
+                    const file = (ev.target as HTMLInputElement).files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (r) => updateUtente(utente.id, { photo: r.target?.result as string });
+                    reader.readAsDataURL(file);
+                  };
+                  document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                }}
+                title="Clique para alterar a foto"
+              >
+                {utente.photo
+                  ? <img src={utente.photo} alt={utente.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : getInitials(utente.name)
+                }
               </div>
               <div style={{ textAlign: "center" as const }}>
                 <div style={{ fontWeight: 600, fontSize: 14, color: "#2A241C" }}>{utente.name}</div>
@@ -1313,8 +1334,26 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
           <div className="side-panel-mobile" style={{ position: "fixed" as const, top: 0, right: 0, bottom: 0, width: 400, maxWidth: "100vw", background: "#FFFFFF", boxShadow: "-4px 0 24px rgba(42,36,28,0.12)", zIndex: 51, display: "flex", flexDirection: "column" as const, overflow: "hidden" as const }}>
             {/* Header do painel */}
             <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #EFEAE2", display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", flexShrink: 0 }}>
-                {getInitials(u.name)}
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", flexShrink: 0, overflow: "hidden", cursor: "pointer", position: "relative" as const }}
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "image/*";
+                  input.onchange = (ev: Event) => {
+                    const file = (ev.target as HTMLInputElement).files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (r) => updateUtente(u.id, { photo: r.target?.result as string });
+                    reader.readAsDataURL(file);
+                  };
+                  document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                }}
+                title="Clique para alterar a foto"
+              >
+                {u.photo
+                  ? <img src={u.photo} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : getInitials(u.name)
+                }
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{u.name}</div>
