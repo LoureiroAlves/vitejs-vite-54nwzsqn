@@ -403,7 +403,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
   });
   const [showFaturas, setShowFaturas] = useState(false);
 
-  const handleImportFromPhoto = (useCamera: boolean) => {
+  const _handleImportFromPhotoStock = (useCamera: boolean) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
@@ -722,34 +722,6 @@ Se não houver produtos, devolve [].` }
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {/* Botão câmara */}
-          <button
-            style={{ border: "none", background: importingPhoto ? "#A39B8E" : "#2A241C", borderRadius: 8, padding: "7px 12px", cursor: importingPhoto ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6, color: "#F5B944", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
-            onClick={() => !importingPhoto && handleImportFromPhoto(true)}
-            onMouseEnter={(e) => showTip2(e, "Tirar foto a uma fatura (câmara)")}
-            onMouseLeave={hideTip2}
-            disabled={importingPhoto}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-              <circle cx="12" cy="13" r="4"/>
-            </svg>
-            {importingPhoto ? "⏳" : "Fatura"}
-          </button>
-          {/* Botão galeria */}
-          <button
-            style={{ border: "none", background: "#F0E8D5", borderRadius: 8, padding: "7px 12px", cursor: importingPhoto ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6, color: "#B08A4E", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
-            onClick={() => !importingPhoto && handleImportFromPhoto(false)}
-            onMouseEnter={(e) => showTip2(e, "Escolher imagem de fatura da galeria")}
-            onMouseLeave={hideTip2}
-            disabled={importingPhoto}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-            </svg>
-            Galeria
-          </button>
           {/* Botão importar JSON */}
           <button
             style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 8, padding: "7px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
@@ -1411,7 +1383,7 @@ Responde APENAS com o array JSON, sem mais texto. Ex: [{"name":"Maria","birthDat
     document.body.appendChild(input); input.click(); document.body.removeChild(input);
   };
 
-  const handleImportFromDoc = () => {
+  const _handleImportFromDoc = () => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".pdf,.doc,.docx,.txt";
@@ -1608,39 +1580,8 @@ ${text}`
         >
           <IconDownload size={14} /> JSON
         </button>
-        <button
-          onClick={handleImportFromDoc}
-          disabled={importing || importingPhotoU}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: importing ? "#A39B8E" : "#5B8DBE", color: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 600, cursor: importing ? "default" : "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
-          onMouseEnter={(e) => showTip(e, "Importar utentes de PDF com IA")}
-          onMouseLeave={hideTip}
-        >
-          {importing ? "⏳ A processar..." : "✨ PDF"}
-        </button>
-        {/* Botão câmara */}
-        <button
-          onClick={() => !importingPhotoU && handleImportFromPhoto(true)}
-          disabled={importingPhotoU || importing}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: importingPhotoU ? "#A39B8E" : "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: importingPhotoU ? "default" : "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
-          onMouseEnter={(e) => showTip(e, "Tirar foto a documento (câmara)")}
-          onMouseLeave={hideTip}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-            <circle cx="12" cy="13" r="4"/>
-          </svg>
-          {importingPhotoU ? "⏳" : "📷"}
-        </button>
-        {/* Botão galeria */}
-        <button
-          onClick={() => !importingPhotoU && handleImportFromPhoto(false)}
-          disabled={importingPhotoU || importing}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: importingPhotoU ? "default" : "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
-          onMouseEnter={(e) => showTip(e, "Escolher foto da galeria")}
-          onMouseLeave={hideTip}
-        >
-          🖼️
-        </button>
+
+
         {showAdd ? (
           <div style={{ display: "flex", gap: 8 }}>
             <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)}
@@ -2418,7 +2359,7 @@ export default function App() {
   };
 
   // ---------- Página HTML partilhável (sem dados pessoais) ----------
-  const handleExportEmployeePage = () => {
+  const _handleExportEmployeePage = () => {
     const rvTable = buildTableHTML(rvEmployees, {
       showStats: false,
       showCoverage: false,
@@ -2684,7 +2625,7 @@ export default function App() {
     document.body.removeChild(input);
   };
 
-  const handleEditScheduleLink = () => {
+  const _handleEditScheduleLink = () => {
     const entered = window.prompt(
       "Link do horário online (opcional, incluído no email aos colaboradores):",
       scheduleLink
@@ -3261,14 +3202,7 @@ export default function App() {
               onMouseEnter={(e) => showTip(e, "Notificar colaboradores por email")} onMouseLeave={hideTip} aria-label="Notificar">
               <IconMail size={16} />
             </button>
-            <button className="tool-btn" style={{ ...styles.toolBtn, color: "#6B6358" }} onClick={handleExportEmployeePage}
-              onMouseEnter={(e) => showTip(e, "Gerar página HTML para colaboradores")} onMouseLeave={hideTip} aria-label="Partilhar">
-              <IconGlobe size={16} />
-            </button>
-            <button className="tool-btn" style={{ ...styles.toolBtn, color: scheduleLink ? "#B08A4E" : "#6B6358" }} onClick={handleEditScheduleLink}
-              onMouseEnter={(e) => showTip(e, scheduleLink ? `Link definido: ${scheduleLink}` : "Definir link online (opcional)")} onMouseLeave={hideTip} aria-label="Link">
-              <IconLink size={16} />
-            </button>
+
 
             <div style={styles.toolDivider} />
 
