@@ -838,6 +838,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
                         <select
                           value={prod.category}
                           onChange={(e) => setProducts((prev) => prev.map((p) => p.id === prod.id ? { ...p, category: e.target.value } : p))}
+                          onKeyDown={(e) => { if (e.key === "Enter") setEditingProduct(null); }}
                           style={{ fontSize: 11, border: "1px solid #E4DED3", borderRadius: 6, padding: "2px 6px", background: "#FAFAF8", fontFamily: "'Inter', sans-serif", color: "#2A241C" }}
                         >
                           {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -864,6 +865,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
                       <input
                         value={prod.name}
                         onChange={(e) => setProducts((prev) => prev.map((p) => p.id === prod.id ? { ...p, name: e.target.value } : p))}
+                        onKeyDown={(e) => { if (e.key === "Enter") setEditingProduct(null); }}
                         style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "6px 8px", fontSize: 14, fontWeight: 600, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, marginBottom: 8 }}
                         autoFocus
                       />
@@ -880,6 +882,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
                         <input
                           value={prod.unit}
                           onChange={(e) => setProducts((prev) => prev.map((p) => p.id === prod.id ? { ...p, unit: e.target.value } : p))}
+                          onKeyDown={(e) => { if (e.key === "Enter") setEditingProduct(null); }}
                           style={{ width: 50, border: "1px solid #E4DED3", borderRadius: 6, padding: "3px 6px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#A39B8E", marginLeft: 4 }}
                         />
                       ) : (
@@ -897,6 +900,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
                           placeholder="0"
                           value={prod.minQuantity === 0 ? "" : prod.minQuantity}
                           onChange={(e) => setProducts((prev) => prev.map((p) => p.id === prod.id ? { ...p, minQuantity: e.target.value === "" ? 0 : Number(e.target.value) } : p))}
+                          onKeyDown={(e) => { if (e.key === "Enter") setEditingProduct(null); }}
                           style={{ width: 60, border: "1px solid #E4DED3", borderRadius: 6, padding: "3px 6px", fontSize: 11, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#A39B8E" }}
                         />
                         <span style={{ fontSize: 11, color: "#A39B8E" }}>{prod.unit}</span>
