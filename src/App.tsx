@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -2328,6 +2327,7 @@ export default function App() {
           const ano = Number(data.ano);
           const key = `${ano}-${String(mes).padStart(2, "0")}`;
           let total = 0;
+          let newSchedule: any = {};
           setSchedule((prev) => {
             const next = { ...prev };
             if (!next[key]) next[key] = {};
@@ -2338,12 +2338,22 @@ export default function App() {
                 total++;
               });
             });
+            newSchedule = next;
             return next;
           });
           // Navegar para o mês importado (month é 0-indexed na app)
           setYear(ano);
           setMonth(mes - 1);
-          alert(`✅ Escala importada! ${Object.keys(data.turnos).length} colaborador(es), ${total} turnos para ${data.mes}/${data.ano}.`);
+          // Guardar no Supabase imediatamente com o novo schedule
+          setTimeout(() => {
+            saveToSupabase("escala_data", {
+              schedule: newSchedule,
+            }).then(() => {
+              alert(`✅ Escala importada e guardada na nuvem! ${Object.keys(data.turnos).length} colaborador(es), ${total} turnos para ${data.mes}/${data.ano}.`);
+            }).catch(() => {
+              alert(`✅ Escala importada! ${Object.keys(data.turnos).length} colaborador(es), ${total} turnos.\n⚠️ Não foi possível guardar na nuvem — verifique a ligação.`);
+            });
+          }, 500);
         } catch {
           alert("❌ Erro ao ler o ficheiro. Certifique-se que é um JSON válido.");
         }
