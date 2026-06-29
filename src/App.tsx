@@ -2522,7 +2522,7 @@ export default function App() {
 
   // ---------- Aniversários de utentes ----------
   const birthdayAlerts = useMemo(() => {
-    const alerts: { name: string; age: number; isToday: boolean; isTomorrow: boolean }[] = [];
+    const alerts: { name: string; age: number; isToday: boolean; isTomorrow: boolean; photo?: string }[] = [];
     const now = today;
     const todayDay = now.getDate();
     const todayMonth = now.getMonth() + 1;
@@ -2545,7 +2545,7 @@ export default function App() {
       const isToday = day === todayDay && month === todayMonth;
       const isTomorrow = day === tomorrowDay && month === tomorrowMonth;
       if (isToday || isTomorrow) {
-        alerts.push({ name: u.name, age: isToday ? age : age, isToday, isTomorrow });
+        alerts.push({ name: u.name, age: isToday ? age : age, isToday, isTomorrow, photo: u.photo });
       }
     });
     return alerts;
@@ -2688,7 +2688,12 @@ export default function App() {
                     border: `2px solid ${alert.isToday ? "#FFD54F" : "#B39DDB"}`,
                     borderRadius: 20, padding: "20px 24px", display: "flex", alignItems: "center", gap: 18, marginBottom: 12,
                   }}>
-                    <div style={{ fontSize: 52, lineHeight: 1, flexShrink: 0 }}>{alert.isToday ? "🎂" : "🎁"}</div>
+                    <div style={{ width: 64, height: 64, borderRadius: "50%", flexShrink: 0, background: alert.isToday ? "#FFD54F" : "#B39DDB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, overflow: "hidden", boxShadow: alert.isToday ? "0 4px 12px rgba(255,213,79,0.4)" : "0 4px 12px rgba(179,157,219,0.4)", animation: alert.isToday ? "bounce 1s infinite" : undefined }}>
+                      {alert.photo
+                        ? <img src={alert.photo} alt={alert.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : (alert.isToday ? "🎂" : "🎁")
+                      }
+                    </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, color: "#2A241C", marginBottom: 4 }}>{alert.name}</div>
                       <div style={{ fontSize: 14, color: "#6B6358", fontWeight: 500 }}>{alert.isToday ? `🎉 Hoje faz ${alert.age} anos! Parabéns!` : `🔔 Amanhã faz ${alert.age} anos`}</div>
