@@ -332,6 +332,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
   const [activeTab, setActiveTab] = useState<"inventory" | "movement" | "history">("inventory");
   const [filterCategory, setFilterCategory] = useState<string>("Todos");
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<string | null>(null);
   const [showMoveModal, setShowMoveModal] = useState<StockProduct | null>(null);
   const [moveType, setMoveType] = useState<"entrada" | "saida">("entrada");
   const [moveQty, setMoveQty] = useState<number | string>("");
@@ -832,19 +833,75 @@ function StockPage({ onBack }: { onBack: () => void }) {
                 return (
                   <div key={prod.id} style={{ ...stockStyles.productCard, ...(isEmpty ? stockStyles.productCardEmpty : isLow ? stockStyles.productCardLow : {}) }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                      <span style={{ ...stockStyles.categoryBadge, background: catColor + "22", color: catColor }}>{prod.category}</span>
-                      <button style={stockStyles.deleteBtn2} onClick={() => removeProduct(prod.id)} title="Remover produto">
-                        <IconTrash2 size={13} />
-                      </button>
+                      {editingProduct === prod.id ? (
+                        <select
+                          value={prod.category}
+                          onChange={(e) => setProducts((prev) => prev.map((p) => p.id === prod.id ? { ...p, category: e.target.value } : p))}
+                          style={{ fontSize: 11, border: "1px solid #E4DED3", borderRadius: 6, padding: "2px 6px", background: "#FAFAF8", fontFamily: "'Inter', sans-serif", color: "#2A241C" }}
+                        >
+                          {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      ) : (
+                        <span style={{ ...stockStyles.categoryBadge, background: catColor + "22", color: catColor }}>{prod.category}</span>
+                      )}
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <button
+                          style={{ border: "none", background: editingProduct === prod.id ? "#2A241C" : "transparent", borderRadius: 6, padding: "3px 6px", cursor: "pointer", color: editingProduct === prod.id ? "#F5B944" : "#A39B8E" }}
+                          onClick={() => setEditingProduct(editingProduct === prod.id ? null : prod.id)}
+                          title={editingProduct === prod.id ? "Fechar edição" : "Editar produto"}
+                        >
+                          {editingProduct === prod.id ? "✓" : "✏️"}
+                        </button>
+                        <button style={stockStyles.deleteBtn2} onClick={() => removeProduct(prod.id)} title="Remover produto">
+                          <IconTrash2 size={13} />
+                        </button>
+                      </div>
                     </div>
-                    <div style={stockStyles.productName}>{prod.name}</div>
+
+                    {/* Nome editável */}
+                    {editingProduct === prod.id ? (
+                      <input
+                        value={prod.name}
+                        onChange={(e) => setProducts((prev) => prev.map((p) => p.id === prod.id ? { ...p, name: e.target.value } : p))}
+                        style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "6px 8px", fontSize: 14, fontWeight: 600, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, marginBottom: 8 }}
+                        autoFocus
+                      />
+                    ) : (
+                      <div style={stockStyles.productName}>{prod.name}</div>
+                    )}
+
                     <div style={stockStyles.productQty}>
                       <span style={{ fontSize: 28, fontWeight: 700, color: isEmpty ? "#C2554A" : isLow ? "#E8A020" : "#2A241C", fontFamily: "'Space Grotesk', sans-serif" }}>
                         {prod.quantity}
                       </span>
-                      <span style={{ fontSize: 13, color: "#A39B8E", marginLeft: 4 }}>{prod.unit}</span>
+                      {/* Unidade editável */}
+                      {editingProduct === prod.id ? (
+                        <input
+                          value={prod.unit}
+                          onChange={(e) => setProducts((prev) => prev.map((p) => p.id === prod.id ? { ...p, unit: e.target.value } : p))}
+                          style={{ width: 50, border: "1px solid #E4DED3", borderRadius: 6, padding: "3px 6px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#A39B8E", marginLeft: 4 }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: 13, color: "#A39B8E", marginLeft: 4 }}>{prod.unit}</span>
+                      )}
                     </div>
-                    <div style={{ fontSize: 11, color: "#A39B8E", marginBottom: 12 }}>mín. {prod.minQuantity} {prod.unit}</div>
+
+                    {/* Mínimo editável */}
+                    {editingProduct === prod.id ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+                        <span style={{ fontSize: 11, color: "#A39B8E" }}>mín.</span>
+                        <input
+                          type="number"
+                          value={prod.minQuantity}
+                          onChange={(e) => setProducts((prev) => prev.map((p) => p.id === prod.id ? { ...p, minQuantity: Number(e.target.value) || 0 } : p))}
+                          style={{ width: 60, border: "1px solid #E4DED3", borderRadius: 6, padding: "3px 6px", fontSize: 11, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#A39B8E" }}
+                        />
+                        <span style={{ fontSize: 11, color: "#A39B8E" }}>{prod.unit}</span>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 11, color: "#A39B8E", marginBottom: 12 }}>mín. {prod.minQuantity} {prod.unit}</div>
+                    )}
+
                     {(isLow || isEmpty) && (
                       <div style={{ ...stockStyles.stockBadge, background: isEmpty ? "#C2554A" : "#E8B14A", color: "#fff" }}>
                         {isEmpty ? "Esgotado" : "Stock baixo"}
