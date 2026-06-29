@@ -1200,7 +1200,8 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
   const [medicalImportResult, setMedicalImportResult] = useState<string | null>(null);
 
   const handleImportMedicalReport = (useCamera: boolean) => {
-    if (!openUtente) return;
+    const currentUtente = openUtente;
+    if (!currentUtente) return;
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*,.pdf";
@@ -1217,76 +1218,16 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
           reader.onerror = reject;
           reader.readAsDataURL(file);
         });
-
-        const isPDF = file.type === "application/pdf";
-        const mediaType = file.type as "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
-
-        // Guardar o documento na ficha do utente
         const now = new Date();
         const dateStr = now.toLocaleDateString("pt-PT").replace(/\//g, "-");
         const timeStr = now.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" }).replace(":", "h");
         const docName = `relatorio_${dateStr}_${timeStr}.${file.name.split(".").pop() || "jpg"}`;
         const fileData = `data:${file.type};base64,${base64}`;
         const newFile = { name: docName, type: file.type, data: fileData, uploadedAt: now.toISOString() };
-        updateUtente(openUtente.id, { files: [...(openUtente.files || []), newFile] });
-
-        // Analisar com Claude
-        const msgContent: any[] = isPDF
-          ? [
-              { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
-              { type: "text", text: `Analisa este relatório médico e extrai informação relevante para a ficha de um utente de lar de idosos.
-Devolve APENAS um objeto JSON com os campos que encontrares (null se não encontrar):
-- birthDate: data de nascimento (DD/MM/AAAA)
-- familyContact: nome do familiar/responsável
-- familyPhone: telefone do familiar
-- notes: observações médicas relevantes (diagnósticos, medicação, alergias, necessidades especiais — resumido)
-Exemplo: {"birthDate":null,"familyContact":"João Silva","familyPhone":"912345678","notes":"Hipertensão. Medicação: Amlodipina 5mg. Alergia à penicilina."}` }
-            ]
-          : [
-              { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-              { type: "text", text: `Analisa este relatório médico/documento e extrai informação relevante para a ficha de um utente de lar de idosos.
-Devolve APENAS um objeto JSON com os campos que encontrares (null se não encontrar):
-- birthDate: data de nascimento (DD/MM/AAAA)
-- familyContact: nome do familiar/responsável
-- familyPhone: telefone do familiar
-- notes: observações médicas relevantes (diagnósticos, medicação, alergias, necessidades especiais — resumido)
-Exemplo: {"birthDate":null,"familyContact":"João Silva","familyPhone":"912345678","notes":"Hipertensão. Medicação: Amlodipina 5mg. Alergia à penicilina."}` }
-            ];
-
-        // Enviar para análise manual
-        throw new Error("manual");
-        const response = await fetch("/api/claude", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-6",
-            max_tokens: 800,
-            messages: [{ role: "user", content: msgContent }]
-          })
-        });
-
-        const data = await response.json();
-        const raw = data.content?.map((c: any) => c.text || "").join("") || "";
-        const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
-
-        // Atualizar ficha com os dados extraídos (só os campos não vazios)
-        if (openUtente) {
-          const updates: Partial<Utente> = {};
-          if (parsed.birthDate && !openUtente?.birthDate)
-if (parsed.familyContact && !openUtente?.familyContact)
-if (parsed.familyPhone && !openUtente?.familyPhone)
-            updates.notes = openUtente.notes
-              ? `${openUtente.notes}\n\n--- Relatório ${dateStr} ---\n${parsed.notes}`
-              : `--- Relatório ${dateStr} ---\n${parsed.notes}`;
-          }
-          if (Object.keys(updates).length > 0) updateUtente(openUtente.id, updates);
-          const camposAtualizados = Object.keys(updates).length;
-          setMedicalImportResult(`✅ Documento guardado${camposAtualizados > 0 ? ` e ${camposAtualizados} campo(s) atualizado(s)` : " (nenhum campo novo encontrado)"}!`);
-        } else {
-          setMedicalImportResult("✅ Documento guardado!");
-        }
-      } catch {
+        updateUtente(currentUtente.id, { files: [...(currentUtente.files || []), newFile] });
         setMedicalImportResult("📸 Documento guardado! Envie-o no chat do Claude para eu extrair a informação médica.");
+      } catch {
+        setMedicalImportResult("❌ Erro ao guardar o documento.");
       }
       setImportingMedical(false);
     };
@@ -1761,17 +1702,17 @@ ${text}`
       )}
 
       {/* Painel lateral da ficha do utente */}
-      {openUtente && (
+      {openUtente && (() => { const u = openUtente; return (
         <>
           <div style={{ position: "fixed" as const, inset: 0, background: "rgba(42,36,28,0.3)", zIndex: 50 }} onClick={() => setOpenUtente(null)} />
           <div className="side-panel-mobile" style={{ position: "fixed" as const, top: 0, right: 0, bottom: 0, width: 400, maxWidth: "100vw", background: "#FFFFFF", boxShadow: "-4px 0 24px rgba(42,36,28,0.12)", zIndex: 51, display: "flex", flexDirection: "column" as const, overflow: "hidden" as const }}>
             {/* Header do painel */}
             <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #EFEAE2", display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", flexShrink: 0 }}>
-                {getInitials(openUtente.name)}
+                {getInitials(u.name)}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{openUtente.name}</div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{u.name}</div>
                 <div style={{ fontSize: 12, color: "#A39B8E", marginTop: 2 }}>Ficha do utente</div>
               </div>
               <button style={{ border: "none", background: "transparent", cursor: "pointer", color: "#A39B8E", padding: 4 }} onClick={() => setOpenUtente(null)}>
@@ -1792,7 +1733,7 @@ ${text}`
                   let formatted = digits;
                   if (digits.length > 2) formatted = digits.slice(0, 2) + "/" + digits.slice(2);
                   if (digits.length > 4) formatted = digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4);
-                  updateUtente(openUtente.id, { [key]: formatted });
+                  updateUtente(u.id, { [key]: formatted });
                 };
 
                 return (
@@ -1800,7 +1741,7 @@ ${text}`
                     <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
                     {multiline ? (
                       <textarea rows={3} value={value} placeholder={placeholder}
-                        onChange={(e) => updateUtente(openUtente.id, { [key]: e.target.value })}
+                        onChange={(e) => updateUtente(u.id, { [key]: e.target.value })}
                         style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }} />
                     ) : isDate ? (
                       <input
@@ -1814,7 +1755,7 @@ ${text}`
                       />
                     ) : (
                       <input type="text" value={value} placeholder={placeholder}
-                        onChange={(e) => updateUtente(openUtente.id, { [key]: e.target.value })}
+                        onChange={(e) => updateUtente(u.id, { [key]: e.target.value })}
                         style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, colorScheme: "light" as const }} />
                     )}
                   </div>
@@ -1857,7 +1798,7 @@ ${text}`
                           reader.onload = (ev) => {
                             const fileData = ev.target?.result as string;
                             const newFile = { name: file.name, type: file.type, data: fileData, uploadedAt: new Date().toISOString() };
-                            updateUtente(openUtente.id, { files: [...(openUtente.files || []), newFile] });
+                            updateUtente(u.id, { files: [...(u.files || []), newFile] });
                           };
                           reader.readAsDataURL(file);
                         });
@@ -1878,13 +1819,13 @@ ${text}`
                   </div>
                 )}
 
-                {(openUtente.files || []).length === 0 ? (
+                {(u.files || []).length === 0 ? (
                   <div style={{ background: "#F7F5F0", borderRadius: 8, padding: "12px", fontSize: 13, color: "#A39B8E", textAlign: "center" as const }}>
                     Nenhum documento ainda.<br /><span style={{ fontSize: 11 }}>PDF, imagens, Word (máx. 5MB)</span>
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
-                    {(openUtente.files || []).map((file, idx) => (
+                    {(u.files || []).map((file, idx) => (
                       <div key={idx} style={{ display: "flex", alignItems: "center", gap: 10, background: "#F7F5F0", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 12px" }}>
                         <span style={{ fontSize: 18 }}>{file.type.startsWith("image/") ? "🖼️" : file.type === "application/pdf" ? "📄" : "📎"}</span>
                         <div style={{ flex: 1, overflow: "hidden" }}>
@@ -1896,7 +1837,7 @@ ${text}`
                           <IconDownload size={14} />
                         </button>
                         <button style={{ border: "none", background: "#FFFFFF", borderRadius: 6, padding: "5px 8px", cursor: "pointer", color: "#C2554A" }}
-                          onClick={() => { if (!window.confirm(`Remover "${file.name}"?`)) return; updateUtente(openUtente.id, { files: (openUtente.files || []).filter((_, i) => i !== idx) }); }}>
+                          onClick={() => { if (!window.confirm(`Remover "${file.name}"?`)) return; updateUtente(u.id, { files: (u.files || []).filter((_, i) => i !== idx) }); }}>
                           <IconX size={14} />
                         </button>
                       </div>
@@ -1913,7 +1854,7 @@ ${text}`
             </div>
           </div>
         </>
-      )}
+      ); })()}
     </div>
   );
 }
