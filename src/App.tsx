@@ -384,9 +384,10 @@ function StockPage({ onBack }: { onBack: () => void }) {
     if (filterCategory === cat) setFilterCategory("Todos");
   };
 
-  const [faturas, setFaturas] = useState<{ nome: string; url: string; data: string; produtos: number }[]>(() => {
+  const [faturas] = useState<{ nome: string; url: string; data: string; produtos: number }[]>(() => {
     try { return JSON.parse(window.localStorage?.getItem?.("turnos-faturas-v1") || "[]"); } catch { return []; }
   });
+  const [photoImportResult, setPhotoImportResult] = useState<string | null>(null);
   const [showFaturas, setShowFaturas] = useState(false);
 
 ;
@@ -1023,6 +1024,7 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
   const [importingMedical, setImportingMedical] = useState(false);
   const [medicalImportResult, setMedicalImportResult] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<string | null>(null);
 
   const handleImportMedicalReport = (useCamera: boolean) => {
     const currentUtente = openUtente;
