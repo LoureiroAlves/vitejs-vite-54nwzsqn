@@ -449,6 +449,8 @@ function StockPage({ onBack }: { onBack: () => void }) {
         } catch {}
 
         // Analisar com Claude
+        // Enviar para análise manual
+        throw new Error("manual");
         const response = await fetch("/api/claude", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -527,7 +529,7 @@ Se não houver produtos, devolve [].` }
 
         setPhotoImportResult(`✅ ${novos} produto(s) criado(s), ${entradas} entrada(s)${faturaUrl ? " · 📎 Fatura guardada" : ""}!`);
       } catch {
-        setPhotoImportResult("❌ Erro ao processar. Tente novamente.");
+        setPhotoImportResult("📸 Foto guardada! Envie-a no chat do Claude para eu extrair os produtos automaticamente.");
       }
       setImportingPhoto(false);
     };
@@ -535,6 +537,74 @@ Se não houver produtos, devolve [].` }
     input.click();
     document.body.removeChild(input);
   };
+  const handleImportJSON = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target?.result as string);
+          if (!data.produtos || !Array.isArray(data.produtos)) {
+            alert("❌ Ficheiro JSON inválido. Certifique-se que foi gerado pelo Claude.");
+            return;
+          }
+          let novos = 0;
+          let entradas = 0;
+          const nota = data.fatura ? `Fatura: ${data.fatura}` : "Importado via JSON";
+
+          data.produtos.forEach((item: any) => {
+            const nome = item.name || item.nome || "Produto desconhecido";
+            const qty = Number(item.quantity || item.quantidade) || 1;
+            const unit = item.unit || item.unidade || "un";
+            const category = item.category || item.categoria || "Outros";
+            const note = item.note || item.nota || nota;
+
+            const existing = products.find((p) =>
+              p.name.toLowerCase().includes(nome.toLowerCase()) ||
+              nome.toLowerCase().includes(p.name.toLowerCase())
+            );
+
+            if (existing) {
+              setProducts((prev) => prev.map((p) =>
+                p.id === existing.id ? { ...p, quantity: p.quantity + qty } : p
+              ));
+              setMovements((prev) => [{
+                id: Date.now().toString() + Math.random().toString(36).slice(2),
+                productId: existing.id, productName: existing.name,
+                type: "entrada" as const, quantity: qty, who: "Importação JSON", note, date: new Date().toISOString(),
+              }, ...prev]);
+              entradas++;
+            } else {
+              const novoProd: StockProduct = {
+                id: Date.now().toString() + Math.random().toString(36).slice(2),
+                name: nome, category, unit, quantity: qty, minQuantity: 1,
+              };
+              setProducts((prev) => [...prev, novoProd]);
+              setMovements((prev) => [{
+                id: Date.now().toString() + Math.random().toString(36).slice(2),
+                productId: novoProd.id, productName: nome,
+                type: "entrada" as const, quantity: qty, who: "Importação JSON", note, date: new Date().toISOString(),
+              }, ...prev]);
+              novos++;
+            }
+          });
+
+          alert(`✅ ${novos} produto(s) criado(s) e ${entradas} entrada(s) registada(s)!`);
+        } catch {
+          alert("❌ Erro ao ler o ficheiro. Certifique-se que é um JSON válido.");
+        }
+      };
+      reader.readAsText(file);
+    };
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
+  };
+
   const addProduct = () => {
     if (!newProduct.name.trim()) return;
     const prod: StockProduct = {
@@ -680,7 +750,16 @@ Se não houver produtos, devolve [].` }
             </svg>
             Galeria
           </button>
-          {/* Botão histórico de faturas */}
+          {/* Botão importar JSON */}
+          <button
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 8, padding: "7px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
+            onClick={handleImportJSON}
+            onMouseEnter={(e) => showTip2(e, "Importar fatura em JSON (gerado pelo Claude)")}
+            onMouseLeave={hideTip2}
+          >
+            <IconDownload size={14} /> JSON
+          </button>
+          <div style={{ width: 1, height: 24, background: "#E4DED3" }} />
           {faturas.length > 0 && (
             <button
               style={{ display: "inline-flex", alignItems: "center", gap: 6, background: showFaturas ? "#2A241C" : "#F7F5F0", color: showFaturas ? "#F5B944" : "#6B6358", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
@@ -1174,6 +1253,8 @@ Devolve APENAS um objeto JSON com os campos que encontrares (null se não encont
 Exemplo: {"birthDate":null,"familyContact":"João Silva","familyPhone":"912345678","notes":"Hipertensão. Medicação: Amlodipina 5mg. Alergia à penicilina."}` }
             ];
 
+        // Enviar para análise manual
+        throw new Error("manual");
         const response = await fetch("/api/claude", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1203,7 +1284,7 @@ Exemplo: {"birthDate":null,"familyContact":"João Silva","familyPhone":"91234567
         const camposAtualizados = Object.keys(updates).length;
         setMedicalImportResult(`✅ Documento guardado${camposAtualizados > 0 ? ` e ${camposAtualizados} campo(s) atualizado(s)` : " (nenhum campo novo encontrado)"}!`);
       } catch {
-        setMedicalImportResult("❌ Erro ao processar o documento.");
+        setMedicalImportResult("📸 Documento guardado! Envie-o no chat do Claude para eu extrair a informação médica.");
       }
       setImportingMedical(false);
     };
@@ -1263,6 +1344,45 @@ Exemplo: {"birthDate":null,"familyContact":"João Silva","familyPhone":"91234567
     w.focus(); setTimeout(() => w.print(), 300);
   };
 
+  const handleImportUtenteJSON = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target?.result as string);
+          const lista = Array.isArray(data) ? data : data.utentes;
+          if (!lista || !Array.isArray(lista)) {
+            alert("❌ Ficheiro JSON inválido. Certifique-se que foi gerado pelo Claude.");
+            return;
+          }
+          const novos: Utente[] = lista.map((u: any) => ({
+            id: Date.now().toString() + Math.random().toString(36).slice(2),
+            name: u.name || u.nome || "Nome desconhecido",
+            birthDate: u.birthDate || u.dataNascimento || undefined,
+            room: u.room || u.quarto || undefined,
+            entryDate: u.entryDate || u.dataEntrada || undefined,
+            familyContact: u.familyContact || u.contactoFamiliar || undefined,
+            familyPhone: u.familyPhone || u.telefoneFamiliar || undefined,
+            notes: u.notes || u.observacoes || undefined,
+          }));
+          setUtentes((prev) => [...prev, ...novos]);
+          alert(`✅ ${novos.length} utente(s) importado(s) com sucesso!`);
+        } catch {
+          alert("❌ Erro ao ler o ficheiro. Certifique-se que é um JSON válido.");
+        }
+      };
+      reader.readAsText(file);
+    };
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
+  };
+
   const addUtente = () => {
     const trimmed = newName.trim();
     if (!trimmed) return;
@@ -1300,6 +1420,8 @@ Exemplo: {"birthDate":null,"familyContact":"João Silva","familyPhone":"91234567
           reader.readAsDataURL(file);
         });
         const mediaType = file.type as "image/jpeg" | "image/png" | "image/webp";
+        // Enviar para análise manual
+        throw new Error("manual");
         const response = await fetch("/api/claude", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1339,7 +1461,7 @@ Responde APENAS com o array JSON, sem mais texto. Ex: [{"name":"Maria","birthDat
         setUtentes((prev) => [...prev, ...novos]);
         setImportResult(`✅ ${novos.length} utente(s) importado(s) da foto!`);
       } catch {
-        setImportResult("❌ Erro ao processar a imagem.");
+        setImportResult("📸 Imagem recebida! Envie-a no chat do Claude para eu extrair os dados dos utentes.");
       }
       setImportingPhotoU(false);
     };
@@ -1423,6 +1545,8 @@ ${text}`
           }];
         }
 
+        // Enviar para análise manual
+        throw new Error("manual");
         const response = await fetch("/api/claude", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1533,6 +1657,14 @@ ${text}`
           placeholder="Pesquisar por nome ou quarto..."
           style={{ flex: 1, border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", colorScheme: "light" as const }}
         />
+        <button
+          onClick={handleImportUtenteJSON}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
+          onMouseEnter={(e) => showTip(e, "Importar utentes de JSON (gerado pelo Claude)")}
+          onMouseLeave={hideTip}
+        >
+          <IconDownload size={14} /> JSON
+        </button>
         <button
           onClick={handleImportFromDoc}
           disabled={importing || importingPhotoU}
