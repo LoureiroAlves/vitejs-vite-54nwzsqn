@@ -333,6 +333,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
   const [filterCategory, setFilterCategory] = useState<string>("Todos");
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<string | null>(null);
+  const [inlineMove, setInlineMove] = useState<{ id: string; type: "entrada" | "saida"; qty: string } | null>(null);
   const [showMoveModal, setShowMoveModal] = useState<StockProduct | null>(null);
   const [moveType, setMoveType] = useState<"entrada" | "saida">("entrada");
   const [moveQty, setMoveQty] = useState<number | string>("");
@@ -907,14 +908,71 @@ function StockPage({ onBack }: { onBack: () => void }) {
                         {isEmpty ? "Esgotado" : "Stock baixo"}
                       </div>
                     )}
-                    <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                      <button style={{ ...stockStyles.moveBtn, flex: 1 }} onClick={() => { setShowMoveModal(prod); setMoveType("entrada"); setMoveQty(""); }}>
-                        <IconPlus2 size={13} /> Entrada
-                      </button>
-                      <button style={{ ...stockStyles.moveBtn, ...stockStyles.moveBtnOut, flex: 1 }} onClick={() => { setShowMoveModal(prod); setMoveType("saida"); setMoveQty(""); }}>
-                        <IconMinus size={13} /> Saída
-                      </button>
-                    </div>
+                    {/* Entrada / Saída inline */}
+                    {inlineMove?.id === prod.id ? (
+                      <div style={{ marginTop: 10 }}>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                          <button
+                            style={{ flex: 1, padding: "5px 0", borderRadius: 7, border: "2px solid", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", background: inlineMove.type === "entrada" ? "#E8F0E8" : "#FFFFFF", color: "#3B6D11", borderColor: inlineMove.type === "entrada" ? "#3B6D11" : "#E4DED3" }}
+                            onClick={() => setInlineMove({ ...inlineMove, type: "entrada" })}
+                          >+ Entrada</button>
+                          <button
+                            style={{ flex: 1, padding: "5px 0", borderRadius: 7, border: "2px solid", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", background: inlineMove.type === "saida" ? "#FFF0EE" : "#FFFFFF", color: "#C2554A", borderColor: inlineMove.type === "saida" ? "#C2554A" : "#E4DED3" }}
+                            onClick={() => setInlineMove({ ...inlineMove, type: "saida" })}
+                          >- Saída</button>
+                        </div>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <input
+                            autoFocus
+                            type="number"
+                            min="0"
+                            placeholder="Qtd."
+                            value={inlineMove.qty}
+                            onChange={(e) => setInlineMove({ ...inlineMove, qty: e.target.value })}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                const qty = Number(inlineMove.qty);
+                                if (!qty) return;
+                                setProducts((prev) => prev.map((p) => p.id === prod.id
+                                  ? { ...p, quantity: inlineMove.type === "entrada" ? p.quantity + qty : Math.max(0, p.quantity - qty) }
+                                  : p
+                                ));
+                                setMovements((prev) => [{ id: Date.now().toString() + Math.random().toString(36).slice(2), productId: prod.id, productName: prod.name, type: inlineMove.type, quantity: qty, who: "Manual", note: "", date: new Date().toISOString() }, ...prev]);
+                                setInlineMove(null);
+                              }
+                              if (e.key === "Escape") setInlineMove(null);
+                            }}
+                            style={{ flex: 1, border: "1px solid #E4DED3", borderRadius: 7, padding: "6px 8px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", colorScheme: "light" as const }}
+                          />
+                          <button
+                            style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}
+                            onClick={() => {
+                              const qty = Number(inlineMove.qty);
+                              if (!qty) return;
+                              setProducts((prev) => prev.map((p) => p.id === prod.id
+                                ? { ...p, quantity: inlineMove.type === "entrada" ? p.quantity + qty : Math.max(0, p.quantity - qty) }
+                                : p
+                              ));
+                              setMovements((prev) => [{ id: Date.now().toString() + Math.random().toString(36).slice(2), productId: prod.id, productName: prod.name, type: inlineMove.type, quantity: qty, who: "Manual", note: "", date: new Date().toISOString() }, ...prev]);
+                              setInlineMove(null);
+                            }}
+                          >✓</button>
+                          <button
+                            style={{ background: "transparent", color: "#A39B8E", border: "1px solid #E4DED3", borderRadius: 7, padding: "6px 10px", cursor: "pointer", fontSize: 13 }}
+                            onClick={() => setInlineMove(null)}
+                          >✕</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                        <button style={{ ...stockStyles.moveBtn, flex: 1 }} onClick={() => setInlineMove({ id: prod.id, type: "entrada", qty: "" })}>
+                          <IconPlus2 size={13} /> Entrada
+                        </button>
+                        <button style={{ ...stockStyles.moveBtn, ...stockStyles.moveBtnOut, flex: 1 }} onClick={() => setInlineMove({ id: prod.id, type: "saida", qty: "" })}>
+                          <IconMinus size={13} /> Saída
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
