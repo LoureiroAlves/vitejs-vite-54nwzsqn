@@ -1292,6 +1292,7 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                 <IconTrash2 size={13} />
               </button>
               <div
+                className="utente-avatar"
                 style={{ width: 56, height: 56, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", overflow: "hidden", flexShrink: 0 }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -2618,6 +2619,8 @@ export default function App() {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-6px); }
         }
+        .utente-avatar { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; }
+        .utente-avatar:hover { transform: scale(2); box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 10; position: relative; }
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
