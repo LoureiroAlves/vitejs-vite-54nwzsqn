@@ -1272,10 +1272,9 @@ Exemplo: {"birthDate":null,"familyContact":"João Silva","familyPhone":"91234567
         // Atualizar ficha com os dados extraídos (só os campos não vazios)
         if (openUtente) {
           const updates: Partial<Utente> = {};
-          if (parsed.birthDate && !openUtente.birthDate) updates.birthDate = parsed.birthDate;
-          if (parsed.familyContact && !openUtente.familyContact) updates.familyContact = parsed.familyContact;
-          if (parsed.familyPhone && !openUtente.familyPhone) updates.familyPhone = parsed.familyPhone;
-          if (parsed.notes) {
+          if (parsed.birthDate && !openUtente?.birthDate)
+if (parsed.familyContact && !openUtente?.familyContact)
+if (parsed.familyPhone && !openUtente?.familyPhone)
             updates.notes = openUtente.notes
               ? `${openUtente.notes}\n\n--- Relatório ${dateStr} ---\n${parsed.notes}`
               : `--- Relatório ${dateStr} ---\n${parsed.notes}`;
