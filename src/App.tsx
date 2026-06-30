@@ -3377,10 +3377,9 @@ export default function App() {
           50% { transform: translateY(-6px); }
         }
         @keyframes floatWord {
-          0% { opacity: 0; transform: scale(0.7); }
-          20% { opacity: 0.16; transform: scale(1); }
-          70% { opacity: 0.16; transform: scale(1.15); }
-          100% { opacity: 0; transform: scale(1.4); }
+          0%   { opacity: 0;    transform: scale(0.5); }
+          50%  { opacity: 0.16; transform: scale(1.15); }
+          100% { opacity: 0;    transform: scale(1.6); }
         }
         .floating-word {
           position: absolute;
@@ -3389,7 +3388,11 @@ export default function App() {
           color: #F5EFD8;
           pointer-events: none;
           white-space: nowrap;
-          animation: floatWord 9s ease-in-out infinite;
+          animation-name: floatWord;
+          animation-duration: 9s;
+          animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+          animation-iteration-count: infinite;
+          will-change: transform, opacity;
         }
         @keyframes spin {
           from { transform: rotate(0deg); }
@@ -3519,11 +3522,11 @@ export default function App() {
               ["Ternura", "Respeito", "Histórias", "Abraços", "Serenidade"],
             ];
             const positions = [
-              { top: "14%", left: "5%", size: 52 },
-              { top: "75%", left: "62%", size: 44 },
-              { top: "65%", left: "2%", size: 48 },
-              { top: "8%", left: "50%", size: 42 },
-              { top: "40%", left: "75%", size: 42 },
+              { top: "8%", left: "4%", size: 58 },
+              { top: "85%", left: "70%", size: 34 },
+              { top: "75%", left: "3%", size: 64 },
+              { top: "5%", left: "68%", size: 28 },
+              { top: "38%", left: "88%", size: 46 },
             ];
             const cycleDuration = 9; // segundos por palavra
 
