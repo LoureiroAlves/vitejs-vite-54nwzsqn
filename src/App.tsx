@@ -3526,7 +3526,6 @@ export default function App() {
               { top: "40%", left: "75%", size: 42 },
             ];
             const cycleDuration = 9; // segundos por palavra
-            const setCount = wordSets.length;
 
             return positions.map((pos, i) => (
               <span
