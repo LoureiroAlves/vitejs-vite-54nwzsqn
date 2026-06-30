@@ -1698,6 +1698,77 @@ function QuickSearchPanel({ target, schedule, onClose }: {
     if (t) summary[t] = (summary[t] || 0) + 1;
   });
 
+  const WEEKDAY_LETTERS = ["D", "S", "T", "Q", "Q", "S", "S"];
+  const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0=domingo
+
+  // ---------- Gerar PDF ----------
+  const handleExportPDF = () => {
+    let html = "";
+    const today2 = new Date().toLocaleDateString("pt-PT");
+
+    if (target.type === "utente") {
+      const rows = [
+        { label: "Data de nascimento", value: utenteData?.birthDate },
+        { label: "Quarto", value: utenteData?.room },
+        { label: "Data de entrada", value: utenteData?.entryDate },
+        { label: "Contacto familiar", value: utenteData?.familyContact },
+        { label: "Telefone familiar", value: utenteData?.familyPhone },
+      ].filter((f) => f.value);
+
+      html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Ficha — ${target.name}</title>
+      <style>
+        @page { size: A4; margin: 18mm; }
+        body { font-family: Arial, sans-serif; color: #2A241C; }
+        h1 { font-size: 20px; margin: 0 0 4px; }
+        .sub { font-size: 12px; color: #888; margin: 0 0 20px; }
+        .row { display: flex; padding: 8px 0; border-bottom: 1px solid #E4DED3; }
+        .label { width: 180px; font-size: 11px; font-weight: bold; color: #6B6358; text-transform: uppercase; }
+        .value { flex: 1; font-size: 13px; }
+        .notes-box { background: #F7F5F0; border-radius: 8px; padding: 14px; margin-top: 16px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
+        .section-title { font-size: 11px; font-weight: bold; color: #6B6358; text-transform: uppercase; margin: 20px 0 6px; }
+      </style></head><body>
+      <h1>Ficha de Utente — ${target.name}</h1>
+      <p class="sub">Gerado em ${today2} · Associação Oliveirense de Socorros Mútuos</p>
+      ${rows.map((r) => `<div class="row"><div class="label">${r.label}</div><div class="value">${r.value}</div></div>`).join("")}
+      ${utenteData?.notes ? `<div class="section-title">Observações / Informação clínica</div><div class="notes-box">${utenteData.notes.replace(/\n/g, "<br>")}</div>` : ""}
+      </body></html>`;
+    } else {
+      const days = Array.from({ length: numDays }, (_, i) => i + 1);
+      const rows = days.map((day) => {
+        const turno = monthSchedule[day] || "—";
+        const date = new Date(year, month, day);
+        const wd = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][date.getDay()];
+        return `<tr><td>${day}</td><td>${wd}</td><td><strong>${turno}</strong></td><td>${TURNO_LABELS[turno] || ""}</td></tr>`;
+      }).join("");
+
+      const summaryHtml = Object.entries(summary).map(([t, c]) => `<span class="badge">${TURNO_LABELS[t] || t}: <strong>${c}</strong></span>`).join(" ");
+
+      html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Horário — ${target.name}</title>
+      <style>
+        @page { size: A4; margin: 18mm; }
+        body { font-family: Arial, sans-serif; color: #2A241C; }
+        h1 { font-size: 20px; margin: 0 0 4px; }
+        .sub { font-size: 12px; color: #888; margin: 0 0 16px; }
+        .badge { display: inline-block; background: #F0E8D5; border-radius: 14px; padding: 4px 12px; font-size: 11px; margin: 0 6px 6px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        th { background: #2A241C; color: #fff; padding: 6px 10px; text-align: left; font-size: 11px; }
+        td { padding: 6px 10px; border-bottom: 1px solid #E4DED3; font-size: 12px; }
+        tr:nth-child(even) { background: #FAFAF8; }
+      </style></head><body>
+      <h1>Horário — ${target.name}</h1>
+      <p class="sub">${MONTH_NAMES_FULL[month]} ${year} · Gerado em ${today2} · Associação Oliveirense de Socorros Mútuos</p>
+      <div>${summaryHtml}</div>
+      <table><thead><tr><th>Dia</th><th>Sem.</th><th>Turno</th><th>Descrição</th></tr></thead><tbody>${rows}</tbody></table>
+      </body></html>`;
+    }
+
+    const w = window.open("", "_blank");
+    if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
+  };
+
   return (
     <>
       <div style={{ position: "fixed" as const, inset: 0, background: "rgba(20,18,14,0.5)", zIndex: 200 }} onClick={onClose} />
@@ -1726,6 +1797,9 @@ function QuickSearchPanel({ target, schedule, onClose }: {
               {target.type === "utente" ? "Utente" : "Colaborador"}
             </div>
           </div>
+          <button onClick={handleExportPDF} style={{ border: "none", background: "rgba(255,255,255,0.6)", borderRadius: 10, padding: 8, cursor: "pointer", color: "#2A241C", display: "flex", alignItems: "center" }} title="Exportar PDF">
+            <IconPrinter size={18} />
+          </button>
           <button onClick={onClose} style={{ border: "none", background: "rgba(255,255,255,0.5)", borderRadius: 10, padding: 8, cursor: "pointer", color: "#2A241C" }}>
             <IconX size={18} />
           </button>
@@ -1802,8 +1876,18 @@ function QuickSearchPanel({ target, schedule, onClose }: {
                     ))}
                   </div>
 
+                  {/* Cabeçalho dias da semana */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
+                    {WEEKDAY_LETTERS.map((d, i) => (
+                      <div key={i} style={{ textAlign: "center" as const, fontSize: 10, fontWeight: 700, color: "#A39B8E" }}>{d}</div>
+                    ))}
+                  </div>
+
                   {/* Grelha de dias */}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+                    {Array.from({ length: firstDayOfWeek }, (_, i) => (
+                      <div key={`empty-${i}`} />
+                    ))}
                     {Array.from({ length: numDays }, (_, i) => i + 1).map((day) => {
                       const turno = monthSchedule[day];
                       const date = new Date(year, month, day);
