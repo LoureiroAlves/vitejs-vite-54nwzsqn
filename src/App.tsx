@@ -2707,12 +2707,10 @@ export default function App() {
   const isStockPage = (activePage as string) === "stock";
 
   const navigateHome = () => {
-    // Adicionar classe de saída ao elemento animado
     const el = document.querySelector(".page-enter") as HTMLElement;
     if (el) {
-      el.classList.remove("page-enter");
-      el.classList.add("page-exit");
-      setTimeout(() => setActivePage("home"), 280);
+      el.style.animation = "slideDown 0.38s cubic-bezier(0.32, 0.72, 0, 1) both";
+      setTimeout(() => setActivePage("home"), 360);
     } else {
       setActivePage("home");
     }
@@ -2863,7 +2861,7 @@ export default function App() {
       `}</style>
 
       {/* Página inicial */}
-      {isHomePage && (
+      {true && (
         <div style={{ position: "fixed" as const, inset: 0, background: "#1E3A1E", display: "flex", alignItems: "center", justifyContent: "center", overflow: "auto" }}>
 
           {/* Logo SVG marca de água — canto superior esquerdo, bem contido */}
