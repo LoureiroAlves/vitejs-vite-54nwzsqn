@@ -1440,17 +1440,42 @@ Responde APENAS em JSON válido (sem markdown, sem texto extra) com esta estrutu
 
     const addTextField = (name: string, page: any, x: number, y: number, w: number, h: number, value = "", multiline = false) => {
       try {
+        // Desenhar fundo e borda visíveis em qualquer leitor
+        page.drawRectangle({ x, y, width: w, height: h, color: COR_FUNDO, borderColor: COR_BORDA, borderWidth: 0.5 });
+        // Escrever valor como texto fixo (visível em qualquer leitor)
+        if (value) {
+          const maxCharsPerLine = Math.floor(w / 4.5);
+          const lines = [];
+          if (multiline) {
+            const words = value.split(" ");
+            let line = "";
+            for (const word of words) {
+              if ((line + word).length > maxCharsPerLine) { lines.push(line.trim()); line = word + " "; }
+              else line += word + " ";
+            }
+            if (line.trim()) lines.push(line.trim());
+          } else {
+            lines.push(value.length > maxCharsPerLine ? value.slice(0, maxCharsPerLine - 3) + "..." : value);
+          }
+          lines.slice(0, Math.floor(h / 10)).forEach((line, i) => {
+            page.drawText(line, { x: x + 3, y: y + h - 10 - i * 11, size: 8, font: fontNormal, color: COR_ESCURO });
+          });
+        }
+        // Campo de formulário editável por cima (transparente — permite edição)
         const field = form.createTextField(name + "_" + Math.random().toString(36).slice(2,6));
         field.setText(value);
         field.setFontSize(8);
         if (multiline) field.enableMultiline();
         field.addToPage(page, {
           x, y, width: w, height: h,
-          backgroundColor: COR_FUNDO,
-          borderColor: COR_BORDA,
-          borderWidth: 0.5,
+          backgroundColor: rgb(1,1,1,0),
+          borderColor: rgb(0,0,0,0),
+          borderWidth: 0,
         });
-      } catch(e) {}
+      } catch(e) {
+        // Fallback: só texto fixo
+        if (value) page.drawText(value.slice(0, Math.floor(w/4.5)), { x: x + 3, y: y + h - 10, size: 8, font: fontNormal, color: COR_ESCURO });
+      }
     };
 
     const addCheckbox = (name: string, page: any, x: number, y: number, size: number) => {
