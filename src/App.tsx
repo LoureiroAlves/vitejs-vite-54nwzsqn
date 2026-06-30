@@ -1944,6 +1944,24 @@ function FamilyPage({ code }: { code: string }) {
   const [month, setMonth] = useState(today.getMonth());
   const [selectedFamilyDay, setSelectedFamilyDay] = useState<string | null>(null);
 
+  // Impedir cache do browser para esta página — garante que a família vê sempre a versão mais recente
+  useEffect(() => {
+    const metaTags = [
+      { httpEquiv: "Cache-Control", content: "no-cache, no-store, must-revalidate" },
+      { httpEquiv: "Pragma", content: "no-cache" },
+      { httpEquiv: "Expires", content: "0" },
+    ];
+    const created: HTMLMetaElement[] = [];
+    metaTags.forEach(({ httpEquiv, content }) => {
+      const meta = document.createElement("meta");
+      meta.httpEquiv = httpEquiv;
+      meta.content = content;
+      document.head.appendChild(meta);
+      created.push(meta);
+    });
+    return () => { created.forEach((m) => m.remove()); };
+  }, []);
+
   useEffect(() => {
     Promise.all([
       loadFromSupabase("utentes_data"),
