@@ -1331,6 +1331,138 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
 
   const [familyLinkModal, setFamilyLinkModal] = useState<{ name: string; link: string } | null>(null);
 
+  const handleGeneratePIC = (u: Utente) => {
+    const hoje = new Date().toLocaleDateString("pt-PT");
+    const dataRevisao = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-PT");
+    const meds = (u.medications || []).map((m) => `${m.name}${m.dose ? " — " + m.dose : ""}${m.schedule ? " (" + m.schedule + ")" : ""}`).join("; ") || u.medicationNotes || "";
+
+    const campo = (label: string, valor: string = "", linhas = 1) => {
+      const altura = linhas === 1 ? "28px" : `${linhas * 28}px`;
+      return `
+        <div class="campo">
+          <div class="label">${label}</div>
+          <div class="valor" style="min-height:${altura}">${valor || ""}</div>
+        </div>`;
+    };
+
+    const duasColunas = (l1: string, v1: string, l2: string, v2: string) => `
+      <div class="row2">
+        <div class="campo">
+          <div class="label">${l1}</div>
+          <div class="valor">${v1 || ""}</div>
+        </div>
+        <div class="campo">
+          <div class="label">${l2}</div>
+          <div class="valor">${v2 || ""}</div>
+        </div>
+      </div>`;
+
+    const secao = (titulo: string) => `<div class="secao">${titulo}</div>`;
+
+    const tabelaObjetivos = (dimensao: string) => `
+      <div class="label" style="margin-top:8px">${dimensao}</div>
+      <table class="tabela-obj">
+        <thead><tr><th>Necessidade / Diagnóstico</th><th>Objetivo</th><th>Atividade / Intervenção</th><th>Responsável</th><th>Prazo</th></tr></thead>
+        <tbody><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></tbody>
+      </table>`;
+
+    const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">
+    <title>PIC — ${u.name}</title>
+    <style>
+      @page { size: A4; margin: 15mm; }
+      body { font-family: Arial, sans-serif; font-size: 9pt; color: #2A241C; margin: 0; }
+      .header { text-align: center; margin-bottom: 8px; }
+      .header h1 { font-size: 13pt; margin: 0 0 2px; color: #2A241C; }
+      .header h2 { font-size: 9pt; font-weight: normal; margin: 0 0 2px; color: #3A5A70; }
+      .header h3 { font-size: 12pt; color: #3A5A70; margin: 6px 0 0; letter-spacing: 1px; }
+      hr { border: none; border-top: 1.5px solid #3A5A70; margin: 6px 0; }
+      .secao { background: #3A5A70; color: white; padding: 4px 8px; font-weight: bold; font-size: 9pt; margin: 8px 0 4px; }
+      .campo { margin-bottom: 4px; }
+      .label { font-size: 7.5pt; font-weight: bold; color: #2A241C; margin-bottom: 1px; text-transform: uppercase; letter-spacing: 0.4px; }
+      .valor { border: 0.5px solid #CCC; padding: 3px 5px; min-height: 20px; background: #FAFAFA; font-size: 9pt; }
+      .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+      .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+      .tabela-obj { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+      .tabela-obj th, .tabela-obj td { border: 0.5px solid #CCC; padding: 3px 4px; font-size: 8pt; }
+      .tabela-obj th { background: #E8EEF5; font-weight: bold; }
+      .tabela-obj td { height: 18px; }
+      .tabela-riscos { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      .tabela-riscos th, .tabela-riscos td { border: 0.5px solid #CCC; padding: 3px 4px; font-size: 8pt; }
+      .tabela-riscos th { background: #E8EEF5; }
+      .tabela-riscos td { height: 16px; }
+      .assinaturas { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px; }
+      .assin-box { border: 0.5px solid #CCC; padding: 6px; text-align: center; }
+      .assin-box .titulo { font-weight: bold; font-size: 8pt; margin-bottom: 20px; }
+      .assin-box .linha { border-top: 0.5px solid #999; margin: 0 10px 4px; }
+      .assin-box .data { font-size: 8pt; color: #666; }
+      .rodape { text-align: center; font-size: 7pt; color: #999; margin-top: 10px; border-top: 0.5px solid #CCC; padding-top: 4px; }
+    </style></head><body>
+
+    <div class="header">
+      <h1>ASSOCIAÇÃO OLIVEIRENSE DE SOCORROS MÚTUOS</h1>
+      <h2>Estrutura Residencial para Pessoas Idosas (ERPI)</h2>
+      <hr>
+      <h3>PLANO INDIVIDUAL DE CUIDADOS</h3>
+    </div>
+
+    ${secao("1. IDENTIFICAÇÃO DO RESIDENTE")}
+    ${campo("Nome completo", u.name)}
+    ${duasColunas("Data de nascimento", u.birthDate || "", "Naturalidade", u.naturalidade || "")}
+    ${duasColunas("Nacionalidade", u.nacionalidade || "", "Estado civil", u.estadoCivil || "")}
+    ${duasColunas("NIF", u.nif || "", "Nº Cartão de Cidadão", u.ccNumber || "")}
+    ${campo("Morada anterior", u.morada || "")}
+    ${duasColunas("Data de admissão", u.entryDate || "", "Quarto", u.room || "")}
+    ${duasColunas("Familiar / representante legal", u.familyContact || "", "Contacto telefónico", u.familyPhone || "")}
+    ${campo("Técnico responsável pelo processo")}
+
+    ${secao("2. AVALIAÇÃO DIAGNÓSTICA")}
+    ${campo("Motivo de admissão / caracterização da situação", "", 3)}
+    ${campo("Historial clínico relevante (diagnósticos, cirurgias, internamentos)", "", 3)}
+    ${campo("Medicação em vigor", meds, meds ? 2 : 1)}
+    ${campo("Alergias conhecidas")}
+    ${duasColunas("Grau de dependência (AVD)", "", "Mobilidade", "")}
+    ${duasColunas("Estado cognitivo", "", "Estado emocional / psicológico", "")}
+    ${campo("Hábitos de vida, preferências e gostos pessoais", `${u.feedingNotes ? "Alimentação: " + u.feedingNotes + " " : ""}${u.hygieneNotes ? "Higiene: " + u.hygieneNotes : ""}`, 2)}
+    ${campo("Expectativas do residente / familiar", "", 2)}
+
+    ${secao("3. OBJETIVOS E INTERVENÇÕES")}
+    ${["Cuidados pessoais e higiene", "Saúde / Cuidados de enfermagem", "Alimentação e hidratação", "Animação sociocultural e ocupacional", "Psicossocial / bem-estar emocional"].map(tabelaObjetivos).join("")}
+
+    ${secao("4. IDENTIFICAÇÃO DE RISCOS")}
+    <table class="tabela-riscos">
+      <thead><tr><th>Risco</th><th>Sim</th><th>Não</th><th>Medidas preventivas</th></tr></thead>
+      <tbody>
+        ${["Queda", "Úlcera de pressão", "Desnutrição / desidratação", "Isolamento social", "Deterioração cognitiva"].map((r) => `<tr><td>${r}</td><td></td><td></td><td></td></tr>`).join("")}
+        <tr><td>Outro: _______________</td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+
+    ${secao("5. VALIDAÇÃO E ASSINATURAS")}
+    <div class="row3" style="margin-bottom:8px">
+      <div class="campo"><div class="label">Data de elaboração</div><div class="valor">${hoje}</div></div>
+      <div class="campo"><div class="label">Data de 1.ª revisão prevista</div><div class="valor">${dataRevisao}</div></div>
+      <div class="campo"><div class="label">Data de última revisão</div><div class="valor">&nbsp;</div></div>
+    </div>
+    <div class="assinaturas">
+      ${["Diretor(a) Técnico(a)", "Residente / Representante legal", "Familiar / Responsável"].map((t) => `
+        <div class="assin-box">
+          <div class="titulo">${t}</div>
+          <div class="linha"></div>
+          <div class="data">Data: ___/___/______</div>
+        </div>`).join("")}
+    </div>
+
+    <div class="rodape">Associação Oliveirense de Socorros Mútuos — ERPI · Documento a rever anualmente ou sempre que se justifique · Portaria n.º 67/2012 de 21 de março</div>
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 400);
+  };
+
   const handleGetFamilyLink = (utente: Utente) => {
     let code = utente.familyCode;
     if (!code) {
@@ -2007,6 +2139,13 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                 title="Gerar/copiar link de acesso para a família"
               >
                 🔗 Link Família
+              </button>
+              <button
+                onClick={() => handleGeneratePIC(u)}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#E8F0E8", color: "#3B6D11", border: "1px solid #A8C8A0", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+                title="Gerar Plano Individual de Cuidados em PDF"
+              >
+                📋 Gerar PIC
               </button>
               <button style={{ background: "#2A241C", color: "#FBF9F5", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }} onClick={() => setOpenUtente(null)}>Fechar</button>
             </div>
