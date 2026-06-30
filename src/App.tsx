@@ -1366,6 +1366,15 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
     document.body.appendChild(input); input.click(); document.body.removeChild(input);
   };
 
+  const handleRemoveEmenta = () => {
+    if (!window.confirm("Remover a ementa atual? As famílias deixarão de a ver até carregar uma nova.")) return;
+    saveToSupabase("ementa_data", { ementa: null }).then(() => {
+      alert("✅ Ementa removida.");
+    }).catch(() => {
+      alert("❌ Erro ao remover a ementa.");
+    });
+  };
+
   const filteredUtentes = utentes.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     (u.room && u.room.toLowerCase().includes(search.toLowerCase()))
@@ -1541,6 +1550,14 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
           onMouseLeave={hideTip}
         >
           🍽️ {uploadingEmenta ? "A carregar..." : "Ementa"}
+        </button>
+        <button
+          onClick={handleRemoveEmenta}
+          style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#FFFFFF", color: "#C2554A", border: "1px solid #F2C4BC", borderRadius: 10, padding: "10px 10px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+          onMouseEnter={(e) => showTip(e, "Remover ementa atual")}
+          onMouseLeave={hideTip}
+        >
+          🗑️
         </button>
 
 
