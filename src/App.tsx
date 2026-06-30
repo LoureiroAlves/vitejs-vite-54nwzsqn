@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -1141,6 +1140,20 @@ interface Utente {
   familyCode?: string;
   dailyLogs?: { date: string; text: string; author?: string }[];
   files?: { name: string; type: string; data: string; uploadedAt: string }[];
+  // Dados do Cartão de Cidadão
+  ccNumber?: string;
+  ccValidity?: string;
+  nif?: string;
+  naturalidade?: string;
+  morada?: string;
+  nacionalidade?: string;
+  estadoCivil?: string;
+  // Dia a dia
+  medications?: { id: string; name: string; dose: string; schedule: string }[];
+  medicationNotes?: string;
+  hygieneNotes?: string;
+  feedingNotes?: string;
+  otherNotes?: string;
 }
 
 function UtentesPage({ onBack }: { onBack: () => void }) {
@@ -1357,12 +1370,34 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
   };
 
   const UTENTE_FIELDS: { key: string; label: string; placeholder: string; type?: string; multiline?: boolean }[] = [
-    { key: "birthDate", label: "Data de nascimento", placeholder: "Ex: 01/01/1940", type: "text" },
     { key: "room", label: "Quarto", placeholder: "Ex: 12A" },
-    { key: "entryDate", label: "Data de entrada", placeholder: "Ex: 15/03/2022" },
-    { key: "familyContact", label: "Contacto familiar (nome)", placeholder: "Ex: João Silva (filho)" },
-    { key: "familyPhone", label: "Contacto familiar (telefone)", placeholder: "Ex: 912 345 678" },
   ];
+
+  const [showCCPanel, setShowCCPanel] = useState<string | null>(null);
+  const [newMedName, setNewMedName] = useState("");
+  const [newMedDose, setNewMedDose] = useState("");
+  const [newMedSchedule, setNewMedSchedule] = useState("");
+
+  const addMedication = (utenteId: string) => {
+    if (!newMedName.trim()) return;
+    const med = { id: Date.now().toString() + Math.random().toString(36).slice(2), name: newMedName.trim(), dose: newMedDose.trim(), schedule: newMedSchedule.trim() };
+    setUtentes((prev) => prev.map((u) => {
+      if (u.id !== utenteId) return u;
+      const updated = { ...u, medications: [...(u.medications || []), med] };
+      if (openUtente?.id === utenteId) setOpenUtente(updated);
+      return updated;
+    }));
+    setNewMedName(""); setNewMedDose(""); setNewMedSchedule("");
+  };
+
+  const removeMedication = (utenteId: string, medId: string) => {
+    setUtentes((prev) => prev.map((u) => {
+      if (u.id !== utenteId) return u;
+      const updated = { ...u, medications: (u.medications || []).filter((m) => m.id !== medId) };
+      if (openUtente?.id === utenteId) setOpenUtente(updated);
+      return updated;
+    }));
+  };
 
   // ---------- Registo diário (substitui o campo Observações único) ----------
   const [newLogText, setNewLogText] = useState("");
@@ -1618,7 +1653,12 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                   onKeyDown={(e) => { if (e.key === "Enter") setOpenUtente(null); }}
                   style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, border: "none", borderBottom: "1px solid #E4DED3", background: "transparent", outline: "none", width: "100%", color: "#2A241C", padding: "2px 0" }}
                 />
-                <div style={{ fontSize: 12, color: "#A39B8E", marginTop: 2 }}>Ficha do utente</div>
+                <button
+                  onClick={() => setShowCCPanel(u.id)}
+                  style={{ fontSize: 12, color: "#3A5A70", marginTop: 2, border: "none", background: "transparent", padding: 0, cursor: "pointer", fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 2 }}
+                >
+                  📇 Ficha do utente (dados do CC)
+                </button>
               </div>
               <button style={{ border: "none", background: "transparent", cursor: "pointer", color: "#A39B8E", padding: 4 }} onClick={() => setOpenUtente(null)}>
                 <IconX size={20} />
@@ -1772,6 +1812,84 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                 )}
               </div>
 
+              {/* Medicação Diária */}
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
+                  💊 Medicação Diária
+                </label>
+                {(u.medications?.length ?? 0) > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 6, marginBottom: 10 }}>
+                    {u.medications!.map((med) => (
+                      <div key={med.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F5F0", borderRadius: 8, padding: "8px 10px" }}>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "#2A241C" }}>{med.name}</span>
+                          {med.dose && <span style={{ fontSize: 12, color: "#6B6358" }}> · {med.dose}</span>}
+                          {med.schedule && <span style={{ fontSize: 12, color: "#8A6A2E" }}> · {med.schedule}</span>}
+                        </div>
+                        <button onClick={() => removeMedication(u.id, med.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                  <input value={newMedName} onChange={(e) => setNewMedName(e.target.value)} placeholder="Medicamento" style={{ flex: 2, border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 9px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
+                  <input value={newMedDose} onChange={(e) => setNewMedDose(e.target.value)} placeholder="Dose" style={{ flex: 1, border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 9px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input value={newMedSchedule} onChange={(e) => setNewMedSchedule(e.target.value)} placeholder="Horário (ex: 8h, 13h, 20h)" style={{ flex: 1, border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 9px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
+                  <button onClick={() => addMedication(u.id)} disabled={!newMedName.trim()} style={{ background: newMedName.trim() ? "#2A241C" : "#E4DED3", color: newMedName.trim() ? "#F5B944" : "#A39B8E", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: newMedName.trim() ? "pointer" : "default", fontFamily: "'Inter', sans-serif" }}>+ Add</button>
+                </div>
+                <textarea
+                  rows={2}
+                  value={u.medicationNotes || ""}
+                  onChange={(e) => updateUtente(u.id, { medicationNotes: e.target.value })}
+                  placeholder="Notas adicionais sobre medicação..."
+                  style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const, marginTop: 8 }}
+                />
+              </div>
+
+              {/* Cuidados de Higiene */}
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
+                  🧼 Cuidados de Higiene
+                </label>
+                <textarea
+                  rows={3}
+                  value={u.hygieneNotes || ""}
+                  onChange={(e) => updateUtente(u.id, { hygieneNotes: e.target.value })}
+                  placeholder="Rotina de higiene, banho assistido, cuidados especiais..."
+                  style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }}
+                />
+              </div>
+
+              {/* Alimentação */}
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
+                  🍽️ Alimentação
+                </label>
+                <textarea
+                  rows={3}
+                  value={u.feedingNotes || ""}
+                  onChange={(e) => updateUtente(u.id, { feedingNotes: e.target.value })}
+                  placeholder="Restrições alimentares, alergias, dieta especial, apetite..."
+                  style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }}
+                />
+              </div>
+
+              {/* Outros */}
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
+                  📌 Outros
+                </label>
+                <textarea
+                  rows={3}
+                  value={u.otherNotes || ""}
+                  onChange={(e) => updateUtente(u.id, { otherNotes: e.target.value })}
+                  placeholder="Outras informações relevantes..."
+                  style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }}
+                />
+              </div>
+
               {/* Documentos */}
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
@@ -1871,6 +1989,62 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
           </div>
         </>
       ); })()}
+
+      {/* Modal de dados do Cartão de Cidadão */}
+      {showCCPanel && (() => {
+        const ccUtente = utentes.find((u) => u.id === showCCPanel);
+        if (!ccUtente) return null;
+        const ccFields: { key: keyof Utente; label: string; placeholder: string }[] = [
+          { key: "ccNumber", label: "Número do Cartão de Cidadão", placeholder: "Ex: 12345678 9 ZZ0" },
+          { key: "ccValidity", label: "Validade do CC", placeholder: "DD/MM/AAAA" },
+          { key: "nif", label: "NIF", placeholder: "Ex: 123456789" },
+          { key: "birthDate", label: "Data de nascimento", placeholder: "DD/MM/AAAA" },
+          { key: "naturalidade", label: "Naturalidade", placeholder: "Ex: Vila Nova de Gaia" },
+          { key: "nacionalidade", label: "Nacionalidade", placeholder: "Ex: Portuguesa" },
+          { key: "estadoCivil", label: "Estado civil", placeholder: "Ex: Viúvo(a)" },
+          { key: "morada", label: "Morada", placeholder: "Endereço completo" },
+          { key: "entryDate", label: "Data de entrada no lar", placeholder: "DD/MM/AAAA" },
+          { key: "familyContact", label: "Contacto familiar (nome)", placeholder: "Ex: João Silva (filho)" },
+          { key: "familyPhone", label: "Contacto familiar (telefone)", placeholder: "Ex: 912 345 678" },
+        ];
+        return (
+          <>
+            <div style={{ position: "fixed" as const, inset: 0, background: "rgba(20,18,14,0.5)", zIndex: 250 }} onClick={() => setShowCCPanel(null)} />
+            <div style={{
+              position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+              width: "min(480px, 92vw)", maxHeight: "85vh", overflowY: "auto" as const,
+              background: "#FFFFFF", borderRadius: 20, zIndex: 251, boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}>
+              <div style={{ padding: "20px 24px", background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#2A241C" }}>📇 Ficha do Utente</div>
+                  <div style={{ fontSize: 12, color: "#3A5A70" }}>{ccUtente.name} — Dados do Cartão de Cidadão</div>
+                </div>
+                <button onClick={() => setShowCCPanel(null)} style={{ border: "none", background: "rgba(255,255,255,0.6)", borderRadius: 10, padding: 8, cursor: "pointer", color: "#2A241C" }}>
+                  <IconX size={18} />
+                </button>
+              </div>
+              <div style={{ padding: 24 }}>
+                {ccFields.map((f) => (
+                  <div key={f.key as string} style={{ marginBottom: 14 }}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>{f.label}</label>
+                    <input
+                      type="text"
+                      value={(ccUtente as any)[f.key] || ""}
+                      onChange={(e) => updateUtente(ccUtente.id, { [f.key]: e.target.value } as Partial<Utente>)}
+                      placeholder={f.placeholder}
+                      style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }}
+                    />
+                  </div>
+                ))}
+                <button onClick={() => setShowCCPanel(null)} style={{ width: "100%", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", marginTop: 8 }}>
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Modal de link de família — campo selecionável, sem depender de clipboard API */}
       {familyLinkModal && (
