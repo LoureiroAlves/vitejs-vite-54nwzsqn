@@ -1309,6 +1309,8 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
     return Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
   };
 
+  const [familyLinkModal, setFamilyLinkModal] = useState<{ name: string; link: string } | null>(null);
+
   const handleGetFamilyLink = (utente: Utente) => {
     let code = utente.familyCode;
     if (!code) {
@@ -1316,22 +1318,7 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
       updateUtente(utente.id, { familyCode: code });
     }
     const link = `${window.location.origin}${window.location.pathname}?familia=${code}`;
-
-    const tryClipboard = () => {
-      if (navigator.clipboard?.writeText) {
-        return navigator.clipboard.writeText(link).then(() => true).catch(() => false);
-      }
-      return Promise.resolve(false);
-    };
-
-    tryClipboard().then((ok) => {
-      if (ok) {
-        alert(`✅ Link copiado para a área de transferência!\n\n${link}\n\nPartilhe este link com a família de ${utente.name}.`);
-      } else {
-        // Fallback: mostrar o link num prompt para cópia manual (sempre funciona)
-        window.prompt(`Copie o link abaixo (Ctrl+C / Cmd+C) e partilhe com a família de ${utente.name}:`, link);
-      }
-    });
+    setFamilyLinkModal({ name: utente.name, link });
   };
 
   const [uploadingEmenta, setUploadingEmenta] = useState(false);
@@ -1809,6 +1796,48 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
           </div>
         </>
       ); })()}
+
+      {/* Modal de link de família — campo selecionável, sem depender de clipboard API */}
+      {familyLinkModal && (
+        <>
+          <div style={{ position: "fixed" as const, inset: 0, background: "rgba(42,36,28,0.4)", zIndex: 200 }} onClick={() => setFamilyLinkModal(null)} />
+          <div style={{ position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "min(440px, 92vw)", background: "#FFFFFF", borderRadius: 20, zIndex: 201, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+            <div style={{ padding: "20px 24px", background: "#E8EEF5", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 26 }}>🔗</span>
+              <div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#2A241C" }}>Link de Família</div>
+                <div style={{ fontSize: 12, color: "#3A5A70" }}>{familyLinkModal.name}</div>
+              </div>
+            </div>
+            <div style={{ padding: 24 }}>
+              <p style={{ fontSize: 13, color: "#6B6358", lineHeight: 1.6, margin: "0 0 14px" }}>
+                Toque no campo abaixo para selecionar tudo, depois copie (Ctrl+C ou Cmd+C) e partilhe com a família.
+              </p>
+              <input
+                readOnly
+                value={familyLinkModal.link}
+                onFocus={(e) => e.target.select()}
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+                style={{ width: "100%", border: "1px solid #B8CCE0", borderRadius: 10, padding: "12px 14px", fontSize: 13, fontFamily: "monospace", outline: "none", background: "#F7F9FB", color: "#2A241C", boxSizing: "border-box" as const, marginBottom: 16 }}
+              />
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  onClick={() => {
+                    const input = document.querySelector('input[readonly]') as HTMLInputElement;
+                    if (input) { input.select(); document.execCommand("copy"); alert("✅ Link copiado!"); }
+                  }}
+                  style={{ flex: 1, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+                >
+                  Copiar link
+                </button>
+                <button onClick={() => setFamilyLinkModal(null)} style={{ flex: 1, background: "transparent", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -2215,21 +2244,48 @@ function QuickSearchPanel({ target, schedule, onClose }: {
                       </div>
 
                       {/* Navegação de mês */}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 14 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
                         <button onClick={() => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); setSelectedLogDay(null); }} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "4px 8px", cursor: "pointer" }}><IconChevronLeft size={14} /></button>
                         <span style={{ fontSize: 12, fontWeight: 600, color: "#6B6358" }}>{MONTH_NAMES_FULL[month]} {year}</span>
                         <button onClick={() => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); setSelectedLogDay(null); }} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "4px 8px", cursor: "pointer" }}><IconChevronRight size={14} /></button>
                       </div>
 
-                      {/* Conteúdo do dia selecionado */}
+                      {/* Modal de visualização do registo do dia selecionado */}
                       {selectedLog && (
-                        <div style={{ background: "#F7F5F0", borderRadius: 10, padding: "12px 14px" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                            <span style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70" }}>{selectedLog.date}</span>
-                            <button onClick={() => printLog(selectedLog)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 14 }} title="Imprimir este registo">🖨️</button>
+                        <>
+                          <div style={{ position: "fixed" as const, inset: 0, background: "rgba(20,18,14,0.55)", zIndex: 300 }} onClick={() => setSelectedLogDay(null)} />
+                          <div style={{
+                            position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+                            width: "min(480px, 92vw)", maxHeight: "80vh", overflowY: "auto" as const,
+                            background: "#FFFFFF", borderRadius: 20, zIndex: 301, boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+                          }}>
+                            <div style={{ padding: "20px 24px", background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <div>
+                                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#2A241C" }}>{target.name}</div>
+                                <div style={{ fontSize: 12, color: "#3A5A70", fontWeight: 600 }}>{selectedLog.date}</div>
+                              </div>
+                              <button onClick={() => setSelectedLogDay(null)} style={{ border: "none", background: "rgba(255,255,255,0.6)", borderRadius: 10, padding: 8, cursor: "pointer", color: "#2A241C" }}>
+                                <IconX size={18} />
+                              </button>
+                            </div>
+                            <div style={{ padding: 24 }}>
+                              <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.7, background: "#F7F5F0", borderRadius: 12, padding: 18, marginBottom: 20 }}>
+                                {selectedLog.text}
+                              </div>
+                              <div style={{ display: "flex", gap: 10 }}>
+                                <button onClick={() => printLog(selectedLog)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                                  🖨️ Imprimir
+                                </button>
+                                <button onClick={() => printLog(selectedLog)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                                  📄 Guardar PDF
+                                </button>
+                              </div>
+                              <div style={{ fontSize: 11, color: "#A39B8E", textAlign: "center" as const, marginTop: 10 }}>
+                                Em "Imprimir" escolha "Guardar como PDF" no destino para criar um ficheiro.
+                              </div>
+                            </div>
                           </div>
-                          <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.6 }}>{selectedLog.text}</div>
-                        </div>
+                        </>
                       )}
                     </div>
                   );
