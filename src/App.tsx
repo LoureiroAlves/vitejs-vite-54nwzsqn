@@ -1369,7 +1369,7 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
     return words.length >= 2 ? (words[0][0] + words[words.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
   };
 
-  const UTENTE_FIELDS = [
+  const UTENTE_FIELDS: { key: string; label: string; placeholder: string; type?: string; multiline?: boolean }[] = [
     { key: "birthDate", label: "Data de nascimento", placeholder: "Ex: 01/01/1940", type: "text" },
     { key: "room", label: "Quarto", placeholder: "Ex: 12A" },
     { key: "entryDate", label: "Data de entrada", placeholder: "Ex: 15/03/2022" },
