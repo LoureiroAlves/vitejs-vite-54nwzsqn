@@ -3522,11 +3522,11 @@ export default function App() {
               ["Ternura", "Respeito", "Histórias", "Abraços", "Serenidade"],
             ];
             const positions = [
-              { top: "8%", left: "4%", size: 58 },
-              { top: "85%", left: "70%", size: 34 },
-              { top: "75%", left: "3%", size: 64 },
-              { top: "5%", left: "68%", size: 28 },
-              { top: "38%", left: "88%", size: 46 },
+              { top: "10%", left: "62%", size: 56, color: "#F5EFD8" },
+              { top: "78%", left: "68%", size: 36, color: "#E8D5A0" },
+              { top: "45%", left: "82%", size: 50, color: "#A8C5A0" },
+              { top: "8%", left: "86%", size: 30, color: "#D9C9E8" },
+              { top: "68%", left: "4%", size: 42, color: "#F0C5A8" },
             ];
             const cycleDuration = 9; // segundos por palavra
 
@@ -3540,11 +3540,15 @@ export default function App() {
                   fontSize: pos.size,
                   fontFamily: "'Space Grotesk', sans-serif",
                   fontWeight: 600,
-                  color: "#F5EFD8",
+                  color: pos.color,
                   pointerEvents: "none" as const,
                   whiteSpace: "nowrap" as const,
-                  animation: `floatWord ${cycleDuration}s ease-in-out infinite`,
+                  animationName: "floatWord",
+                  animationDuration: `${cycleDuration}s`,
+                  animationTimingFunction: "cubic-bezier(0.45, 0, 0.55, 1)",
+                  animationIterationCount: "infinite",
                   animationDelay: `${i * 1.8}s`,
+                  willChange: "transform, opacity",
                 }}
               >
                 <FloatingWordCycler words={wordSets.map((set) => set[i])} interval={cycleDuration * 1000} delay={i * 1800} />
