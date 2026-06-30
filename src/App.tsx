@@ -1939,6 +1939,10 @@ function FamilyPage({ code }: { code: string }) {
   const [utente, setUtente] = useState<Utente | null | "not_found">(null);
   const [ementa, setEmenta] = useState<{ data: string; type: string; uploadedAt: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const today = new Date();
+  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
+  const [selectedFamilyDay, setSelectedFamilyDay] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -1949,6 +1953,19 @@ function FamilyPage({ code }: { code: string }) {
       const found = utentes.find((u: any) => u.familyCode === code);
       setUtente(found || "not_found");
       if (ementaRow?.ementa?.data) setEmenta(ementaRow.ementa);
+      // Definir mês inicial como o mês do registo mais recente, se existir
+      if (found?.dailyLogs?.length) {
+        const parseDate = (d: string) => {
+          const [day, mo, yr] = d.split("/").map(Number);
+          return new Date(yr, mo - 1, day);
+        };
+        const mostRecent = found.dailyLogs.reduce((latest: Date, log: any) => {
+          const d = parseDate(log.date);
+          return d > latest ? d : latest;
+        }, parseDate(found.dailyLogs[0].date));
+        setYear(mostRecent.getFullYear());
+        setMonth(mostRecent.getMonth());
+      }
       setLoading(false);
     }).catch(() => {
       setUtente("not_found");
@@ -2008,20 +2025,94 @@ function FamilyPage({ code }: { code: string }) {
           ))}
         </div>
 
-        {/* Registo do dia — diário clínico, mais recente primeiro */}
-        {(utente.dailyLogs?.length ?? 0) > 0 && (
-          <div style={{ background: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 12 }}>📝 Registo do Dia</div>
-            <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
-              {utente.dailyLogs!.map((log, idx) => (
-                <div key={idx} style={{ background: "#F7F5F0", borderRadius: 10, padding: 14 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70", marginBottom: 6 }}>{log.date}</div>
-                  <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.6 }}>{log.text}</div>
-                </div>
-              ))}
+        {/* Registo do dia — calendário interativo */}
+        {(utente.dailyLogs?.length ?? 0) > 0 && (() => {
+          const logsByDate: Record<string, { date: string; text: string }> = {};
+          utente.dailyLogs!.forEach((log) => { logsByDate[log.date] = log; });
+          const numDaysF = new Date(year, month + 1, 0).getDate();
+          const firstDayOfWeekF = new Date(year, month, 1).getDay();
+          const todayStrF = today.toLocaleDateString("pt-PT");
+          const selectedLog = selectedFamilyDay ? logsByDate[selectedFamilyDay] : null;
+          const weekdayColors = ["#C2554A", "#5B8DBE", "#3B6D11", "#B08A4E", "#7E57C2", "#3A8A8A", "#C2554A"];
+
+          return (
+            <div style={{ background: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 12 }}>📝 Registo do Dia — toque num dia para ver</div>
+
+              {/* Cabeçalho dias da semana */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
+                {["D", "S", "T", "Q", "Q", "S", "S"].map((d, i) => (
+                  <div key={i} style={{ width: 22, height: 22, borderRadius: "50%", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", background: weekdayColors[i] + "1F", color: weekdayColors[i], fontSize: 9, fontWeight: 800 }}>{d}</div>
+                ))}
+              </div>
+
+              {/* Grelha do calendário */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 14 }}>
+                {Array.from({ length: firstDayOfWeekF }, (_, i) => <div key={`e-${i}`} />)}
+                {Array.from({ length: numDaysF }, (_, i) => i + 1).map((day) => {
+                  const dateObj = new Date(year, month, day);
+                  const dateStr = dateObj.toLocaleDateString("pt-PT");
+                  const hasLog = !!logsByDate[dateStr];
+                  const isSelected = selectedFamilyDay === dateStr;
+                  const isToday = dateStr === todayStrF;
+                  return (
+                    <button
+                      key={day}
+                      onClick={() => hasLog && setSelectedFamilyDay(isSelected ? null : dateStr)}
+                      style={{
+                        aspectRatio: "1", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 12, fontWeight: hasLog ? 700 : 400, cursor: hasLog ? "pointer" : "default",
+                        background: isSelected ? "#3A5A70" : hasLog ? "#E8EEF5" : "#FAFAF8",
+                        color: isSelected ? "#FFFFFF" : hasLog ? "#3A5A70" : "#C2BAAC",
+                        border: isToday ? "2px solid #5B8DBE" : "1px solid #EFEAE2",
+                      }}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Navegação de mês */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
+                <button onClick={() => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); setSelectedFamilyDay(null); }} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "6px 10px", cursor: "pointer", color: "#3A5A70", display: "flex", alignItems: "center" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#6B6358" }}>{MONTH_NAMES_FULL[month]} {year}</span>
+                <button onClick={() => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); setSelectedFamilyDay(null); }} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "6px 10px", cursor: "pointer", color: "#3A5A70", display: "flex", alignItems: "center" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+              </div>
+
+              {/* Modal de visualização do registo selecionado */}
+              {selectedLog && (
+                <>
+                  <div style={{ position: "fixed" as const, inset: 0, background: "rgba(20,18,14,0.55)", zIndex: 300 }} onClick={() => setSelectedFamilyDay(null)} />
+                  <div style={{
+                    position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+                    width: "min(440px, 90vw)", maxHeight: "75vh", overflowY: "auto" as const,
+                    background: "#FFFFFF", borderRadius: 20, zIndex: 301, boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+                  }}>
+                    <div style={{ padding: "18px 22px", background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div>
+                        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15, color: "#2A241C" }}>{utente.name}</div>
+                        <div style={{ fontSize: 12, color: "#3A5A70", fontWeight: 600 }}>{selectedLog.date}</div>
+                      </div>
+                      <button onClick={() => setSelectedFamilyDay(null)} style={{ border: "none", background: "rgba(255,255,255,0.6)", borderRadius: 10, padding: 8, cursor: "pointer", color: "#2A241C" }}>
+                        <IconX size={18} />
+                      </button>
+                    </div>
+                    <div style={{ padding: 20 }}>
+                      <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.7, background: "#F7F5F0", borderRadius: 12, padding: 16 }}>
+                        {selectedLog.text}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Documentos */}
         {(utente.files?.length ?? 0) > 0 && (
