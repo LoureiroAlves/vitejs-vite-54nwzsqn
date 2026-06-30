@@ -249,6 +249,12 @@ function saveStoredData(data: any) {
   try {
     window.localStorage?.setItem?.(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {}
+  // Proteção: nunca enviar um schedule vazio para o Supabase de forma silenciosa —
+  // isto evita que um estado inicial vazio sobrescreva dados já guardados na nuvem.
+  if (data.schedule && Object.keys(data.schedule).length === 0) {
+    console.warn("saveStoredData: schedule vazio detectado — gravação ignorada para proteger dados existentes.");
+    return;
+  }
   // Guardar também no Supabase (sem bloquear)
   saveToSupabase("escala_data", {
     employees: data.employees,
@@ -2918,13 +2924,22 @@ export default function App() {
   };
 
   // Carregar do Supabase ao iniciar (sincronização em background)
+  const [initialSyncComplete, setInitialSyncComplete] = useState(false);
   useEffect(() => {
     syncFromSupabase();
+    // Marcar sincronização inicial como completa após terminar (sucesso ou erro)
   }, []);
 
-
-  // Guardar tudo automaticamente
+  // Detectar quando o syncStatus sai de "syncing" pela primeira vez para liberar gravações
   useEffect(() => {
+    if (syncStatus === "synced" || syncStatus === "error" || syncStatus === "idle") {
+      if (!initialSyncComplete) setInitialSyncComplete(true);
+    }
+  }, [syncStatus]);
+
+  // Guardar tudo automaticamente — só depois da sincronização inicial, para nunca sobrescrever com dados vazios
+  useEffect(() => {
+    if (!initialSyncComplete) return;
     saveStoredData({
       employees,
       rvEmployees,
@@ -2935,7 +2950,7 @@ export default function App() {
       scheduleLink,
       lastPublished,
     });
-  }, [employees, rvEmployees, schedule, extraHours, employeeEmails, scheduleLink, lastPublished]);
+  }, [employees, rvEmployees, schedule, extraHours, employeeEmails, scheduleLink, lastPublished, initialSyncComplete]);
 
   const numDays = daysInMonth(year, month);
   const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
