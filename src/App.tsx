@@ -3355,6 +3355,21 @@ export default function App() {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-6px); }
         }
+        @keyframes floatWord {
+          0% { opacity: 0; transform: translateY(20px) scale(0.9); }
+          15% { opacity: var(--word-opacity, 0.16); transform: translateY(0) scale(1); }
+          85% { opacity: var(--word-opacity, 0.16); transform: translateY(0) scale(1); }
+          100% { opacity: 0; transform: translateY(-20px) scale(0.9); }
+        }
+        .floating-word {
+          position: absolute;
+          font-family: 'Space Grotesk', sans-serif;
+          font-weight: 600;
+          color: #F5EFD8;
+          pointer-events: none;
+          white-space: nowrap;
+          animation: floatWord 8s ease-in-out infinite;
+        }
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
@@ -3474,6 +3489,34 @@ export default function App() {
             <ellipse cx="66" cy="47" rx="13" ry="16" fill="white" transform="rotate(15 66 47)"/>
             <ellipse cx="50" cy="24" rx="10" ry="14" fill="white"/>
           </svg>
+
+          {/* Palavras flutuantes — movimento suave em loop */}
+          {[
+            { text: "Amor", top: "12%", left: "8%", delay: "0s", duration: "9s", size: 22 },
+            { text: "Família", top: "22%", left: "78%", delay: "1.5s", duration: "10s", size: 18 },
+            { text: "Cuidado", top: "68%", left: "6%", delay: "3s", duration: "8s", size: 20 },
+            { text: "Carinho", top: "78%", left: "75%", delay: "4.5s", duration: "9.5s", size: 19 },
+            { text: "Gratidão", top: "8%", left: "55%", delay: "2s", duration: "8.5s", size: 17 },
+            { text: "Memórias", top: "45%", left: "85%", delay: "5.5s", duration: "9s", size: 18 },
+            { text: "Sabedoria", top: "55%", left: "3%", delay: "6.5s", duration: "10s", size: 17 },
+            { text: "Acolhimento", top: "88%", left: "30%", delay: "1s", duration: "9.5s", size: 16 },
+            { text: "Sorrisos", top: "15%", left: "30%", delay: "7s", duration: "8s", size: 19 },
+            { text: "Companhia", top: "35%", left: "10%", delay: "3.5s", duration: "9s", size: 16 },
+          ].map((w, i) => (
+            <span
+              key={i}
+              className="floating-word"
+              style={{
+                top: w.top, left: w.left,
+                fontSize: w.size,
+                animationDelay: w.delay,
+                animationDuration: w.duration,
+                ["--word-opacity" as any]: 0.14,
+              }}
+            >
+              {w.text}
+            </span>
+          ))}
 
           {/* Conteúdo centrado */}
           <div style={{ position: "relative" as const, zIndex: 1, width: "100%", maxWidth: 680, padding: "0 24px" }}>
