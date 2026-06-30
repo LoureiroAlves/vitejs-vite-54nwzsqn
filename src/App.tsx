@@ -1402,6 +1402,28 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
     setNewLogText("");
   };
 
+  const printDailyLog = (utente: Utente, log: { date: string; text: string }) => {
+    const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Registo — ${utente.name} — ${log.date}</title>
+    <style>
+      @page { size: A4; margin: 20mm; }
+      body { font-family: Arial, sans-serif; color: #2A241C; }
+      h1 { font-size: 18px; margin: 0 0 4px; }
+      .sub { font-size: 12px; color: #888; margin: 0 0 20px; }
+      .date-badge { display: inline-block; background: #2A241C; color: #F5B944; border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: bold; margin-bottom: 16px; }
+      .text-box { font-size: 14px; line-height: 1.8; white-space: pre-wrap; border: 1px solid #E4DED3; border-radius: 8px; padding: 18px; }
+    </style></head><body>
+    <h1>Registo do Dia — ${utente.name}</h1>
+    <p class="sub">Associação Oliveirense de Socorros Mútuos · Gerado em ${new Date().toLocaleDateString("pt-PT")}</p>
+    <div class="date-badge">${log.date}</div>
+    <div class="text-box">${log.text.replace(/\n/g, "<br>")}</div>
+    </body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
+  };
+
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#E8EEF5", minHeight: "100vh", padding: "32px 24px 60px", color: "#2A241C", animation: "pageOpen 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards" }}>
       {tooltip && (
@@ -1659,18 +1681,25 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                       <div key={idx} style={{ background: "#F7F5F0", borderRadius: 10, padding: "10px 12px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                           <span style={{ fontSize: 11, fontWeight: 700, color: "#5B8DBE" }}>{log.date}{log.date === todayStr ? " (hoje)" : ""}</span>
-                          <button
-                            onClick={() => {
-                              if (!window.confirm("Remover este registo?")) return;
-                              setUtentes((prev) => prev.map((uu) => {
-                                if (uu.id !== u.id) return uu;
-                                const updated = { ...uu, dailyLogs: (uu.dailyLogs || []).filter((_, i) => i !== idx) };
-                                if (openUtente?.id === u.id) setOpenUtente(updated);
-                                return updated;
-                              }));
-                            }}
-                            style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }}
-                          >✕</button>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button
+                              onClick={() => printDailyLog(u, log)}
+                              style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}
+                              title="Imprimir este registo"
+                            >🖨️</button>
+                            <button
+                              onClick={() => {
+                                if (!window.confirm("Remover este registo?")) return;
+                                setUtentes((prev) => prev.map((uu) => {
+                                  if (uu.id !== u.id) return uu;
+                                  const updated = { ...uu, dailyLogs: (uu.dailyLogs || []).filter((_, i) => i !== idx) };
+                                  if (openUtente?.id === u.id) setOpenUtente(updated);
+                                  return updated;
+                                }));
+                              }}
+                              style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }}
+                            >✕</button>
+                          </div>
                         </div>
                         <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.5 }}>{log.text}</div>
                       </div>
@@ -2129,7 +2158,22 @@ function QuickSearchPanel({ target, schedule, onClose }: {
                     <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, maxHeight: 240, overflowY: "auto" as const }}>
                       {utenteData.dailyLogs.map((log: any, i: number) => (
                         <div key={i} style={{ background: "#F7F5F0", borderRadius: 10, padding: "10px 12px" }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", marginBottom: 4 }}>{log.date}</div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70" }}>{log.date}</span>
+                            <button
+                              onClick={() => {
+                                const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Registo — ${target.name} — ${log.date}</title>
+                                <style>@page{size:A4;margin:20mm}body{font-family:Arial,sans-serif;color:#2A241C}h1{font-size:18px;margin:0 0 4px}.sub{font-size:12px;color:#888;margin:0 0 20px}.date-badge{display:inline-block;background:#2A241C;color:#F5B944;border-radius:20px;padding:6px 16px;font-size:13px;font-weight:bold;margin-bottom:16px}.text-box{font-size:14px;line-height:1.8;white-space:pre-wrap;border:1px solid #E4DED3;border-radius:8px;padding:18px}</style>
+                                </head><body><h1>Registo do Dia — ${target.name}</h1><p class="sub">Associação Oliveirense de Socorros Mútuos · Gerado em ${new Date().toLocaleDateString("pt-PT")}</p><div class="date-badge">${log.date}</div><div class="text-box">${log.text.replace(/\n/g, "<br>")}</div></body></html>`;
+                                const w = window.open("", "_blank");
+                                if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+                                w.document.open(); w.document.write(html); w.document.close();
+                                w.focus(); setTimeout(() => w.print(), 300);
+                              }}
+                              style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}
+                              title="Imprimir este registo"
+                            >🖨️</button>
+                          </div>
                           <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.5 }}>{log.text}</div>
                         </div>
                       ))}
@@ -5558,3 +5602,4 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
+                    
