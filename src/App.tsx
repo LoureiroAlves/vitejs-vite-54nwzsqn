@@ -2025,10 +2025,10 @@ function FamilyPage({ code }: { code: string }) {
           ))}
         </div>
 
-        {/* Registo do dia — calendário interativo */}
-        {(utente.dailyLogs?.length ?? 0) > 0 && (() => {
+        {/* Registo do dia — calendário interativo (mostra sempre, mesmo sem registos) */}
+        {(() => {
           const logsByDate: Record<string, { date: string; text: string }> = {};
-          utente.dailyLogs!.forEach((log) => { logsByDate[log.date] = log; });
+          (utente.dailyLogs || []).forEach((log) => { logsByDate[log.date] = log; });
           const numDaysF = new Date(year, month + 1, 0).getDate();
           const firstDayOfWeekF = new Date(year, month, 1).getDay();
           const todayStrF = today.toLocaleDateString("pt-PT");
