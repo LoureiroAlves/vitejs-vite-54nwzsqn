@@ -1869,6 +1869,7 @@ export default function App() {
     category?: string;
     schedule?: string;
     notes?: string;
+    preferredShift?: "M" | "T" | "N" | "";
     files?: { name: string; type: string; data: string; uploadedAt: string }[];
   }>>(() => {
     const stored = loadStoredData();
@@ -2532,6 +2533,11 @@ export default function App() {
   // ---------- Backup / Restauro ----------
   // ---------- Gerar escala automaticamente (continuar padrão) ----------
   const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [generateMode, setGenerateMode] = useState<"pattern" | "rules">("pattern");
+  const [generateMinM, setGenerateMinM] = useState(3);
+  const [generateMinT, setGenerateMinT] = useState(3);
+  const [generateMinN, setGenerateMinN] = useState(2);
+  const [generateFolgaDays, setGenerateFolgaDays] = useState(2); // folgas por semana
 
   const detectCyclePeriod = (seq: string[]): number | null => {
     const n = seq.length;
@@ -2604,6 +2610,86 @@ export default function App() {
     setMonth(nextMonth);
     setShowGenerateModal(false);
     alert(`✅ Escala de ${MONTH_NAMES[nextMonth]} ${nextYear} gerada automaticamente para ${totalGerados} colaborador(es)!`);
+  };
+
+  // ---------- Gerar escala por regras (mínimos + preferências) ----------
+  const handleGenerateByRules = () => {
+    let nextMonth = month + 1;
+    let nextYear = year;
+    if (nextMonth > 11) { nextMonth = 0; nextYear++; }
+    const nextKey = `${nextYear}-${String(nextMonth + 1).padStart(2, "0")}`;
+    const numDaysNext = new Date(nextYear, nextMonth + 1, 0).getDate();
+
+    const allStaff = [...employees, ...rvEmployees];
+    if (allStaff.length === 0) {
+      alert("⚠️ Não há colaboradores registados.");
+      return;
+    }
+
+    // Contadores de turnos consecutivos e folgas para cada pessoa (simples)
+    const consecutiveWork: Record<string, number> = {};
+    const lastFolgaDay: Record<string, number> = {};
+    allStaff.forEach((n) => { consecutiveWork[n] = 0; lastFolgaDay[n] = 0; });
+
+    const newScheduleForMonth: Record<string, Record<number, string>> = {};
+    allStaff.forEach((n) => { newScheduleForMonth[n] = {}; });
+
+    for (let day = 1; day <= numDaysNext; day++) {
+      // Quem ainda não tem turno hoje, ordenado por: preferência correspondente primeiro, depois quem trabalhou menos dias seguidos
+      const needed: { shift: "M" | "T" | "N"; count: number }[] = [
+        { shift: "M", count: generateMinM },
+        { shift: "T", count: generateMinT },
+        { shift: "N", count: generateMinN },
+      ];
+
+      const assignedToday = new Set<string>();
+      const dayOfWeek = new Date(nextYear, nextMonth, day).getDay(); // 0=domingo
+
+      // Forçar folga semanal: se a pessoa já trabalhou generateFolgaDays*... dias seguidos, dá folga
+      const availableToday = allStaff.filter((n) => {
+        if (consecutiveWork[n] >= (7 - generateFolgaDays)) return false; // precisa de folga
+        return true;
+      });
+
+      needed.forEach(({ shift, count }) => {
+        // Ordenar candidatos: preferência pelo turno primeiro, depois menos dias trabalhados seguidos
+        const candidates = availableToday
+          .filter((n) => !assignedToday.has(n))
+          .sort((a, b) => {
+            const prefA = employeeProfiles[a]?.preferredShift === shift ? 0 : 1;
+            const prefB = employeeProfiles[b]?.preferredShift === shift ? 0 : 1;
+            if (prefA !== prefB) return prefA - prefB;
+            return consecutiveWork[a] - consecutiveWork[b];
+          });
+
+        const chosen = candidates.slice(0, count);
+        chosen.forEach((n) => {
+          newScheduleForMonth[n][day] = shift;
+          assignedToday.add(n);
+          consecutiveWork[n] = (consecutiveWork[n] || 0) + 1;
+        });
+      });
+
+      // Quem não foi escalado hoje fica de folga
+      allStaff.forEach((n) => {
+        if (!assignedToday.has(n)) {
+          newScheduleForMonth[n][day] = dayOfWeek === 0 ? "FO" : "FC";
+          consecutiveWork[n] = 0;
+        }
+      });
+    }
+
+    setSchedule((prev) => {
+      const next: typeof prev = JSON.parse(JSON.stringify(prev || {}));
+      next[nextKey] = newScheduleForMonth;
+      saveToSupabase("escala_data", { schedule: next }).catch(() => {});
+      return next;
+    });
+
+    setYear(nextYear);
+    setMonth(nextMonth);
+    setShowGenerateModal(false);
+    alert(`✅ Escala de ${MONTH_NAMES[nextMonth]} ${nextYear} gerada por regras para ${allStaff.length} colaborador(es)!\n\nMínimos: M=${generateMinM} T=${generateMinT} N=${generateMinN}\n\n⚠️ Reveja sempre a escala gerada — pode precisar de ajustes manuais.`);
   };
 
   const handleImportScheduleJSON = () => {
@@ -3929,6 +4015,39 @@ export default function App() {
                 );
               })}
 
+              {/* Turno preferencial */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
+                  Turno preferencial
+                </label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[
+                    { value: "M", label: "Manhã", color: "#E8B14A" },
+                    { value: "T", label: "Tarde", color: "#5B8DBE" },
+                    { value: "N", label: "Noite", color: "#7E57C2" },
+                  ].map((opt) => {
+                    const current = employeeProfiles[openProfile]?.preferredShift;
+                    const active = current === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => setEmployeeProfiles((prev) => ({ ...prev, [openProfile]: { ...(prev[openProfile] || {}), preferredShift: active ? "" : (opt.value as "M" | "T" | "N") } }))}
+                        style={{
+                          flex: 1, padding: "8px 0", borderRadius: 8, border: "2px solid",
+                          borderColor: active ? opt.color : "#E4DED3",
+                          background: active ? opt.color + "22" : "#FFFFFF",
+                          color: active ? opt.color : "#6B6358",
+                          fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif",
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: 11, color: "#A39B8E", marginTop: 5 }}>Usado pelo gerador automático de escalas para priorizar este turno.</div>
+              </div>
+
               {/* Secção de ficheiros */}
               <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
@@ -4058,29 +4177,89 @@ export default function App() {
         return (
           <>
             <div style={{ position: "fixed" as const, inset: 0, background: "rgba(42,36,28,0.4)", zIndex: 100 }} onClick={() => setShowGenerateModal(false)} />
-            <div style={{ position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "min(420px, 92vw)", background: "#FFFFFF", borderRadius: 20, zIndex: 101, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
-              <div style={{ padding: "20px 24px", background: "#E8F0E8", display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "min(440px, 92vw)", maxHeight: "88vh", overflowY: "auto" as const, background: "#FFFFFF", borderRadius: 20, zIndex: 101, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+              <div style={{ padding: "20px 24px", background: "#E8F0E8", display: "flex", alignItems: "center", gap: 10, position: "sticky" as const, top: 0, zIndex: 1 }}>
                 <span style={{ fontSize: 28 }}>🪄</span>
                 <div>
                   <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#2A241C" }}>Gerar escala automática</div>
                   <div style={{ fontSize: 12, color: "#5A7A4A" }}>{MONTH_NAMES[nm]} {ny}</div>
                 </div>
               </div>
+
+              {/* Tabs de modo */}
+              <div style={{ display: "flex", gap: 6, padding: "16px 24px 0" }}>
+                <button onClick={() => setGenerateMode("pattern")} style={{ flex: 1, padding: "8px 0", borderRadius: "8px 8px 0 0", border: "none", borderBottom: generateMode === "pattern" ? "2px solid #3B6D11" : "2px solid #E4DED3", background: "transparent", fontSize: 12, fontWeight: 700, color: generateMode === "pattern" ? "#3B6D11" : "#A39B8E", cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                  🔁 Continuar padrão
+                </button>
+                <button onClick={() => setGenerateMode("rules")} style={{ flex: 1, padding: "8px 0", borderRadius: "8px 8px 0 0", border: "none", borderBottom: generateMode === "rules" ? "2px solid #3B6D11" : "2px solid #E4DED3", background: "transparent", fontSize: 12, fontWeight: 700, color: generateMode === "rules" ? "#3B6D11" : "#A39B8E", cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                  ⚙️ Definir regras
+                </button>
+              </div>
+
               <div style={{ padding: 24 }}>
-                <p style={{ fontSize: 13, color: "#6B6358", lineHeight: 1.6, margin: "0 0 18px" }}>
-                  Vou analisar o padrão de turnos de <strong>{MONTH_NAMES[month]} {year}</strong> para cada colaborador e continuar a mesma sequência rotativa em <strong>{MONTH_NAMES[nm]} {ny}</strong>.
-                </p>
-                <div style={{ background: "#FFF8E1", border: "1px solid #FFE9A8", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#8A6A2E", marginBottom: 20 }}>
-                  ⚠️ Reveja sempre feriados e pedidos especiais depois de gerar — o algoritmo só continua o padrão, não conhece exceções.
-                </div>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => setShowGenerateModal(false)} style={{ flex: 1, background: "transparent", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>
-                    Cancelar
-                  </button>
-                  <button onClick={handleGenerateNextMonth} style={{ flex: 1, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
-                    Gerar escala
-                  </button>
-                </div>
+                {generateMode === "pattern" ? (
+                  <>
+                    <p style={{ fontSize: 13, color: "#6B6358", lineHeight: 1.6, margin: "0 0 18px" }}>
+                      Vou analisar o padrão de turnos de <strong>{MONTH_NAMES[month]} {year}</strong> para cada colaborador e continuar a mesma sequência rotativa em <strong>{MONTH_NAMES[nm]} {ny}</strong>.
+                    </p>
+                    <div style={{ background: "#FFF8E1", border: "1px solid #FFE9A8", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#8A6A2E", marginBottom: 20 }}>
+                      ⚠️ Reveja sempre feriados e pedidos especiais depois de gerar — o algoritmo só continua o padrão, não conhece exceções.
+                    </div>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button onClick={() => setShowGenerateModal(false)} style={{ flex: 1, background: "transparent", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>
+                        Cancelar
+                      </button>
+                      <button onClick={handleGenerateNextMonth} style={{ flex: 1, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                        Gerar escala
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ fontSize: 13, color: "#6B6358", lineHeight: 1.6, margin: "0 0 16px" }}>
+                      Vou construir a escala de <strong>{MONTH_NAMES[nm]} {ny}</strong> do zero, respeitando os mínimos por turno e a preferência de cada colaborador (definida na ficha).
+                    </p>
+
+                    {/* Mínimos por turno */}
+                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 12, marginBottom: 16 }}>
+                      {[
+                        { label: "Mínimo de Manhã", value: generateMinM, setter: setGenerateMinM, color: "#E8B14A" },
+                        { label: "Mínimo de Tarde", value: generateMinT, setter: setGenerateMinT, color: "#5B8DBE" },
+                        { label: "Mínimo de Noite", value: generateMinN, setter: setGenerateMinN, color: "#7E57C2" },
+                      ].map((row) => (
+                        <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "#2A241C" }}>{row.label}</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <button onClick={() => row.setter(Math.max(0, row.value - 1))} style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #E4DED3", background: "#F7F5F0", cursor: "pointer", fontSize: 14, fontWeight: 700, color: row.color }}>−</button>
+                            <span style={{ width: 24, textAlign: "center" as const, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif" }}>{row.value}</span>
+                            <button onClick={() => row.setter(row.value + 1)} style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #E4DED3", background: "#F7F5F0", cursor: "pointer", fontSize: 14, fontWeight: 700, color: row.color }}>+</button>
+                          </div>
+                        </div>
+                      ))}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 8, borderTop: "1px solid #EFEAE2" }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#2A241C" }}>Folgas por semana</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <button onClick={() => setGenerateFolgaDays(Math.max(1, generateFolgaDays - 1))} style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #E4DED3", background: "#F7F5F0", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#6B6358" }}>−</button>
+                          <span style={{ width: 24, textAlign: "center" as const, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif" }}>{generateFolgaDays}</span>
+                          <button onClick={() => setGenerateFolgaDays(generateFolgaDays + 1)} style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #E4DED3", background: "#F7F5F0", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#6B6358" }}>+</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ background: "#FFF8E1", border: "1px solid #FFE9A8", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#8A6A2E", marginBottom: 20 }}>
+                      ⚠️ Algoritmo simples — não substitui revisão humana. Confira a escala gerada e ajuste manualmente o que for preciso.
+                    </div>
+
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button onClick={() => setShowGenerateModal(false)} style={{ flex: 1, background: "transparent", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>
+                        Cancelar
+                      </button>
+                      <button onClick={handleGenerateByRules} style={{ flex: 1, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                        Gerar escala
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </>
