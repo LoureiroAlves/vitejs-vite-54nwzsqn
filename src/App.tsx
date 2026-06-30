@@ -2800,7 +2800,7 @@ export default function App() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
         * { box-sizing: border-box; }
-        body { margin: 0; }
+        html, body { margin: 0; padding: 0; background: #1E3A1E; }
         .cell-btn { transition: transform 0.08s ease; }
         .cell-btn:hover { transform: scale(1.05); }
         .cell-btn:active { transform: scale(0.97); }
