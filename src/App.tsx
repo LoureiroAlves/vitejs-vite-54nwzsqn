@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -2650,6 +2651,52 @@ function QuickSearchPanel({ target, schedule, onClose }: {
                     </div>
                   );
                 })()}
+
+                {/* Medicação Diária */}
+                {((utenteData.medications?.length ?? 0) > 0 || utenteData.medicationNotes) && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 6 }}>💊 Medicação Diária</div>
+                    {(utenteData.medications?.length ?? 0) > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column" as const, gap: 6, marginBottom: utenteData.medicationNotes ? 8 : 0 }}>
+                        {utenteData.medications.map((med: any) => (
+                          <div key={med.id} style={{ background: "#F7F5F0", borderRadius: 8, padding: "8px 10px", fontSize: 13 }}>
+                            <span style={{ fontWeight: 600, color: "#2A241C" }}>{med.name}</span>
+                            {med.dose && <span style={{ color: "#6B6358" }}> · {med.dose}</span>}
+                            {med.schedule && <span style={{ color: "#8A6A2E" }}> · {med.schedule}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {utenteData.medicationNotes && (
+                      <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, background: "#F7F5F0", borderRadius: 8, padding: "8px 10px", lineHeight: 1.5 }}>{utenteData.medicationNotes}</div>
+                    )}
+                  </div>
+                )}
+
+                {/* Cuidados de Higiene */}
+                {utenteData.hygieneNotes && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 6 }}>🧼 Cuidados de Higiene</div>
+                    <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, background: "#F7F5F0", borderRadius: 8, padding: "8px 10px", lineHeight: 1.5 }}>{utenteData.hygieneNotes}</div>
+                  </div>
+                )}
+
+                {/* Alimentação */}
+                {utenteData.feedingNotes && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 6 }}>🍽️ Alimentação</div>
+                    <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, background: "#F7F5F0", borderRadius: 8, padding: "8px 10px", lineHeight: 1.5 }}>{utenteData.feedingNotes}</div>
+                  </div>
+                )}
+
+                {/* Outros */}
+                {utenteData.otherNotes && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 6 }}>📌 Outros</div>
+                    <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, background: "#F7F5F0", borderRadius: 8, padding: "8px 10px", lineHeight: 1.5 }}>{utenteData.otherNotes}</div>
+                  </div>
+                )}
+
                 {(utenteData.files?.length ?? 0) > 0 && (
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 600, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 6 }}>Documentos ({utenteData.files.length})</div>
