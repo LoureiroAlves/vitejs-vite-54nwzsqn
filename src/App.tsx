@@ -1138,6 +1138,7 @@ interface Utente {
   entryDate?: string;
   notes?: string;
   photo?: string;
+  familyCode?: string;
   files?: { name: string; type: string; data: string; uploadedAt: string }[];
 }
 
@@ -1300,6 +1301,49 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
     if (openUtente?.id === id) setOpenUtente((prev) => prev ? { ...prev, ...updates } : prev);
   };
 
+  const generateFamilyCode = () => {
+    return Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+  };
+
+  const handleGetFamilyLink = (utente: Utente) => {
+    let code = utente.familyCode;
+    if (!code) {
+      code = generateFamilyCode();
+      updateUtente(utente.id, { familyCode: code });
+    }
+    const link = `${window.location.origin}${window.location.pathname}?familia=${code}`;
+    navigator.clipboard?.writeText(link).then(() => {
+      alert(`✅ Link copiado para a área de transferência!\n\n${link}\n\nPartilhe este link com a família de ${utente.name}.`);
+    }).catch(() => {
+      prompt("Copie o link manualmente:", link);
+    });
+  };
+
+  const [uploadingEmenta, setUploadingEmenta] = useState(false);
+  const handleUploadEmenta = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*,.pdf";
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      setUploadingEmenta(true);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        saveToSupabase("ementa_data", {
+          ementa: { data: dataUrl, type: file.type, uploadedAt: new Date().toISOString() },
+        }).then(() => {
+          alert("✅ Ementa da semana atualizada! Já está visível para todas as famílias.");
+        }).catch(() => {
+          alert("❌ Erro ao guardar a ementa. Tente novamente.");
+        }).finally(() => setUploadingEmenta(false));
+      };
+      reader.readAsDataURL(file);
+    };
+    document.body.appendChild(input); input.click(); document.body.removeChild(input);
+  };
+
   const filteredUtentes = utentes.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     (u.room && u.room.toLowerCase().includes(search.toLowerCase()))
@@ -1365,6 +1409,15 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
           onMouseLeave={hideTip}
         >
           <IconDownload size={14} /> JSON
+        </button>
+        <button
+          onClick={handleUploadEmenta}
+          disabled={uploadingEmenta}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: uploadingEmenta ? "#A39B8E" : "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: uploadingEmenta ? "default" : "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
+          onMouseEnter={(e) => showTip(e, "Carregar ementa da semana (visível às famílias)")}
+          onMouseLeave={hideTip}
+        >
+          🍽️ {uploadingEmenta ? "A carregar..." : "Ementa"}
         </button>
 
 
@@ -1622,8 +1675,14 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
             </div>
 
             {/* Footer */}
-            <div style={{ padding: "12px 24px", borderTop: "1px solid #EFEAE2", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 12, color: "#A39B8E" }}>✓ Guardado automaticamente</span>
+            <div style={{ padding: "12px 24px", borderTop: "1px solid #EFEAE2", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <button
+                onClick={() => handleGetFamilyLink(u)}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+                title="Gerar/copiar link de acesso para a família"
+              >
+                🔗 Link Família
+              </button>
               <button style={{ background: "#2A241C", color: "#FBF9F5", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }} onClick={() => setOpenUtente(null)}>Fechar</button>
             </div>
           </div>
@@ -1648,6 +1707,128 @@ const TURNO_LABELS: Record<string, string> = {
 // ============================================================
 // Componente que troca de palavra a cada ciclo (efeito flutuante)
 // ============================================================
+// ============================================================
+// PÁGINA PÚBLICA DA FAMÍLIA — acesso via link individual
+// ============================================================
+function FamilyPage({ code }: { code: string }) {
+  const [utente, setUtente] = useState<Utente | null | "not_found">(null);
+  const [ementa, setEmenta] = useState<{ data: string; type: string; uploadedAt: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      loadFromSupabase("utentes_data"),
+      loadFromSupabase("ementa_data"),
+    ]).then(([utentesRow, ementaRow]) => {
+      const utentes = utentesRow?.utentes ?? [];
+      const found = utentes.find((u: any) => u.familyCode === code);
+      setUtente(found || "not_found");
+      if (ementaRow?.ementa?.data) setEmenta(ementaRow.ementa);
+      setLoading(false);
+    }).catch(() => {
+      setUtente("not_found");
+      setLoading(false);
+    });
+  }, [code]);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ textAlign: "center" as const, color: "#3A5A70" }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
+          <div>A carregar informação...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (utente === "not_found" || !utente) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", padding: 24 }}>
+        <div style={{ textAlign: "center" as const, color: "#3A5A70", maxWidth: 360 }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Link inválido ou expirado</div>
+          <div style={{ fontSize: 13, color: "#6B6358" }}>Contacte o lar para obter um novo link de acesso.</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#E8EEF5", fontFamily: "'Inter', sans-serif", paddingBottom: 60 }}>
+      {/* Header */}
+      <div style={{ background: "#2A241C", padding: "28px 20px", display: "flex", alignItems: "center", gap: 16, color: "#FFFFFF" }}>
+        <div style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: "#3A5A70", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif" }}>
+          {utente.photo ? <img src={utente.photo} alt={utente.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : utente.name.slice(0, 2).toUpperCase()}
+        </div>
+        <div>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700 }}>{utente.name}</div>
+          <div style={{ fontSize: 12, color: "#C9C2B5" }}>Associação Oliveirense de Socorros Mútuos</div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 600, margin: "0 auto", padding: "24px 20px" }}>
+        {/* Dados básicos */}
+        <div style={{ background: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 14 }}>Informação Geral</div>
+          {[
+            { label: "Quarto", value: utente.room },
+            { label: "Data de nascimento", value: utente.birthDate },
+            { label: "Data de entrada", value: utente.entryDate },
+          ].filter((f) => f.value).map((f) => (
+            <div key={f.label} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #F0EDE6" }}>
+              <span style={{ fontSize: 13, color: "#6B6358" }}>{f.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#2A241C" }}>{f.value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Observações / informação clínica */}
+        {utente.notes && (
+          <div style={{ background: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 10 }}>Informação Clínica / Observações</div>
+            <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.6, background: "#F7F5F0", borderRadius: 10, padding: 14 }}>{utente.notes}</div>
+          </div>
+        )}
+
+        {/* Documentos */}
+        {(utente.files?.length ?? 0) > 0 && (
+          <div style={{ background: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 10 }}>Documentos</div>
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+              {utente.files!.map((f, i) => (
+                <a key={i} href={f.data} download={f.name} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#3A5A70", textDecoration: "none", background: "#F7F5F0", borderRadius: 8, padding: "8px 12px" }}>
+                  📎 {f.name}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Ementa semanal */}
+        <div style={{ background: "#FFFFFF", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 10 }}>🍽️ Ementa da Semana</div>
+          {ementa ? (
+            ementa.type.startsWith("image/") ? (
+              <img src={ementa.data} alt="Ementa da semana" style={{ width: "100%", borderRadius: 10, border: "1px solid #E4DED3" }} />
+            ) : (
+              <a href={ementa.data} download="ementa.pdf" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#3A5A70", textDecoration: "none", background: "#F7F5F0", borderRadius: 8, padding: "10px 14px" }}>
+                📄 Ver ementa da semana (PDF)
+              </a>
+            )
+          ) : (
+            <div style={{ fontSize: 13, color: "#A39B8E", textAlign: "center" as const, padding: "16px 0" }}>Ementa ainda não disponível.</div>
+          )}
+        </div>
+
+        <div style={{ textAlign: "center" as const, fontSize: 11, color: "#A39B8E", marginTop: 24 }}>
+          Esta página é de acesso restrito e exclusivo para familiares.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FloatingWordCycler({ words, interval, delay = 0 }: { words: string[]; interval: number; delay?: number }) {
   const [index, setIndex] = useState(0);
 
@@ -1947,6 +2128,11 @@ function QuickSearchPanel({ target, schedule, onClose }: {
 }
 
 export default function App() {
+  // Detectar acesso público de família via URL (?familia=CODIGO)
+  const familyCode = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("familia")
+    : null;
+
   const today = new Date();
   const [activePage, setActivePage] = useState<"home" | "schedule" | "stock" | "utentes">("home");
   const [year, setYear] = useState(today.getFullYear());
@@ -3398,6 +3584,11 @@ export default function App() {
         </div>
       );
     });
+
+  // Se houver código de família na URL, mostra só a página pública e ignora o resto da app
+  if (familyCode) {
+    return <FamilyPage code={familyCode} />;
+  }
 
   return (
     <div style={{ ...styles.page, background: isHomePage ? "#1E3A1E" : "#1E3A1E" }}>
