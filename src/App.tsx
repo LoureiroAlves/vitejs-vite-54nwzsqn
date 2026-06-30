@@ -1877,10 +1877,20 @@ function QuickSearchPanel({ target, schedule, onClose }: {
                   </div>
 
                   {/* Cabeçalho dias da semana */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
-                    {WEEKDAY_LETTERS.map((d, i) => (
-                      <div key={i} style={{ textAlign: "center" as const, fontSize: 10, fontWeight: 700, color: "#A39B8E" }}>{d}</div>
-                    ))}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 8 }}>
+                    {WEEKDAY_LETTERS.map((d, i) => {
+                      const colors = ["#C2554A", "#5B8DBE", "#3B6D11", "#B08A4E", "#7E57C2", "#3A8A8A", "#C2554A"];
+                      return (
+                        <div key={i} style={{
+                          width: 26, height: 26, borderRadius: "50%", margin: "0 auto",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          background: colors[i] + "1F", color: colors[i],
+                          fontSize: 11, fontWeight: 800, fontFamily: "'Space Grotesk', sans-serif",
+                        }}>
+                          {d}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Grelha de dias */}
@@ -2697,6 +2707,52 @@ export default function App() {
   };
 
   // ---------- Gerar escala por regras (mínimos + preferências) ----------
+  // ---------- Auto-preencher preferências de turno com base no histórico ----------
+  const handleAutoFillPreferences = () => {
+    const allStaff = [...employees, ...rvEmployees];
+    const counts: Record<string, { M: number; T: number; N: number }> = {};
+    allStaff.forEach((n) => { counts[n] = { M: 0, T: 0, N: 0 }; });
+
+    // Percorrer todos os meses guardados no schedule
+    Object.values(schedule || {}).forEach((monthData) => {
+      Object.entries(monthData || {}).forEach(([name, days]) => {
+        if (!counts[name]) counts[name] = { M: 0, T: 0, N: 0 };
+        Object.values(days || {}).forEach((turno) => {
+          if (turno === "M" || turno === "T" || turno === "N") {
+            counts[name][turno]++;
+          }
+        });
+      });
+    });
+
+    let atualizados = 0;
+    setEmployeeProfiles((prev) => {
+      const next = { ...prev };
+      allStaff.forEach((name) => {
+        const c = counts[name];
+        if (!c) return;
+        const total = c.M + c.T + c.N;
+        if (total === 0) return; // sem histórico, não mexe
+
+        const max = Math.max(c.M, c.T, c.N);
+        const pref: "M" | "T" | "N" = c.M === max ? "M" : c.T === max ? "T" : "N";
+
+        // Só preenche se ainda não tiver preferência definida manualmente
+        if (!next[name]?.preferredShift) {
+          next[name] = { ...(next[name] || {}), preferredShift: pref };
+          atualizados++;
+        }
+      });
+      return next;
+    });
+
+    if (atualizados === 0) {
+      alert("ℹ️ Todos os colaboradores já têm preferência definida, ou não há histórico suficiente.");
+    } else {
+      alert(`✅ Preferência de turno preenchida automaticamente para ${atualizados} colaborador(es), com base no histórico de turnos!`);
+    }
+  };
+
   const handleGenerateByRules = () => {
     let nextMonth = month + 1;
     let nextYear = year;
@@ -4329,6 +4385,10 @@ export default function App() {
                         </div>
                       </div>
                     </div>
+
+                    <button onClick={handleAutoFillPreferences} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 10, padding: "10px 0", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", marginBottom: 16 }}>
+                      ✨ Preencher preferências automaticamente com base no histórico
+                    </button>
 
                     <div style={{ background: "#FFF8E1", border: "1px solid #FFE9A8", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#8A6A2E", marginBottom: 20 }}>
                       ⚠️ Algoritmo simples — não substitui revisão humana. Confira a escala gerada e ajuste manualmente o que for preciso.
