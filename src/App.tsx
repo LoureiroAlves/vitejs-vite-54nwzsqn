@@ -2706,6 +2706,18 @@ export default function App() {
   const isHomePage = (activePage as string) === "home";
   const isStockPage = (activePage as string) === "stock";
 
+  const navigateHome = () => {
+    // Adicionar classe de saída ao elemento animado
+    const el = document.querySelector(".page-enter") as HTMLElement;
+    if (el) {
+      el.classList.remove("page-enter");
+      el.classList.add("page-exit");
+      setTimeout(() => setActivePage("home"), 280);
+    } else {
+      setActivePage("home");
+    }
+  };
+
   // ---------- Aniversários de utentes ----------
   const birthdayAlerts = useMemo(() => {
     const alerts: { name: string; age: number; isToday: boolean; isTomorrow: boolean; photo?: string }[] = [];
@@ -2809,7 +2821,12 @@ export default function App() {
           0% { opacity: 0; transform: translateY(100%); }
           100% { opacity: 1; transform: translateY(0); }
         }
+        @keyframes pageClose {
+          0% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(100%); }
+        }
         .page-enter { animation: pageOpen 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+        .page-exit { animation: pageClose 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
         .utente-avatar { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; }
         .utente-avatar:hover { transform: scale(2); box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 10; position: relative; }
         input[type="number"]::-webkit-outer-spin-button,
@@ -2943,24 +2960,26 @@ export default function App() {
       {/* Página de stock */}
       {isStockPage && (
         <div className="page-enter" style={{ margin: "-32px -24px", minHeight: "100vh" }}>
-          <StockPage key={`stock-${syncDone}`} onBack={() => setActivePage("home")} />
+          <StockPage key={`stock-${syncDone}`} onBack={() => navigateHome()} />
         </div>
       )}
 
       {/* Página de utentes */}
       {isUtentesPage && (
         <div className="page-enter" style={{ margin: "-32px -24px", minHeight: "100vh" }}>
-          <UtentesPage key={`utentes-${syncDone}`} onBack={() => setActivePage("home")} />
+          <UtentesPage key={`utentes-${syncDone}`} onBack={() => navigateHome()} />
         </div>
       )}
 
-      {isSchedulePage && (<>
+      {isSchedulePage && (
+      <div className="page-enter" style={{ position: "relative" as const }}>
+      <>
 
       <header style={styles.header}>
         {/* Voltar + ícone de colaboradores */}
         <div style={styles.logoWrap}>
           <button
-            onClick={() => setActivePage("home")}
+            onClick={() => navigateHome()}
             style={{ display: "flex", alignItems: "center", gap: 6, border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "7px 12px", cursor: "pointer", color: "#6B6358", fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif", flexShrink: 0 }}
             onMouseEnter={(e) => showTip(e, "Voltar ao início")}
             onMouseLeave={hideTip}
