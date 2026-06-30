@@ -2817,16 +2817,24 @@ export default function App() {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-6px); }
         }
-        @keyframes pageOpen {
-          0% { opacity: 0; transform: translateY(100%); }
-          100% { opacity: 1; transform: translateY(0); }
+        @keyframes revealUp {
+          0% { clip-path: inset(100% 0 0 0); }
+          100% { clip-path: inset(0% 0 0 0); }
         }
-        @keyframes pageClose {
-          0% { opacity: 1; transform: translateY(0); }
-          100% { opacity: 0; transform: translateY(100%); }
+        @keyframes revealDown {
+          0% { clip-path: inset(0% 0 0 0); }
+          100% { clip-path: inset(100% 0 0 0); }
         }
-        .page-enter { animation: pageOpen 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
-        .page-exit { animation: pageClose 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+        .page-enter {
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          z-index: 100; overflow-y: auto;
+          animation: revealUp 0.45s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+        }
+        .page-exit {
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          z-index: 100; overflow-y: auto;
+          animation: revealDown 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+        }
         .utente-avatar { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; }
         .utente-avatar:hover { transform: scale(2); box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 10; position: relative; }
         input[type="number"]::-webkit-outer-spin-button,
@@ -2959,20 +2967,20 @@ export default function App() {
 
       {/* Página de stock */}
       {isStockPage && (
-        <div className="page-enter" style={{ margin: "-32px -24px", minHeight: "100vh", background: "#E8F0E8" }}>
+        <div className="page-enter" style={{ background: "#E8F0E8" }}>
           <StockPage key={`stock-${syncDone}`} onBack={() => navigateHome()} />
         </div>
       )}
 
       {/* Página de utentes */}
       {isUtentesPage && (
-        <div className="page-enter" style={{ margin: "-32px -24px", minHeight: "100vh", background: "#E8EEF5" }}>
+        <div className="page-enter" style={{ background: "#E8EEF5" }}>
           <UtentesPage key={`utentes-${syncDone}`} onBack={() => navigateHome()} />
         </div>
       )}
 
       {isSchedulePage && (
-      <div className="page-enter" style={{ position: "relative" as const, background: "#F5EDD8" }}>
+      <div className="page-enter" style={{ background: "#F5EDD8" }}>
       <>
 
       <header style={styles.header}>
