@@ -1871,6 +1871,9 @@ export default function App() {
 
   const syncFromSupabase = () => {
     setSyncStatus("syncing");
+    const startTime = Date.now();
+    const MIN_DURATION = 2500; // tempo mínimo visível da animação
+
     Promise.all([
       loadFromSupabase("escala_data"),
       loadFromSupabase("stock_data"),
@@ -1902,9 +1905,17 @@ export default function App() {
           }));
         } catch (e) {}
       }
-      setSyncStatus(escala ? "synced" : "idle");
-      setSyncDone((prev) => !prev);
-    }).catch(() => setSyncStatus("error"));
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, MIN_DURATION - elapsed);
+      setTimeout(() => {
+        setSyncStatus(escala ? "synced" : "idle");
+        setSyncDone((prev) => !prev);
+      }, remaining);
+    }).catch(() => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, MIN_DURATION - elapsed);
+      setTimeout(() => setSyncStatus("error"), remaining);
+    });
   };
 
   // Carregar do Supabase ao iniciar (sincronização em background)
@@ -3142,12 +3153,12 @@ export default function App() {
                 disabled={syncStatus === "syncing"}
                 style={{
                   width: 80, height: 80, borderRadius: 24,
-                  background: syncStatus === "error" ? "rgba(226,108,90,0.18)" : "rgba(255,255,255,0.12)",
-                  border: `1px solid ${syncStatus === "error" ? "rgba(226,108,90,0.4)" : "rgba(255,255,255,0.2)"}`,
+                  background: syncStatus === "syncing" ? "rgba(91,168,232,0.18)" : syncStatus === "error" ? "rgba(226,108,90,0.18)" : "rgba(255,255,255,0.12)",
+                  border: `1px solid ${syncStatus === "syncing" ? "rgba(91,168,232,0.4)" : syncStatus === "error" ? "rgba(226,108,90,0.4)" : "rgba(255,255,255,0.2)"}`,
                   display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px",
                   cursor: syncStatus === "syncing" ? "default" : "pointer", padding: 0,
                   animation: syncStatus === "syncing" ? "spin 1s linear infinite" : undefined,
-                  transition: "transform 0.15s",
+                  transition: "background 0.3s ease, border-color 0.3s ease, transform 0.15s",
                 }}
                 title={
                   syncStatus === "synced" ? "Sincronizado — clique para atualizar" :
@@ -3157,7 +3168,7 @@ export default function App() {
                 onMouseEnter={(e) => { if (syncStatus !== "syncing") (e.currentTarget as HTMLElement).style.transform = "scale(1.08)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
               >
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={syncStatus === "error" ? "#E26C5A" : "#F5B944"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={syncStatus === "syncing" ? "#5BA8E8" : syncStatus === "error" ? "#E26C5A" : "#F5B944"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 0.3s ease" }}>
                   <path d="M3 21V7l9-4 9 4v14"/>
                   <path d="M9 21V13h6v8"/>
                   <path d="M9 9h.01M12 9h.01M15 9h.01M9 13h.01M15 13h.01"/>
@@ -4638,4 +4649,3 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
-                      
