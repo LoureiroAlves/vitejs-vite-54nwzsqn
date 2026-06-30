@@ -2005,6 +2005,7 @@ function QuickSearchPanel({ target, schedule, onClose }: {
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
   const [utenteData, setUtenteData] = useState<any>(null);
+  const [selectedLogDay, setSelectedLogDay] = useState<string | null>(null);
 
   useEffect(() => {
     if (target.type === "utente") {
@@ -2152,34 +2153,87 @@ function QuickSearchPanel({ target, schedule, onClose }: {
                     <div style={{ fontSize: 14, color: "#2A241C" }}>{f.value}</div>
                   </div>
                 ))}
-                {(utenteData.dailyLogs?.length ?? 0) > 0 && (
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 6 }}>📝 Registo do Dia</div>
-                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, maxHeight: 240, overflowY: "auto" as const }}>
-                      {utenteData.dailyLogs.map((log: any, i: number) => (
-                        <div key={i} style={{ background: "#F7F5F0", borderRadius: 10, padding: "10px 12px" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70" }}>{log.date}</span>
+                {(utenteData.dailyLogs?.length ?? 0) > 0 && (() => {
+                  // Criar mapa rápido data -> log
+                  const logsByDate: Record<string, { date: string; text: string }> = {};
+                  utenteData.dailyLogs.forEach((log: any) => { logsByDate[log.date] = log; });
+
+                  const numDaysU = new Date(year, month + 1, 0).getDate();
+                  const firstDayOfWeekU = new Date(year, month, 1).getDay();
+                  const selectedLog = selectedLogDay ? logsByDate[selectedLogDay] : null;
+
+                  const printLog = (log: { date: string; text: string }) => {
+                    const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Registo — ${target.name} — ${log.date}</title>
+                    <style>@page{size:A4;margin:20mm}body{font-family:Arial,sans-serif;color:#2A241C}h1{font-size:18px;margin:0 0 4px}.sub{font-size:12px;color:#888;margin:0 0 20px}.date-badge{display:inline-block;background:#2A241C;color:#F5B944;border-radius:20px;padding:6px 16px;font-size:13px;font-weight:bold;margin-bottom:16px}.text-box{font-size:14px;line-height:1.8;white-space:pre-wrap;border:1px solid #E4DED3;border-radius:8px;padding:18px}</style>
+                    </head><body><h1>Registo do Dia — ${target.name}</h1><p class="sub">Associação Oliveirense de Socorros Mútuos · Gerado em ${new Date().toLocaleDateString("pt-PT")}</p><div class="date-badge">${log.date}</div><div class="text-box">${log.text.replace(/\n/g, "<br>")}</div></body></html>`;
+                    const w = window.open("", "_blank");
+                    if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+                    w.document.open(); w.document.write(html); w.document.close();
+                    w.focus(); setTimeout(() => w.print(), 300);
+                  };
+
+                  return (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 10 }}>📝 Registo do Dia — clique num dia para ver</div>
+
+                      {/* Cabeçalho dias da semana */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
+                        {WEEKDAY_LETTERS.map((d, i) => {
+                          const colors = ["#C2554A", "#5B8DBE", "#3B6D11", "#B08A4E", "#7E57C2", "#3A8A8A", "#C2554A"];
+                          return (
+                            <div key={i} style={{ width: 22, height: 22, borderRadius: "50%", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", background: colors[i] + "1F", color: colors[i], fontSize: 9, fontWeight: 800 }}>{d}</div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Grelha do calendário */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 14 }}>
+                        {Array.from({ length: firstDayOfWeekU }, (_, i) => <div key={`e-${i}`} />)}
+                        {Array.from({ length: numDaysU }, (_, i) => i + 1).map((day) => {
+                          const dateObj = new Date(year, month, day);
+                          const dateStr = dateObj.toLocaleDateString("pt-PT");
+                          const hasLog = !!logsByDate[dateStr];
+                          const isSelected = selectedLogDay === dateStr;
+                          const isToday = dateStr === new Date().toLocaleDateString("pt-PT");
+                          return (
                             <button
-                              onClick={() => {
-                                const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Registo — ${target.name} — ${log.date}</title>
-                                <style>@page{size:A4;margin:20mm}body{font-family:Arial,sans-serif;color:#2A241C}h1{font-size:18px;margin:0 0 4px}.sub{font-size:12px;color:#888;margin:0 0 20px}.date-badge{display:inline-block;background:#2A241C;color:#F5B944;border-radius:20px;padding:6px 16px;font-size:13px;font-weight:bold;margin-bottom:16px}.text-box{font-size:14px;line-height:1.8;white-space:pre-wrap;border:1px solid #E4DED3;border-radius:8px;padding:18px}</style>
-                                </head><body><h1>Registo do Dia — ${target.name}</h1><p class="sub">Associação Oliveirense de Socorros Mútuos · Gerado em ${new Date().toLocaleDateString("pt-PT")}</p><div class="date-badge">${log.date}</div><div class="text-box">${log.text.replace(/\n/g, "<br>")}</div></body></html>`;
-                                const w = window.open("", "_blank");
-                                if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
-                                w.document.open(); w.document.write(html); w.document.close();
-                                w.focus(); setTimeout(() => w.print(), 300);
+                              key={day}
+                              onClick={() => hasLog && setSelectedLogDay(isSelected ? null : dateStr)}
+                              style={{
+                                aspectRatio: "1", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: 11, fontWeight: hasLog ? 700 : 400, cursor: hasLog ? "pointer" : "default",
+                                background: isSelected ? "#3A5A70" : hasLog ? "#E8EEF5" : "#FAFAF8",
+                                color: isSelected ? "#FFFFFF" : hasLog ? "#3A5A70" : "#C2BAAC",
+                                border: isToday ? "2px solid #5B8DBE" : "1px solid #EFEAE2",
                               }}
-                              style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}
-                              title="Imprimir este registo"
-                            >🖨️</button>
+                              title={hasLog ? "Ver registo deste dia" : undefined}
+                            >
+                              {day}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Navegação de mês */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 14 }}>
+                        <button onClick={() => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); setSelectedLogDay(null); }} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "4px 8px", cursor: "pointer" }}><IconChevronLeft size={14} /></button>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#6B6358" }}>{MONTH_NAMES_FULL[month]} {year}</span>
+                        <button onClick={() => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); setSelectedLogDay(null); }} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "4px 8px", cursor: "pointer" }}><IconChevronRight size={14} /></button>
+                      </div>
+
+                      {/* Conteúdo do dia selecionado */}
+                      {selectedLog && (
+                        <div style={{ background: "#F7F5F0", borderRadius: 10, padding: "12px 14px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70" }}>{selectedLog.date}</span>
+                            <button onClick={() => printLog(selectedLog)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 14 }} title="Imprimir este registo">🖨️</button>
                           </div>
-                          <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.5 }}>{log.text}</div>
+                          <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.6 }}>{selectedLog.text}</div>
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
                 {(utenteData.files?.length ?? 0) > 0 && (
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 600, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 6 }}>Documentos ({utenteData.files.length})</div>
@@ -5602,4 +5656,3 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
-                    
