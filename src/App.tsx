@@ -2846,20 +2846,62 @@ export default function App() {
 
         /* ===== RESPONSIVO MOBILE ===== */
         @media (max-width: 768px) {
-          .home-grid { grid-template-columns: 1fr !important; max-width: 280px !important; margin: 0 auto !important; gap: 12px !important; }
-          .home-btn { padding: 20px 16px !important; border-radius: 18px !important; flex-direction: row !important; gap: 14px !important; justify-content: flex-start !important; }
-          .home-btn-icon { width: 48px !important; height: 48px !important; border-radius: 14px !important; flex-shrink: 0 !important; }
-          .home-btn-icon svg { width: 24px !important; height: 24px !important; }
-          .home-btn-label { font-size: 16px !important; }
-          .home-title { font-size: 16px !important; }
-          .home-icon-wrap { width: 56px !important; height: 56px !important; }
-          .home-icon-wrap svg { width: 28px !important; height: 28px !important; }
-          .home-center { margin-bottom: 28px !important; }
-          .summary-grid-mobile { grid-template-columns: repeat(2, 1fr) !important; }
-          .utentes-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .stock-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          /* Home */
+          .home-grid { grid-template-columns: 1fr !important; max-width: 280px !important; margin: 0 auto !important; gap: 10px !important; }
+          .home-btn { padding: 16px 14px !important; border-radius: 16px !important; flex-direction: row !important; gap: 12px !important; justify-content: flex-start !important; }
+          .home-btn-icon { width: 44px !important; height: 44px !important; border-radius: 12px !important; flex-shrink: 0 !important; }
+          .home-btn-icon svg { width: 22px !important; height: 22px !important; }
+          .home-btn-label { font-size: 14px !important; }
+          .home-title { font-size: 17px !important; padding: 0 16px; }
+          .home-icon-wrap { width: 52px !important; height: 52px !important; }
+          .home-icon-wrap svg { width: 26px !important; height: 26px !important; }
+          .home-center { margin-bottom: 20px !important; }
+
+          /* Header geral de todas as páginas */
+          .header-right-mobile { width: 100% !important; flex-wrap: wrap !important; gap: 4px !important; justify-content: flex-start !important; }
+
+          /* Grelhas */
+          .summary-grid-mobile { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+          .utentes-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+          .stock-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+
+          /* Painéis laterais ocupam ecrã todo */
           .side-panel-mobile { width: 100vw !important; }
-          .header-right-mobile { width: 100% !important; flex-wrap: wrap !important; gap: 6px !important; }
+
+          /* Toolbar e botões em geral mais compactos */
+          .tool-btn { padding: 5px 8px !important; font-size: 11px !important; }
+        }
+
+        @media (max-width: 480px) {
+          /* Home ainda mais compacta */
+          .home-grid { max-width: 260px !important; gap: 8px !important; }
+          .home-btn { padding: 12px 10px !important; gap: 10px !important; }
+          .home-btn-icon { width: 38px !important; height: 38px !important; }
+          .home-btn-icon svg { width: 19px !important; height: 19px !important; }
+          .home-btn-label { font-size: 12px !important; }
+          .home-title { font-size: 14px !important; line-height: 1.3 !important; }
+          .home-icon-wrap { width: 44px !important; height: 44px !important; margin-bottom: 10px !important; }
+          .home-icon-wrap svg { width: 22px !important; height: 22px !important; }
+
+          /* Grelhas em 1 coluna no ecrã muito pequeno */
+          .utentes-grid { grid-template-columns: 1fr !important; }
+          .stock-grid { grid-template-columns: 1fr !important; }
+          .summary-grid-mobile { grid-template-columns: 1fr !important; }
+        }
+
+        /* Aplica-se a toda a app independentemente do breakpoint específico */
+        @media (max-width: 768px) {
+          body { font-size: 14px; }
+          h1 { font-size: 18px !important; }
+
+          /* Tabela/grelha de turnos com scroll horizontal suave */
+          .schedule-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+
+          /* Modal e painéis com padding reduzido */
+          .modal-mobile { padding: 16px !important; }
+
+          /* Botões de toolbar quebram em várias linhas */
+          .toolbar-wrap { flex-wrap: wrap !important; row-gap: 6px !important; }
         }
       `}</style>
 
@@ -3042,7 +3084,7 @@ export default function App() {
             </button>
           </div>
 
-          <div style={styles.toolbar}>
+          <div className="toolbar-wrap" style={styles.toolbar}>
             {/* Borracha */}
             <button
               className={`tool-btn${selectMode ? " tool-btn-active" : ""}`}
