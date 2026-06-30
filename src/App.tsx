@@ -2796,7 +2796,7 @@ export default function App() {
     });
 
   return (
-    <div style={{ ...styles.page, background: isHomePage ? "#1E3A1E" : isStockPage ? "#E8F0E8" : isUtentesPage ? "#E8EEF5" : "#F5EDD8" }}>
+    <div style={{ ...styles.page, background: isHomePage ? "#1E3A1E" : "#1E3A1E" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
         * { box-sizing: border-box; }
