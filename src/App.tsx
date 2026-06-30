@@ -2678,7 +2678,7 @@ export default function App() {
     const numDaysCurrent = new Date(year, month + 1, 0).getDate();
     const numDaysNext = new Date(nextYear, nextMonth + 1, 0).getDate();
 
-    const allStaff = [...employees, ...rvEmployees];
+    const allStaff = [...employees]; // Recibo Verde excluído — gerido manualmente
     let totalGerados = 0;
     const newScheduleForMonth: Record<string, Record<number, string>> = {};
 
@@ -2730,7 +2730,7 @@ export default function App() {
   // ---------- Gerar escala por regras (mínimos + preferências) ----------
   // ---------- Auto-preencher preferências de turno com base no histórico ----------
   const handleAutoFillPreferences = () => {
-    const allStaff = [...employees, ...rvEmployees];
+    const allStaff = [...employees]; // Recibo Verde excluído — gerido manualmente
     const counts: Record<string, { M: number; T: number; N: number }> = {};
     allStaff.forEach((n) => { counts[n] = { M: 0, T: 0, N: 0 }; });
 
@@ -2781,22 +2781,24 @@ export default function App() {
     const nextKey = `${nextYear}-${String(nextMonth + 1).padStart(2, "0")}`;
     const numDaysNext = new Date(nextYear, nextMonth + 1, 0).getDate();
 
-    const allStaff = [...employees, ...rvEmployees];
+    const allStaff = [...employees]; // Recibo Verde excluído — gerido manualmente
     if (allStaff.length === 0) {
       alert("⚠️ Não há colaboradores registados.");
       return;
     }
 
-    // Contadores de turnos consecutivos e folgas para cada pessoa (simples)
-    const consecutiveWork: Record<string, number> = {};
-    const lastFolgaDay: Record<string, number> = {};
-    allStaff.forEach((n) => { consecutiveWork[n] = 0; lastFolgaDay[n] = 0; });
-
     const newScheduleForMonth: Record<string, Record<number, string>> = {};
     allStaff.forEach((n) => { newScheduleForMonth[n] = {}; });
 
+    // Máximo de dias de trabalho seguidos antes de obrigar folga (como em Julho: 3-4 dias)
+    const maxConsecutive = Math.max(3, Math.min(4, 7 - generateFolgaDays));
+
+    const consecutiveWork: Record<string, number> = {};
+    const daysSinceLastFO: Record<string, number> = {}; // dias desde a última folga obrigatória completa
+    const totalAssigned: Record<string, number> = {};
+    allStaff.forEach((n) => { consecutiveWork[n] = 0; daysSinceLastFO[n] = 0; totalAssigned[n] = 0; });
+
     for (let day = 1; day <= numDaysNext; day++) {
-      // Quem ainda não tem turno hoje, ordenado por: preferência correspondente primeiro, depois quem trabalhou menos dias seguidos
       const needed: { shift: "M" | "T" | "N"; count: number }[] = [
         { shift: "M", count: generateMinM },
         { shift: "T", count: generateMinT },
@@ -2806,21 +2808,19 @@ export default function App() {
       const assignedToday = new Set<string>();
       const dayOfWeek = new Date(nextYear, nextMonth, day).getDay(); // 0=domingo
 
-      // Forçar folga semanal: se a pessoa já trabalhou generateFolgaDays*... dias seguidos, dá folga
-      const availableToday = allStaff.filter((n) => {
-        if (consecutiveWork[n] >= (7 - generateFolgaDays)) return false; // precisa de folga
-        return true;
-      });
-
       needed.forEach(({ shift, count }) => {
-        // Ordenar candidatos: preferência pelo turno primeiro, depois menos dias trabalhados seguidos
-        const candidates = availableToday
-          .filter((n) => !assignedToday.has(n))
+        // Candidatos disponíveis: ainda não atingiram o limite de dias seguidos
+        const candidates = allStaff
+          .filter((n) => !assignedToday.has(n) && consecutiveWork[n] < maxConsecutive)
           .sort((a, b) => {
+            // 1º: quem está mais perto do limite de dias seguidos trabalha primeiro (force-finish o ciclo antes de começar outro)
+            if (consecutiveWork[a] !== consecutiveWork[b]) return consecutiveWork[b] - consecutiveWork[a];
+            // 2º: quem tem menos turnos totais no mês (rotação justa)
+            if (totalAssigned[a] !== totalAssigned[b]) return totalAssigned[a] - totalAssigned[b];
+            // 3º: preferência pelo turno
             const prefA = employeeProfiles[a]?.preferredShift === shift ? 0 : 1;
             const prefB = employeeProfiles[b]?.preferredShift === shift ? 0 : 1;
-            if (prefA !== prefB) return prefA - prefB;
-            return consecutiveWork[a] - consecutiveWork[b];
+            return prefA - prefB;
           });
 
         const chosen = candidates.slice(0, count);
@@ -2828,17 +2828,25 @@ export default function App() {
           newScheduleForMonth[n][day] = shift;
           assignedToday.add(n);
           consecutiveWork[n] = (consecutiveWork[n] || 0) + 1;
+          totalAssigned[n] = (totalAssigned[n] || 0) + 1;
+          daysSinceLastFO[n] = (daysSinceLastFO[n] || 0) + 1;
         });
       });
 
-      // Quem não foi escalado hoje fica de folga
+      // Quem não trabalhou hoje: dá folga. Alterna FC/FO conforme o padrão de Julho —
+      // se já passaram >=6 dias desde a última FO, dá FO; senão FC
       allStaff.forEach((n) => {
         if (!assignedToday.has(n)) {
-          newScheduleForMonth[n][day] = dayOfWeek === 0 ? "FO" : "FC";
+          const giveFolgaObrigatoria = daysSinceLastFO[n] >= 6 || dayOfWeek === 0;
+          newScheduleForMonth[n][day] = giveFolgaObrigatoria ? "FO" : "FC";
+          if (giveFolgaObrigatoria) daysSinceLastFO[n] = 0;
           consecutiveWork[n] = 0;
         }
       });
     }
+
+    const avgAssigned = Object.values(totalAssigned).reduce((a, b) => a + b, 0) / allStaff.length;
+    const underused = allStaff.filter((n) => totalAssigned[n] < avgAssigned * 0.3);
 
     setSchedule((prev) => {
       const next: typeof prev = JSON.parse(JSON.stringify(prev || {}));
@@ -2850,7 +2858,10 @@ export default function App() {
     setYear(nextYear);
     setMonth(nextMonth);
     setShowGenerateModal(false);
-    alert(`✅ Escala de ${MONTH_NAMES[nextMonth]} ${nextYear} gerada por regras para ${allStaff.length} colaborador(es)!\n\nMínimos: M=${generateMinM} T=${generateMinT} N=${generateMinN}\n\n⚠️ Reveja sempre a escala gerada — pode precisar de ajustes manuais.`);
+    const underusedMsg = underused.length > 0
+      ? `\n\n⚠️ Atenção: ${underused.join(", ")} ${underused.length === 1 ? "ficou" : "ficaram"} com poucos turnos atribuídos. Verifique manualmente.`
+      : "";
+    alert(`✅ Escala de ${MONTH_NAMES[nextMonth]} ${nextYear} gerada por regras para ${allStaff.length} colaborador(es)!\n\nMínimos: M=${generateMinM} T=${generateMinT} N=${generateMinN}${underusedMsg}\n\n⚠️ Reveja sempre a escala gerada — pode precisar de ajustes manuais.`);
   };
 
   const handleImportScheduleJSON = () => {
@@ -4431,6 +4442,10 @@ export default function App() {
                     <p style={{ fontSize: 13, color: "#6B6358", lineHeight: 1.6, margin: "0 0 18px" }}>
                       Vou analisar o padrão de turnos de <strong>{MONTH_NAMES[month]} {year}</strong> para cada colaborador e continuar a mesma sequência rotativa em <strong>{MONTH_NAMES[nm]} {ny}</strong>.
                     </p>
+                    <div style={{ background: "#E8EEF5", border: "1px solid #B8CCE0", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#3A5A70", marginBottom: 12 }}>
+                      ℹ️ Colaboradores de Recibo Verde não são incluídos — continuam a ser inseridos manualmente.
+                    </div>
+
                     <div style={{ background: "#FFF8E1", border: "1px solid #FFE9A8", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#8A6A2E", marginBottom: 20 }}>
                       ⚠️ Reveja sempre feriados e pedidos especiais depois de gerar — o algoritmo só continua o padrão, não conhece exceções.
                     </div>
@@ -4478,6 +4493,10 @@ export default function App() {
                     <button onClick={handleAutoFillPreferences} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 10, padding: "10px 0", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", marginBottom: 16 }}>
                       ✨ Preencher preferências automaticamente com base no histórico
                     </button>
+
+                    <div style={{ background: "#E8EEF5", border: "1px solid #B8CCE0", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#3A5A70", marginBottom: 12 }}>
+                      ℹ️ Colaboradores de Recibo Verde não são incluídos — continuam a ser inseridos manualmente.
+                    </div>
 
                     <div style={{ background: "#FFF8E1", border: "1px solid #FFE9A8", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#8A6A2E", marginBottom: 20 }}>
                       ⚠️ Algoritmo simples — não substitui revisão humana. Confira a escala gerada e ajuste manualmente o que for preciso.
