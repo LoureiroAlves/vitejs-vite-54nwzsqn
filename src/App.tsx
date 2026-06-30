@@ -2790,13 +2790,20 @@ export default function App() {
     const newScheduleForMonth: Record<string, Record<number, string>> = {};
     allStaff.forEach((n) => { newScheduleForMonth[n] = {}; });
 
-    // Máximo de dias de trabalho seguidos antes de obrigar folga (como em Julho: 3-4 dias)
-    const maxConsecutive = Math.max(3, Math.min(4, 7 - generateFolgaDays));
+    // Regras fixas de ciclo (como em Julho): máx. 3-4 dias trabalho seguidos, máx. 2 dias folga seguidos
+    const maxConsecutiveWork = Math.max(3, Math.min(4, 7 - generateFolgaDays));
+    const maxConsecutiveFolga = 2;
 
     const consecutiveWork: Record<string, number> = {};
-    const daysSinceLastFO: Record<string, number> = {}; // dias desde a última folga obrigatória completa
+    const consecutiveFolga: Record<string, number> = {};
+    const daysSinceLastFO: Record<string, number> = {};
     const totalAssigned: Record<string, number> = {};
-    allStaff.forEach((n) => { consecutiveWork[n] = 0; daysSinceLastFO[n] = 0; totalAssigned[n] = 0; });
+    allStaff.forEach((n) => {
+      consecutiveWork[n] = 0;
+      consecutiveFolga[n] = 0;
+      daysSinceLastFO[n] = 0;
+      totalAssigned[n] = 0;
+    });
 
     for (let day = 1; day <= numDaysNext; day++) {
       const needed: { shift: "M" | "T" | "N"; count: number }[] = [
@@ -2808,39 +2815,66 @@ export default function App() {
       const assignedToday = new Set<string>();
       const dayOfWeek = new Date(nextYear, nextMonth, day).getDay(); // 0=domingo
 
+      // Quem JÁ atingiu o máximo de folgas seguidas é FORÇADO a trabalhar hoje (prioridade absoluta)
+      const mustWorkToday = allStaff.filter((n) => consecutiveFolga[n] >= maxConsecutiveFolga);
+
       needed.forEach(({ shift, count }) => {
-        // Candidatos disponíveis: ainda não atingiram o limite de dias seguidos
         const candidates = allStaff
-          .filter((n) => !assignedToday.has(n) && consecutiveWork[n] < maxConsecutive)
+          .filter((n) => !assignedToday.has(n) && consecutiveWork[n] < maxConsecutiveWork)
           .sort((a, b) => {
-            // 1º: quem está mais perto do limite de dias seguidos trabalha primeiro (force-finish o ciclo antes de começar outro)
+            // 1º: quem TEM de trabalhar hoje (limite de folgas atingido) vai sempre primeiro
+            const mustA = mustWorkToday.includes(a) ? 0 : 1;
+            const mustB = mustWorkToday.includes(b) ? 0 : 1;
+            if (mustA !== mustB) return mustA - mustB;
+            // 2º: quem está mais perto do limite de dias seguidos termina o ciclo primeiro
             if (consecutiveWork[a] !== consecutiveWork[b]) return consecutiveWork[b] - consecutiveWork[a];
-            // 2º: quem tem menos turnos totais no mês (rotação justa)
+            // 3º: rotação justa — quem tem menos turnos totais no mês
             if (totalAssigned[a] !== totalAssigned[b]) return totalAssigned[a] - totalAssigned[b];
-            // 3º: preferência pelo turno
+            // 4º: preferência pelo turno
             const prefA = employeeProfiles[a]?.preferredShift === shift ? 0 : 1;
             const prefB = employeeProfiles[b]?.preferredShift === shift ? 0 : 1;
             return prefA - prefB;
           });
 
-        const chosen = candidates.slice(0, count);
+        // Garante mínimo, mas se houver pessoas que TÊM de trabalhar hoje, inclui-as mesmo acima do mínimo
+        const mustHere = candidates.filter((n) => mustWorkToday.includes(n));
+        const others = candidates.filter((n) => !mustWorkToday.includes(n));
+        const chosen = [...mustHere, ...others].slice(0, Math.max(count, mustHere.length));
+
         chosen.forEach((n) => {
           newScheduleForMonth[n][day] = shift;
           assignedToday.add(n);
           consecutiveWork[n] = (consecutiveWork[n] || 0) + 1;
+          consecutiveFolga[n] = 0; // reset folga ao trabalhar
           totalAssigned[n] = (totalAssigned[n] || 0) + 1;
           daysSinceLastFO[n] = (daysSinceLastFO[n] || 0) + 1;
         });
       });
 
-      // Quem não trabalhou hoje: dá folga. Alterna FC/FO conforme o padrão de Julho —
-      // se já passaram >=6 dias desde a última FO, dá FO; senão FC
+      // Verificação final: ninguém pode ficar com consecutiveFolga >= maxConsecutiveFolga sem ter sido escalado
+      // Se sobrar alguém (porque não havia turno disponível por já ter atingido maxConsecutiveWork=0 dias),
+      // força-o num turno extra acima dos mínimos para não quebrar a regra das 2 folgas
+      allStaff.forEach((n) => {
+        if (!assignedToday.has(n) && consecutiveFolga[n] >= maxConsecutiveFolga) {
+          // Escolher o turno preferido da pessoa, ou Manhã por defeito
+          const fallbackShift = (employeeProfiles[n]?.preferredShift || "M") as "M" | "T" | "N";
+          newScheduleForMonth[n][day] = fallbackShift;
+          assignedToday.add(n);
+          consecutiveWork[n] = 1;
+          consecutiveFolga[n] = 0;
+          totalAssigned[n] = (totalAssigned[n] || 0) + 1;
+          daysSinceLastFO[n] = (daysSinceLastFO[n] || 0) + 1;
+        }
+      });
+
+      // Quem não trabalhou hoje fica de folga
       allStaff.forEach((n) => {
         if (!assignedToday.has(n)) {
           const giveFolgaObrigatoria = daysSinceLastFO[n] >= 6 || dayOfWeek === 0;
           newScheduleForMonth[n][day] = giveFolgaObrigatoria ? "FO" : "FC";
           if (giveFolgaObrigatoria) daysSinceLastFO[n] = 0;
           consecutiveWork[n] = 0;
+          consecutiveFolga[n] = (consecutiveFolga[n] || 0) + 1;
         }
       });
     }
