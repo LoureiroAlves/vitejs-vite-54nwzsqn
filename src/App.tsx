@@ -1651,8 +1651,29 @@ function QuickSearchPanel({ target, schedule, onClose }: {
   onClose: () => void;
 }) {
   const today = new Date();
-  const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth());
+
+  // Encontrar o mês mais recente com dados para este colaborador
+  const findInitialMonth = (): [number, number] => {
+    if (target.type !== "colaborador") return [today.getFullYear(), today.getMonth()];
+    const targetLower = target.name.trim().toLowerCase();
+    const keysWithData = Object.keys(schedule || {})
+      .filter((k) => {
+        const monthData = schedule[k] || {};
+        const matchedKey = Object.keys(monthData).find((name) => name.trim().toLowerCase() === targetLower);
+        return matchedKey && Object.keys(monthData[matchedKey]).length > 0;
+      })
+      .sort()
+      .reverse();
+    if (keysWithData.length > 0) {
+      const [y, m] = keysWithData[0].split("-").map(Number);
+      return [y, m - 1];
+    }
+    return [today.getFullYear(), today.getMonth()];
+  };
+
+  const [initialYear, initialMonth] = findInitialMonth();
+  const [year, setYear] = useState(initialYear);
+  const [month, setMonth] = useState(initialMonth);
   const [utenteData, setUtenteData] = useState<any>(null);
 
   useEffect(() => {
@@ -1664,7 +1685,12 @@ function QuickSearchPanel({ target, schedule, onClose }: {
   }, [target]);
 
   const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
-  const monthSchedule = schedule?.[monthKey]?.[target.name] || {};
+  const monthData = schedule?.[monthKey] || {};
+  // Procurar o nome de forma tolerante (espaços, maiúsculas/minúsculas)
+  const matchedKey = Object.keys(monthData).find(
+    (k) => k.trim().toLowerCase() === target.name.trim().toLowerCase()
+  );
+  const monthSchedule = matchedKey ? monthData[matchedKey] : (monthData[target.name] || {});
   const numDays = new Date(year, month + 1, 0).getDate();
 
   const summary: Record<string, number> = {};
@@ -1747,15 +1773,19 @@ function QuickSearchPanel({ target, schedule, onClose }: {
           ) : (
             // ---------- Informação de colaborador (horário) ----------
             <div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, background: "#F7F5F0", borderRadius: 12, padding: "8px 8px" }}>
                 <button onClick={() => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); }}
-                  style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>
-                  <IconChevronLeft size={16} />
+                  style={{ border: "none", background: "#FFFFFF", borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: "#8A6A2E", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", display: "flex", alignItems: "center" }}
+                  title="Mês anterior"
+                >
+                  <IconChevronLeft size={18} />
                 </button>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15 }}>{MONTH_NAMES_FULL[month]} {year}</div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15, color: "#2A241C" }}>{MONTH_NAMES_FULL[month]} {year}</div>
                 <button onClick={() => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); }}
-                  style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>
-                  <IconChevronRight size={16} />
+                  style={{ border: "none", background: "#FFFFFF", borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: "#8A6A2E", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", display: "flex", alignItems: "center" }}
+                  title="Mês seguinte"
+                >
+                  <IconChevronRight size={18} />
                 </button>
               </div>
 
