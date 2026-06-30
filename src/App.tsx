@@ -2530,6 +2530,82 @@ export default function App() {
     : "";
 
   // ---------- Backup / Restauro ----------
+  // ---------- Gerar escala automaticamente (continuar padrão) ----------
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+
+  const detectCyclePeriod = (seq: string[]): number | null => {
+    const n = seq.length;
+    for (let period = 4; period <= 16; period++) {
+      let ok = true;
+      for (let i = period; i < n; i++) {
+        if (seq[i] !== seq[i % period]) { ok = false; break; }
+      }
+      if (ok) return period;
+    }
+    return null;
+  };
+
+  const handleGenerateNextMonth = () => {
+    // Calcular o mês seguinte ao atualmente visível
+    let nextMonth = month + 1;
+    let nextYear = year;
+    if (nextMonth > 11) { nextMonth = 0; nextYear++; }
+
+    const currentKey = `${year}-${String(month + 1).padStart(2, "0")}`;
+    const nextKey = `${nextYear}-${String(nextMonth + 1).padStart(2, "0")}`;
+    const currentMonthData = schedule[currentKey] || {};
+    const numDaysCurrent = new Date(year, month + 1, 0).getDate();
+    const numDaysNext = new Date(nextYear, nextMonth + 1, 0).getDate();
+
+    const allStaff = [...employees, ...rvEmployees];
+    let totalGerados = 0;
+    const newScheduleForMonth: Record<string, Record<number, string>> = {};
+
+    allStaff.forEach((name) => {
+      const personData = currentMonthData[name];
+      if (!personData) return;
+      const seq: string[] = [];
+      for (let d = 1; d <= numDaysCurrent; d++) {
+        seq.push(personData[d] || "FO");
+      }
+      const period = detectCyclePeriod(seq);
+      const dayShifts: Record<number, string> = {};
+      if (period) {
+        for (let day = 1; day <= numDaysNext; day++) {
+          const idx = (numDaysCurrent + day - 1) % period;
+          dayShifts[day] = seq[idx];
+        }
+      } else {
+        for (let day = 1; day <= numDaysNext; day++) {
+          const idx = (seq.length + day - 1) % seq.length;
+          dayShifts[day] = seq[idx];
+        }
+      }
+      newScheduleForMonth[name] = dayShifts;
+      totalGerados++;
+    });
+
+    if (totalGerados === 0) {
+      alert("⚠️ Não há dados no mês atual para gerar o próximo. Importe ou preencha o mês atual primeiro.");
+      return;
+    }
+
+    setSchedule((prev) => {
+      // CRÍTICO: clonar profundamente e fazer merge — nunca perder meses já existentes
+      const next: typeof prev = JSON.parse(JSON.stringify(prev || {}));
+      next[nextKey] = newScheduleForMonth;
+
+      saveToSupabase("escala_data", { schedule: next }).catch(() => {});
+
+      return next;
+    });
+
+    setYear(nextYear);
+    setMonth(nextMonth);
+    setShowGenerateModal(false);
+    alert(`✅ Escala de ${MONTH_NAMES[nextMonth]} ${nextYear} gerada automaticamente para ${totalGerados} colaborador(es)!`);
+  };
+
   const handleImportScheduleJSON = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -2549,9 +2625,10 @@ export default function App() {
           const ano = Number(data.ano);
           const key = `${ano}-${String(mes).padStart(2, "0")}`;
           let total = 0;
-          let newSchedule: any = {};
+
           setSchedule((prev) => {
-            const next = { ...prev };
+            // CRÍTICO: clonar profundamente o estado anterior para nunca perder outros meses
+            const next: typeof prev = JSON.parse(JSON.stringify(prev || {}));
             if (!next[key]) next[key] = {};
             Object.entries(data.turnos).forEach(([nome, dias]: [string, any]) => {
               if (!next[key][nome]) next[key][nome] = {};
@@ -2560,22 +2637,22 @@ export default function App() {
                 total++;
               });
             });
-            newSchedule = next;
+
+            // Guardar no Supabase usando o schedule MERGED completo (next), nunca um valor antigo
+            saveToSupabase("escala_data", { schedule: next })
+              .then(() => {
+                alert(`✅ Escala importada e guardada na nuvem! ${Object.keys(data.turnos).length} colaborador(es), ${total} turnos para ${data.mes}/${data.ano}.\n\n📅 Meses agora guardados: ${Object.keys(next).join(", ")}`);
+              })
+              .catch(() => {
+                alert(`✅ Escala importada localmente! ${Object.keys(data.turnos).length} colaborador(es), ${total} turnos.\n⚠️ Não foi possível guardar na nuvem — verifique a ligação e tente sincronizar manualmente depois.`);
+              });
+
             return next;
           });
+
           // Navegar para o mês importado (month é 0-indexed na app)
           setYear(ano);
           setMonth(mes - 1);
-          // Guardar no Supabase imediatamente com o novo schedule
-          setTimeout(() => {
-            saveToSupabase("escala_data", {
-              schedule: newSchedule,
-            }).then(() => {
-              alert(`✅ Escala importada e guardada na nuvem! ${Object.keys(data.turnos).length} colaborador(es), ${total} turnos para ${data.mes}/${data.ano}.`);
-            }).catch(() => {
-              alert(`✅ Escala importada! ${Object.keys(data.turnos).length} colaborador(es), ${total} turnos.\n⚠️ Não foi possível guardar na nuvem — verifique a ligação.`);
-            });
-          }, 500);
         } catch {
           alert("❌ Erro ao ler o ficheiro. Certifique-se que é um JSON válido.");
         }
@@ -3462,6 +3539,10 @@ export default function App() {
               onMouseEnter={(e) => showTip(e, "Importar escala de JSON (gerado pelo Claude)")} onMouseLeave={hideTip} aria-label="Importar escala JSON">
               <IconDownload size={14} />&nbsp;JSON
             </button>
+            <button className="tool-btn" style={{ ...styles.toolBtn, color: "#3B6D11", fontWeight: 700, fontSize: 12 }} onClick={() => setShowGenerateModal(true)}
+              onMouseEnter={(e) => showTip(e, "Gerar escala do próximo mês automaticamente")} onMouseLeave={hideTip} aria-label="Gerar próximo mês">
+              🪄&nbsp;Gerar mês
+            </button>
 
             {/* Menu impressão/PDF (dropdown) */}
             <div style={{ position: "relative" as const }}>
@@ -3969,6 +4050,42 @@ export default function App() {
           </div>
         </>
       )}
+
+      {/* Modal de gerar próximo mês */}
+      {showGenerateModal && (() => {
+        let nm = month + 1, ny = year;
+        if (nm > 11) { nm = 0; ny++; }
+        return (
+          <>
+            <div style={{ position: "fixed" as const, inset: 0, background: "rgba(42,36,28,0.4)", zIndex: 100 }} onClick={() => setShowGenerateModal(false)} />
+            <div style={{ position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "min(420px, 92vw)", background: "#FFFFFF", borderRadius: 20, zIndex: 101, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+              <div style={{ padding: "20px 24px", background: "#E8F0E8", display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 28 }}>🪄</span>
+                <div>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#2A241C" }}>Gerar escala automática</div>
+                  <div style={{ fontSize: 12, color: "#5A7A4A" }}>{MONTH_NAMES[nm]} {ny}</div>
+                </div>
+              </div>
+              <div style={{ padding: 24 }}>
+                <p style={{ fontSize: 13, color: "#6B6358", lineHeight: 1.6, margin: "0 0 18px" }}>
+                  Vou analisar o padrão de turnos de <strong>{MONTH_NAMES[month]} {year}</strong> para cada colaborador e continuar a mesma sequência rotativa em <strong>{MONTH_NAMES[nm]} {ny}</strong>.
+                </p>
+                <div style={{ background: "#FFF8E1", border: "1px solid #FFE9A8", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#8A6A2E", marginBottom: 20 }}>
+                  ⚠️ Reveja sempre feriados e pedidos especiais depois de gerar — o algoritmo só continua o padrão, não conhece exceções.
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setShowGenerateModal(false)} style={{ flex: 1, background: "transparent", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>
+                    Cancelar
+                  </button>
+                  <button onClick={handleGenerateNextMonth} style={{ flex: 1, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                    Gerar escala
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Tooltip flutuante */}
       {tooltip && (
