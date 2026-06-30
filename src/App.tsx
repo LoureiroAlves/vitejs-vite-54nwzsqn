@@ -1405,7 +1405,7 @@ Responde APENAS em JSON válido (sem markdown, sem texto extra) com esta estrutu
     document.head.appendChild(script);
     await new Promise((res) => { script.onload = res; });
 
-    const { PDFDocument, rgb, StandardFonts, PDFName } = (window as any).PDFLib;
+    const { PDFDocument, rgb, StandardFonts } = (window as any).PDFLib;
 
     const pdfDoc = await PDFDocument.create();
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -1529,7 +1529,7 @@ Responde APENAS em JSON válido (sem markdown, sem texto extra) com esta estrutu
 
     for (let di = 0; di < 5; di++) {
       const dim = ["Cuidados pessoais e higiene","Saúde / Cuidados de enfermagem","Alimentação e hidratação","Animação sociocultural e ocupacional","Psicossocial / bem-estar emocional"][di];
-      if (y2 < mmToPt(55)) { const p2b = addPage(); y2 = H - MARGIN; }
+      if (y2 < mmToPt(55)) { addPage(); y2 = H - MARGIN; }
       p2.drawText(`Dimensão: ${dim}`, { x: MARGIN, y: y2, size: 8, font: fontBold, color: COR_ESCURO });
       y2 -= mmToPt(5);
       p2.drawRectangle({ x: MARGIN, y: y2 - mmToPt(6), width: CW, height: mmToPt(6), color: COR_SEC_FUNDO });
