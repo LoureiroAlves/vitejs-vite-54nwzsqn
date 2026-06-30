@@ -3683,11 +3683,11 @@ export default function App() {
             {/* 3 botões */}
             <div className="home-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
               <button onClick={() => setActivePage("utentes")} className="home-btn"
-                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "40px 18px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 18, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 16, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(91,141,190,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 65, height: 65, borderRadius: 20, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <IconUserCircle size={32} color="#3A5A70" />
+                <div style={{ width: 59, height: 59, borderRadius: 18, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconUserCircle size={29} color="#3A5A70" />
                 </div>
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Utentes
@@ -3696,11 +3696,11 @@ export default function App() {
               </button>
 
               <button onClick={() => setActivePage("schedule")} className="home-btn"
-                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "40px 18px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 18, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 16, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(232,177,74,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 65, height: 65, borderRadius: 20, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <IconUsers size={32} color="#B08A4E" />
+                <div style={{ width: 59, height: 59, borderRadius: 18, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconUsers size={29} color="#B08A4E" />
                 </div>
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Colaboradores
@@ -3709,11 +3709,11 @@ export default function App() {
               </button>
 
               <button onClick={() => setActivePage("stock")} className="home-btn"
-                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "40px 18px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 18, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 16, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(111,168,111,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 65, height: 65, borderRadius: 20, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <IconBox size={32} color="#3B6D11" />
+                <div style={{ width: 59, height: 59, borderRadius: 18, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconBox size={29} color="#3B6D11" />
                 </div>
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Stock
