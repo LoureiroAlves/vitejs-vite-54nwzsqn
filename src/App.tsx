@@ -2796,7 +2796,7 @@ export default function App() {
     });
 
   return (
-    <div style={styles.page}>
+    <div style={{ ...styles.page, background: isHomePage ? "#1E3A1E" : isStockPage ? "#E8F0E8" : isUtentesPage ? "#E8EEF5" : "#F5EDD8" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
         * { box-sizing: border-box; }
@@ -2835,6 +2835,7 @@ export default function App() {
           z-index: 100; overflow-y: auto;
           animation: revealDown 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
         }
+        body { background: #1E3A1E !important; margin: 0; }
         .utente-avatar { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; }
         .utente-avatar:hover { transform: scale(2); box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 10; position: relative; }
         input[type="number"]::-webkit-outer-spin-button,
