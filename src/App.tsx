@@ -1367,6 +1367,39 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
   // ---------- Registo diário (substitui o campo Observações único) ----------
   const [newLogText, setNewLogText] = useState("");
   const todayStr = new Date().toLocaleDateString("pt-PT");
+  const [editingLogIdx, setEditingLogIdx] = useState<number | null>(null);
+  const [editingLogText, setEditingLogText] = useState("");
+  const [unlockedLogs, setUnlockedLogs] = useState<Set<string>>(new Set());
+  const EDIT_PASSWORD = "UTENTES";
+
+  const isLogEditable = (utenteId: string, idx: number, logDate: string) => {
+    if (logDate === todayStr) return true;
+    return unlockedLogs.has(`${utenteId}-${idx}`);
+  };
+
+  const requestUnlock = (utenteId: string, idx: number) => {
+    const pwd = window.prompt("Este registo é de um dia anterior. Introduza a password de autorização para editar:");
+    if (pwd === null) return false;
+    if (pwd === EDIT_PASSWORD) {
+      setUnlockedLogs((prev) => new Set(prev).add(`${utenteId}-${idx}`));
+      return true;
+    }
+    alert("❌ Password incorreta.");
+    return false;
+  };
+
+  const saveEditedLog = (utenteId: string, idx: number) => {
+    setUtentes((prev) => prev.map((uu) => {
+      if (uu.id !== utenteId) return uu;
+      const logs = [...(uu.dailyLogs || [])];
+      logs[idx] = { ...logs[idx], text: editingLogText };
+      const updated = { ...uu, dailyLogs: logs };
+      if (openUtente?.id === utenteId) setOpenUtente(updated);
+      return updated;
+    }));
+    setEditingLogIdx(null);
+    setEditingLogText("");
+  };
 
   const addDailyLog = (utenteId: string) => {
     if (!newLogText.trim()) return;
@@ -1664,33 +1697,75 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                 {/* Histórico de registos anteriores */}
                 {(u.dailyLogs?.length ?? 0) > 0 ? (
                   <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, maxHeight: 280, overflowY: "auto" as const }}>
-                    {u.dailyLogs!.map((log, idx) => (
-                      <div key={idx} style={{ background: "#F7F5F0", borderRadius: 10, padding: "10px 12px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: "#5B8DBE" }}>{log.date}{log.date === todayStr ? " (hoje)" : ""}</span>
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <button
-                              onClick={() => printDailyLog(u, log)}
-                              style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}
-                              title="Imprimir este registo"
-                            >🖨️</button>
-                            <button
-                              onClick={() => {
-                                if (!window.confirm("Remover este registo?")) return;
-                                setUtentes((prev) => prev.map((uu) => {
-                                  if (uu.id !== u.id) return uu;
-                                  const updated = { ...uu, dailyLogs: (uu.dailyLogs || []).filter((_, i) => i !== idx) };
-                                  if (openUtente?.id === u.id) setOpenUtente(updated);
-                                  return updated;
-                                }));
-                              }}
-                              style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }}
-                            >✕</button>
+                    {u.dailyLogs!.map((log, idx) => {
+                      const editable = isLogEditable(u.id, idx, log.date);
+                      const isEditing = editingLogIdx === idx;
+                      return (
+                        <div key={idx} style={{ background: "#F7F5F0", borderRadius: 10, padding: "10px 12px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "#5B8DBE" }}>
+                              {log.date}{log.date === todayStr ? " (hoje)" : ""}
+                              {!editable && <span style={{ marginLeft: 5 }} title="Bloqueado — requer autorização">🔒</span>}
+                            </span>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              {isEditing ? (
+                                <>
+                                  <button onClick={() => saveEditedLog(u.id, idx)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#3B6D11", fontSize: 13, fontWeight: 700 }} title="Guardar">✓</button>
+                                  <button onClick={() => { setEditingLogIdx(null); setEditingLogText(""); }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }} title="Cancelar">✕</button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      if (editable) {
+                                        setEditingLogIdx(idx);
+                                        setEditingLogText(log.text);
+                                      } else {
+                                        if (requestUnlock(u.id, idx)) {
+                                          setEditingLogIdx(idx);
+                                          setEditingLogText(log.text);
+                                        }
+                                      }
+                                    }}
+                                    style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}
+                                    title={editable ? "Editar registo" : "Editar (requer autorização)"}
+                                  >✏️</button>
+                                  <button
+                                    onClick={() => printDailyLog(u, log)}
+                                    style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}
+                                    title="Imprimir este registo"
+                                  >🖨️</button>
+                                  <button
+                                    onClick={() => {
+                                      if (!editable) { if (!requestUnlock(u.id, idx)) return; }
+                                      if (!window.confirm("Remover este registo?")) return;
+                                      setUtentes((prev) => prev.map((uu) => {
+                                        if (uu.id !== u.id) return uu;
+                                        const updated = { ...uu, dailyLogs: (uu.dailyLogs || []).filter((_, i) => i !== idx) };
+                                        if (openUtente?.id === u.id) setOpenUtente(updated);
+                                        return updated;
+                                      }));
+                                    }}
+                                    style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }}
+                                  >🗑️</button>
+                                </>
+                              )}
+                            </div>
                           </div>
+                          {isEditing ? (
+                            <textarea
+                              rows={3}
+                              value={editingLogText}
+                              onChange={(e) => setEditingLogText(e.target.value)}
+                              autoFocus
+                              style={{ width: "100%", border: "1px solid #B8CCE0", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }}
+                            />
+                          ) : (
+                            <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.5 }}>{log.text}</div>
+                          )}
                         </div>
-                        <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.5 }}>{log.text}</div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div style={{ fontSize: 12, color: "#A39B8E", textAlign: "center" as const, padding: "10px 0" }}>Nenhum registo ainda.</div>
@@ -2157,9 +2232,11 @@ function QuickSearchPanel({ target, schedule, onClose }: {
               {target.type === "utente" ? "Utente" : "Colaborador"}
             </div>
           </div>
-          <button onClick={handleExportPDF} style={{ border: "none", background: "rgba(255,255,255,0.6)", borderRadius: 10, padding: 8, cursor: "pointer", color: "#2A241C", display: "flex", alignItems: "center" }} title="Exportar PDF">
-            <IconPrinter size={18} />
-          </button>
+          {target.type !== "utente" && (
+            <button onClick={handleExportPDF} style={{ border: "none", background: "rgba(255,255,255,0.6)", borderRadius: 10, padding: 8, cursor: "pointer", color: "#2A241C", display: "flex", alignItems: "center" }} title="Exportar PDF">
+              <IconPrinter size={18} />
+            </button>
+          )}
           <button onClick={onClose} style={{ border: "none", background: "rgba(255,255,255,0.5)", borderRadius: 10, padding: 8, cursor: "pointer", color: "#2A241C" }}>
             <IconX size={18} />
           </button>
@@ -2245,9 +2322,9 @@ function QuickSearchPanel({ target, schedule, onClose }: {
 
                       {/* Navegação de mês */}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
-                        <button onClick={() => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); setSelectedLogDay(null); }} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "4px 8px", cursor: "pointer" }}><IconChevronLeft size={14} /></button>
+                        <button onClick={() => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); setSelectedLogDay(null); }} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "6px 10px", cursor: "pointer", color: "#3A5A70", display: "flex", alignItems: "center" }}><IconChevronLeft size={16} /></button>
                         <span style={{ fontSize: 12, fontWeight: 600, color: "#6B6358" }}>{MONTH_NAMES_FULL[month]} {year}</span>
-                        <button onClick={() => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); setSelectedLogDay(null); }} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "4px 8px", cursor: "pointer" }}><IconChevronRight size={14} /></button>
+                        <button onClick={() => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); setSelectedLogDay(null); }} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "6px 10px", cursor: "pointer", color: "#3A5A70", display: "flex", alignItems: "center" }}><IconChevronRight size={16} /></button>
                       </div>
 
                       {/* Modal de visualização do registo do dia selecionado */}
