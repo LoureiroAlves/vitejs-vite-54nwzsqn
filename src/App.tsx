@@ -1481,7 +1481,7 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                 <input
                   value={u.name}
                   onChange={(e) => updateUtente(u.id, { name: e.target.value })}
-                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") setOpenUtente(null); }}
                   style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, border: "none", borderBottom: "1px solid #E4DED3", background: "transparent", outline: "none", width: "100%", color: "#2A241C", padding: "2px 0" }}
                 />
                 <div style={{ fontSize: 12, color: "#A39B8E", marginTop: 2 }}>Ficha do utente</div>
@@ -1513,7 +1513,7 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                     {multiline ? (
                       <textarea rows={3} value={value} placeholder={placeholder}
                         onChange={(e) => updateUtente(u.id, { [key]: e.target.value })}
-                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.target as HTMLElement).blur(); } }}
+                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); setOpenUtente(null); } }}
                         style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }} />
                     ) : isDate ? (
                       <input
@@ -1523,13 +1523,13 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                         inputMode="numeric"
                         maxLength={10}
                         onChange={handleDateInput}
-                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") setOpenUtente(null); }}
                         style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, colorScheme: "light" as const, letterSpacing: "0.05em" }}
                       />
                     ) : (
                       <input type="text" value={value} placeholder={placeholder}
                         onChange={(e) => updateUtente(u.id, { [key]: e.target.value })}
-                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") setOpenUtente(null); }}
                         style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, colorScheme: "light" as const }} />
                     )}
                   </div>
@@ -3417,7 +3417,7 @@ export default function App() {
                       <textarea
                         value={value}
                         onChange={(e) => setEmployeeProfiles((prev) => ({ ...prev, [openProfile]: { ...(prev[openProfile] || {}), [key]: e.target.value } }))}
-                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.target as HTMLElement).blur(); } }}
+                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); setOpenProfile(null); } }}
                         placeholder={placeholder}
                         rows={3}
                         style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }}
@@ -3427,7 +3427,7 @@ export default function App() {
                         type={key === "email" ? "email" : "text"}
                         value={value}
                         onChange={(e) => setEmployeeProfiles((prev) => ({ ...prev, [openProfile]: { ...(prev[openProfile] || {}), [key]: e.target.value } }))}
-                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") setOpenProfile(null); }}
                         placeholder={placeholder}
                         style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, colorScheme: "light" as const }}
                       />
