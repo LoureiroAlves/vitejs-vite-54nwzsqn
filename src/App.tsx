@@ -2847,15 +2847,22 @@ export default function App() {
         /* ===== RESPONSIVO MOBILE ===== */
         @media (max-width: 768px) {
           /* Home */
-          .home-grid { grid-template-columns: 1fr !important; max-width: 280px !important; margin: 0 auto !important; gap: 10px !important; }
-          .home-btn { padding: 16px 14px !important; border-radius: 16px !important; flex-direction: row !important; gap: 12px !important; justify-content: flex-start !important; }
-          .home-btn-icon { width: 44px !important; height: 44px !important; border-radius: 12px !important; flex-shrink: 0 !important; }
-          .home-btn-icon svg { width: 22px !important; height: 22px !important; }
-          .home-btn-label { font-size: 14px !important; }
-          .home-title { font-size: 17px !important; padding: 0 16px; }
-          .home-icon-wrap { width: 52px !important; height: 52px !important; }
-          .home-icon-wrap svg { width: 26px !important; height: 26px !important; }
-          .home-center { margin-bottom: 20px !important; }
+          .home-grid { display: flex !important; flex-direction: column !important; grid-template-columns: none !important; max-width: 300px !important; width: 88% !important; margin: 0 auto !important; gap: 10px !important; }
+          .home-btn { width: 100% !important; padding: 14px 16px !important; border-radius: 14px !important; flex-direction: row !important; gap: 12px !important; justify-content: flex-start !important; box-sizing: border-box !important; }
+          .home-btn-icon { width: 42px !important; height: 42px !important; border-radius: 11px !important; flex-shrink: 0 !important; }
+          .home-btn-icon svg { width: 21px !important; height: 21px !important; }
+          .home-btn-label { font-size: 13px !important; }
+          .home-title { font-size: 15px !important; padding: 0 20px; line-height: 1.3 !important; }
+          .home-icon-wrap { width: 44px !important; height: 44px !important; margin-bottom: 12px !important; }
+          .home-icon-wrap svg { width: 22px !important; height: 22px !important; }
+          .home-center { margin-bottom: 14px !important; }
+
+          /* Card de aniversário */
+          .bday-card { padding: 12px 14px !important; gap: 10px !important; border-radius: 14px !important; }
+          .bday-avatar { width: 44px !important; height: 44px !important; font-size: 22px !important; }
+          .bday-name { font-size: 14px !important; margin-bottom: 2px !important; }
+          .bday-msg { font-size: 11px !important; }
+          .bday-age { font-size: 22px !important; }
 
           /* Header geral de todas as páginas */
           .header-right-mobile { width: 100% !important; flex-wrap: wrap !important; gap: 4px !important; justify-content: flex-start !important; }
@@ -2874,14 +2881,19 @@ export default function App() {
 
         @media (max-width: 480px) {
           /* Home ainda mais compacta */
-          .home-grid { max-width: 260px !important; gap: 8px !important; }
-          .home-btn { padding: 12px 10px !important; gap: 10px !important; }
-          .home-btn-icon { width: 38px !important; height: 38px !important; }
-          .home-btn-icon svg { width: 19px !important; height: 19px !important; }
+          .home-grid { max-width: 280px !important; gap: 8px !important; }
+          .home-btn { padding: 11px 12px !important; gap: 10px !important; }
+          .home-btn-icon { width: 36px !important; height: 36px !important; }
+          .home-btn-icon svg { width: 18px !important; height: 18px !important; }
           .home-btn-label { font-size: 12px !important; }
-          .home-title { font-size: 14px !important; line-height: 1.3 !important; }
-          .home-icon-wrap { width: 44px !important; height: 44px !important; margin-bottom: 10px !important; }
-          .home-icon-wrap svg { width: 22px !important; height: 22px !important; }
+          .home-title { font-size: 13px !important; line-height: 1.25 !important; }
+          .home-icon-wrap { width: 40px !important; height: 40px !important; margin-bottom: 8px !important; }
+          .home-icon-wrap svg { width: 20px !important; height: 20px !important; }
+          .bday-card { padding: 10px 12px !important; }
+          .bday-avatar { width: 38px !important; height: 38px !important; font-size: 18px !important; }
+          .bday-name { font-size: 13px !important; }
+          .bday-msg { font-size: 10px !important; }
+          .bday-age { font-size: 18px !important; }
 
           /* Grelhas em 1 coluna no ecrã muito pequeno */
           .utentes-grid { grid-template-columns: 1fr !important; }
@@ -2944,18 +2956,19 @@ export default function App() {
                 onClick={syncFromSupabase}
                 disabled={syncStatus === "syncing"}
                 style={{
-                  marginTop: 16, display: "inline-flex", alignItems: "center", gap: 6,
+                  marginTop: 14, display: "inline-flex", alignItems: "center", gap: 5,
                   background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: 20, padding: "6px 14px", cursor: syncStatus === "syncing" ? "default" : "pointer",
-                  fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif",
+                  borderRadius: 20, padding: "6px 12px", cursor: syncStatus === "syncing" ? "default" : "pointer",
+                  fontSize: 11, fontWeight: 600, fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const,
                   color: syncStatus === "synced" ? "#8FBF8F" : syncStatus === "error" ? "#E8A398" : "#E8D5A0",
+                  maxWidth: "90vw", overflow: "hidden" as const, textOverflow: "ellipsis" as const,
                 }}
                 title="Forçar sincronização com a nuvem"
               >
                 {syncStatus === "syncing" && <>⟳ A sincronizar...</>}
-                {syncStatus === "synced" && <>✓ Sincronizado — clique para atualizar</>}
-                {syncStatus === "error" && <>⚠ Sem ligação — clique para tentar</>}
-                {syncStatus === "idle" && <>↻ Sincronizar agora</>}
+                {syncStatus === "synced" && <>✓ Sincronizado</>}
+                {syncStatus === "error" && <>⚠ Sem ligação</>}
+                {syncStatus === "idle" && <>↻ Sincronizar</>}
               </button>
             </div>
 
@@ -2963,22 +2976,22 @@ export default function App() {
             {birthdayAlerts.length > 0 && (
               <div style={{ marginBottom: 28 }}>
                 {birthdayAlerts.map((alert, idx) => (
-                  <div key={idx} style={{
+                  <div key={idx} className="bday-card" style={{
                     background: alert.isToday ? "linear-gradient(135deg, #FFF8E1, #FCE4EC)" : "linear-gradient(135deg, #F3F8FF, #EDE7F6)",
                     border: `2px solid ${alert.isToday ? "#FFD54F" : "#B39DDB"}`,
                     borderRadius: 20, padding: "20px 24px", display: "flex", alignItems: "center", gap: 18, marginBottom: 12,
                   }}>
-                    <div style={{ width: 64, height: 64, borderRadius: "50%", flexShrink: 0, background: alert.isToday ? "#FFD54F" : "#B39DDB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, overflow: "hidden", boxShadow: alert.isToday ? "0 4px 12px rgba(255,213,79,0.4)" : "0 4px 12px rgba(179,157,219,0.4)", animation: alert.isToday ? "bounce 1s infinite" : undefined }}>
+                    <div className="bday-avatar" style={{ width: 64, height: 64, borderRadius: "50%", flexShrink: 0, background: alert.isToday ? "#FFD54F" : "#B39DDB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, overflow: "hidden", boxShadow: alert.isToday ? "0 4px 12px rgba(255,213,79,0.4)" : "0 4px 12px rgba(179,157,219,0.4)", animation: alert.isToday ? "bounce 1s infinite" : undefined }}>
                       {alert.photo
                         ? <img src={alert.photo} alt={alert.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                         : (alert.isToday ? "🎂" : "🎁")
                       }
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, color: "#2A241C", marginBottom: 4 }}>{alert.name}</div>
-                      <div style={{ fontSize: 14, color: "#6B6358", fontWeight: 500 }}>{alert.isToday ? `🎉 Hoje faz ${alert.age} anos! Parabéns!` : `🔔 Amanhã faz ${alert.age} anos`}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="bday-name" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, color: "#2A241C", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{alert.name}</div>
+                      <div className="bday-msg" style={{ fontSize: 14, color: "#6B6358", fontWeight: 500 }}>{alert.isToday ? `🎉 Hoje faz ${alert.age} anos! Parabéns!` : `🔔 Amanhã faz ${alert.age} anos`}</div>
                     </div>
-                    <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 36, fontWeight: 800, color: alert.isToday ? "#F9A825" : "#7E57C2", lineHeight: 1, flexShrink: 0 }}>{alert.age}</div>
+                    <div className="bday-age" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 36, fontWeight: 800, color: alert.isToday ? "#F9A825" : "#7E57C2", lineHeight: 1, flexShrink: 0 }}>{alert.age}</div>
                   </div>
                 ))}
               </div>
