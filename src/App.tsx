@@ -2959,20 +2959,20 @@ export default function App() {
 
       {/* Página de stock */}
       {isStockPage && (
-        <div className="page-enter" style={{ margin: "-32px -24px", minHeight: "100vh" }}>
+        <div className="page-enter" style={{ margin: "-32px -24px", minHeight: "100vh", background: "#E8F0E8" }}>
           <StockPage key={`stock-${syncDone}`} onBack={() => navigateHome()} />
         </div>
       )}
 
       {/* Página de utentes */}
       {isUtentesPage && (
-        <div className="page-enter" style={{ margin: "-32px -24px", minHeight: "100vh" }}>
+        <div className="page-enter" style={{ margin: "-32px -24px", minHeight: "100vh", background: "#E8EEF5" }}>
           <UtentesPage key={`utentes-${syncDone}`} onBack={() => navigateHome()} />
         </div>
       )}
 
       {isSchedulePage && (
-      <div className="page-enter" style={{ position: "relative" as const }}>
+      <div className="page-enter" style={{ position: "relative" as const, background: "#F5EDD8" }}>
       <>
 
       <header style={styles.header}>
