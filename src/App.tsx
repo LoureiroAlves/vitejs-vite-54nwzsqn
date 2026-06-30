@@ -1139,6 +1139,7 @@ interface Utente {
   notes?: string;
   photo?: string;
   familyCode?: string;
+  dailyLogs?: { date: string; text: string; author?: string }[];
   files?: { name: string; type: string; data: string; uploadedAt: string }[];
 }
 
@@ -1202,7 +1203,7 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
     const header = ["Nome", "Data Nasc.", "Quarto", "Data Entrada", "Contacto Familiar", "Telefone Familiar", "Observações", "Documentos"];
     const rows = utentes.map((u) => [
       u.name, u.birthDate || "", u.room || "", u.entryDate || "",
-      u.familyContact || "", u.familyPhone || "", u.notes || "",
+      u.familyContact || "", u.familyPhone || "", (u.dailyLogs?.[0]?.text || ""),
       (u.files?.length ?? 0) + " ficheiro(s)"
     ]);
     const csv = "\uFEFF" + [header, ...rows].map((r) => r.map((v) => `"${v}"`).join(";")).join("\r\n");
@@ -1220,7 +1221,7 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
         <td>${u.name}</td><td>${u.birthDate || "—"}</td><td>${u.room || "—"}</td>
         <td>${u.entryDate || "—"}</td>
         <td>${u.familyContact || "—"}${u.familyPhone ? ` / ${u.familyPhone}` : ""}</td>
-        <td>${u.notes || "—"}</td><td style="text-align:center">${u.files?.length ?? 0}</td>
+        <td>${u.dailyLogs?.[0]?.text || "—"}</td><td style="text-align:center">${u.files?.length ?? 0}</td>
       </tr>`).join("");
     const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Lista de Utentes</title>
     <style>@page{size:A4 landscape;margin:12mm}body{font-family:Arial,sans-serif;font-size:11px}
@@ -1253,16 +1254,19 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
             alert("❌ Ficheiro JSON inválido. Certifique-se que foi gerado pelo Claude.");
             return;
           }
-          const novos: Utente[] = lista.map((u: any) => ({
-            id: Date.now().toString() + Math.random().toString(36).slice(2),
-            name: u.name || u.nome || "Nome desconhecido",
-            birthDate: u.birthDate || u.dataNascimento || undefined,
-            room: u.room || u.quarto || undefined,
-            entryDate: u.entryDate || u.dataEntrada || undefined,
-            familyContact: u.familyContact || u.contactoFamiliar || undefined,
-            familyPhone: u.familyPhone || u.telefoneFamiliar || undefined,
-            notes: u.notes || u.observacoes || undefined,
-          }));
+          const novos: Utente[] = lista.map((u: any) => {
+            const initialNote = u.notes || u.observacoes;
+            return {
+              id: Date.now().toString() + Math.random().toString(36).slice(2),
+              name: u.name || u.nome || "Nome desconhecido",
+              birthDate: u.birthDate || u.dataNascimento || undefined,
+              room: u.room || u.quarto || undefined,
+              entryDate: u.entryDate || u.dataEntrada || undefined,
+              familyContact: u.familyContact || u.contactoFamiliar || undefined,
+              familyPhone: u.familyPhone || u.telefoneFamiliar || undefined,
+              dailyLogs: initialNote ? [{ date: new Date().toLocaleDateString("pt-PT"), text: initialNote }] : undefined,
+            };
+          });
           setUtentes((prev) => [...prev, ...novos]);
           alert(`✅ ${novos.length} utente(s) importado(s) com sucesso!`);
         } catch {
@@ -1312,10 +1316,21 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
       updateUtente(utente.id, { familyCode: code });
     }
     const link = `${window.location.origin}${window.location.pathname}?familia=${code}`;
-    navigator.clipboard?.writeText(link).then(() => {
-      alert(`✅ Link copiado para a área de transferência!\n\n${link}\n\nPartilhe este link com a família de ${utente.name}.`);
-    }).catch(() => {
-      prompt("Copie o link manualmente:", link);
+
+    const tryClipboard = () => {
+      if (navigator.clipboard?.writeText) {
+        return navigator.clipboard.writeText(link).then(() => true).catch(() => false);
+      }
+      return Promise.resolve(false);
+    };
+
+    tryClipboard().then((ok) => {
+      if (ok) {
+        alert(`✅ Link copiado para a área de transferência!\n\n${link}\n\nPartilhe este link com a família de ${utente.name}.`);
+      } else {
+        // Fallback: mostrar o link num prompt para cópia manual (sempre funciona)
+        window.prompt(`Copie o link abaixo (Ctrl+C / Cmd+C) e partilhe com a família de ${utente.name}:`, link);
+      }
     });
   };
 
@@ -1360,8 +1375,32 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
     { key: "entryDate", label: "Data de entrada", placeholder: "Ex: 15/03/2022" },
     { key: "familyContact", label: "Contacto familiar (nome)", placeholder: "Ex: João Silva (filho)" },
     { key: "familyPhone", label: "Contacto familiar (telefone)", placeholder: "Ex: 912 345 678" },
-    { key: "notes", label: "Observações", placeholder: "Notas, necessidades especiais...", multiline: true },
   ];
+
+  // ---------- Registo diário (substitui o campo Observações único) ----------
+  const [newLogText, setNewLogText] = useState("");
+  const todayStr = new Date().toLocaleDateString("pt-PT");
+
+  const addDailyLog = (utenteId: string) => {
+    if (!newLogText.trim()) return;
+    setUtentes((prev) => prev.map((u) => {
+      if (u.id !== utenteId) return u;
+      const logs = u.dailyLogs || [];
+      const existingTodayIdx = logs.findIndex((l) => l.date === todayStr);
+      let newLogs;
+      if (existingTodayIdx >= 0) {
+        // Já existe registo de hoje — acrescenta (não substitui)
+        newLogs = [...logs];
+        newLogs[existingTodayIdx] = { ...newLogs[existingTodayIdx], text: newLogs[existingTodayIdx].text + "\n\n" + newLogText.trim() };
+      } else {
+        newLogs = [{ date: todayStr, text: newLogText.trim() }, ...logs];
+      }
+      const updated = { ...u, dailyLogs: newLogs };
+      if (openUtente?.id === utenteId) setOpenUtente(updated);
+      return updated;
+    }));
+    setNewLogText("");
+  };
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#E8EEF5", minHeight: "100vh", padding: "32px 24px 60px", color: "#2A241C", animation: "pageOpen 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards" }}>
@@ -1589,6 +1628,59 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                 );
               })}
 
+              {/* Registo do dia — diário clínico */}
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
+                  📝 Registo do dia
+                </label>
+
+                {/* Campo para adicionar novo registo (hoje) */}
+                <div style={{ marginBottom: 14 }}>
+                  <textarea
+                    rows={3}
+                    value={newLogText}
+                    onChange={(e) => setNewLogText(e.target.value)}
+                    placeholder={`Escrever registo de hoje (${todayStr})...`}
+                    style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const, marginBottom: 8 }}
+                  />
+                  <button
+                    onClick={() => addDailyLog(u.id)}
+                    disabled={!newLogText.trim()}
+                    style={{ background: newLogText.trim() ? "#2A241C" : "#E4DED3", color: newLogText.trim() ? "#F5B944" : "#A39B8E", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: newLogText.trim() ? "pointer" : "default", fontFamily: "'Inter', sans-serif" }}
+                  >
+                    + Adicionar registo de hoje
+                  </button>
+                </div>
+
+                {/* Histórico de registos anteriores */}
+                {(u.dailyLogs?.length ?? 0) > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, maxHeight: 280, overflowY: "auto" as const }}>
+                    {u.dailyLogs!.map((log, idx) => (
+                      <div key={idx} style={{ background: "#F7F5F0", borderRadius: 10, padding: "10px 12px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "#5B8DBE" }}>{log.date}{log.date === todayStr ? " (hoje)" : ""}</span>
+                          <button
+                            onClick={() => {
+                              if (!window.confirm("Remover este registo?")) return;
+                              setUtentes((prev) => prev.map((uu) => {
+                                if (uu.id !== u.id) return uu;
+                                const updated = { ...uu, dailyLogs: (uu.dailyLogs || []).filter((_, i) => i !== idx) };
+                                if (openUtente?.id === u.id) setOpenUtente(updated);
+                                return updated;
+                              }));
+                            }}
+                            style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }}
+                          >✕</button>
+                        </div>
+                        <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.5 }}>{log.text}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: "#A39B8E", textAlign: "center" as const, padding: "10px 0" }}>Nenhum registo ainda.</div>
+                )}
+              </div>
+
               {/* Documentos */}
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
@@ -1783,11 +1875,18 @@ function FamilyPage({ code }: { code: string }) {
           ))}
         </div>
 
-        {/* Observações / informação clínica */}
-        {utente.notes && (
+        {/* Registo do dia — diário clínico, mais recente primeiro */}
+        {(utente.dailyLogs?.length ?? 0) > 0 && (
           <div style={{ background: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 10 }}>Informação Clínica / Observações</div>
-            <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.6, background: "#F7F5F0", borderRadius: 10, padding: 14 }}>{utente.notes}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 12 }}>📝 Registo do Dia</div>
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+              {utente.dailyLogs!.map((log, idx) => (
+                <div key={idx} style={{ background: "#F7F5F0", borderRadius: 10, padding: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70", marginBottom: 6 }}>{log.date}</div>
+                  <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.6 }}>{log.text}</div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -1932,7 +2031,7 @@ function QuickSearchPanel({ target, schedule, onClose }: {
       <h1>Ficha de Utente — ${target.name}</h1>
       <p class="sub">Gerado em ${today2} · Associação Oliveirense de Socorros Mútuos</p>
       ${rows.map((r) => `<div class="row"><div class="label">${r.label}</div><div class="value">${r.value}</div></div>`).join("")}
-      ${utenteData?.notes ? `<div class="section-title">Observações / Informação clínica</div><div class="notes-box">${utenteData.notes.replace(/\n/g, "<br>")}</div>` : ""}
+      ${(utenteData?.dailyLogs?.length ?? 0) > 0 ? `<div class="section-title">Registo do Dia</div>${utenteData.dailyLogs.map((log: any) => `<div class="notes-box"><strong>${log.date}</strong><br>${log.text.replace(/\n/g, "<br>")}</div>`).join("")}` : ""}
       </body></html>`;
     } else {
       const days = Array.from({ length: numDays }, (_, i) => i + 1);
@@ -2024,10 +2123,17 @@ function QuickSearchPanel({ target, schedule, onClose }: {
                     <div style={{ fontSize: 14, color: "#2A241C" }}>{f.value}</div>
                   </div>
                 ))}
-                {utenteData.notes && (
+                {(utenteData.dailyLogs?.length ?? 0) > 0 && (
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 3 }}>Observações / Informação clínica</div>
-                    <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, background: "#F7F5F0", borderRadius: 10, padding: "10px 12px", lineHeight: 1.5 }}>{utenteData.notes}</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 6 }}>📝 Registo do Dia</div>
+                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, maxHeight: 240, overflowY: "auto" as const }}>
+                      {utenteData.dailyLogs.map((log: any, i: number) => (
+                        <div key={i} style={{ background: "#F7F5F0", borderRadius: 10, padding: "10px 12px" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", marginBottom: 4 }}>{log.date}</div>
+                          <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.5 }}>{log.text}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {(utenteData.files?.length ?? 0) > 0 && (
