@@ -1645,6 +1645,27 @@ const TURNO_LABELS: Record<string, string> = {
   FE: "Férias", FR: "Feriado", BM: "Baixa médica", EX: "Falta injustificada", FA: "Falta",
 };
 
+// ============================================================
+// Componente que troca de palavra a cada ciclo (efeito flutuante)
+// ============================================================
+function FloatingWordCycler({ words, interval, delay = 0 }: { words: string[]; interval: number; delay?: number }) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    // Espera o delay inicial + a duração de um ciclo completo antes de trocar,
+    // para a troca acontecer sempre que opacity está em 0 (início do próximo ciclo)
+    const startTimer = setTimeout(() => {
+      const timer = setInterval(() => {
+        setIndex((prev) => (prev + 1) % words.length);
+      }, interval);
+      return () => clearInterval(timer);
+    }, delay);
+    return () => clearTimeout(startTimer);
+  }, [words.length, interval, delay]);
+
+  return <>{words[index]}</>;
+}
+
 function QuickSearchPanel({ target, schedule, onClose }: {
   target: { type: "utente" | "colaborador"; name: string; photo?: string };
   schedule: Record<string, Record<string, Record<number, string>>>;
@@ -3356,10 +3377,10 @@ export default function App() {
           50% { transform: translateY(-6px); }
         }
         @keyframes floatWord {
-          0% { opacity: 0; transform: translateY(20px) scale(0.9); }
-          15% { opacity: var(--word-opacity, 0.16); transform: translateY(0) scale(1); }
-          85% { opacity: var(--word-opacity, 0.16); transform: translateY(0) scale(1); }
-          100% { opacity: 0; transform: translateY(-20px) scale(0.9); }
+          0% { opacity: 0; transform: scale(0.7); }
+          20% { opacity: 0.16; transform: scale(1); }
+          70% { opacity: 0.16; transform: scale(1.15); }
+          100% { opacity: 0; transform: scale(1.4); }
         }
         .floating-word {
           position: absolute;
@@ -3368,7 +3389,7 @@ export default function App() {
           color: #F5EFD8;
           pointer-events: none;
           white-space: nowrap;
-          animation: floatWord 8s ease-in-out infinite;
+          animation: floatWord 9s ease-in-out infinite;
         }
         @keyframes spin {
           from { transform: rotate(0deg); }
@@ -3477,9 +3498,9 @@ export default function App() {
       {true && (
         <div style={{ position: "fixed" as const, inset: 0, background: "#1E3A1E", display: "flex", alignItems: "center", justifyContent: "center", overflow: "auto" }}>
 
-          {/* Logo SVG marca de água — canto superior esquerdo, bem contido */}
+          {/* Logo SVG marca de água — canto superior esquerdo, triplicado, pode sair de quadro */}
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
-            style={{ position: "absolute" as const, top: -40, left: -40, width: 260, height: 260, opacity: 0.15, pointerEvents: "none" as const }}>
+            style={{ position: "absolute" as const, top: -120, left: -120, width: 780, height: 780, opacity: 0.15, pointerEvents: "none" as const }}>
             <circle cx="50" cy="50" r="48" fill="#4A8A4A"/>
             <rect x="46" y="62" width="8" height="22" rx="3" fill="white"/>
             <path d="M46 80 Q36 82 30 88" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
@@ -3491,32 +3512,43 @@ export default function App() {
           </svg>
 
           {/* Palavras flutuantes — movimento suave em loop */}
-          {[
-            { text: "Amor", top: "12%", left: "8%", delay: "0s", duration: "9s", size: 22 },
-            { text: "Família", top: "22%", left: "78%", delay: "1.5s", duration: "10s", size: 18 },
-            { text: "Cuidado", top: "68%", left: "6%", delay: "3s", duration: "8s", size: 20 },
-            { text: "Carinho", top: "78%", left: "75%", delay: "4.5s", duration: "9.5s", size: 19 },
-            { text: "Gratidão", top: "8%", left: "55%", delay: "2s", duration: "8.5s", size: 17 },
-            { text: "Memórias", top: "45%", left: "85%", delay: "5.5s", duration: "9s", size: 18 },
-            { text: "Sabedoria", top: "55%", left: "3%", delay: "6.5s", duration: "10s", size: 17 },
-            { text: "Acolhimento", top: "88%", left: "30%", delay: "1s", duration: "9.5s", size: 16 },
-            { text: "Sorrisos", top: "15%", left: "30%", delay: "7s", duration: "8s", size: 19 },
-            { text: "Companhia", top: "35%", left: "10%", delay: "3.5s", duration: "9s", size: 16 },
-          ].map((w, i) => (
-            <span
-              key={i}
-              className="floating-word"
-              style={{
-                top: w.top, left: w.left,
-                fontSize: w.size,
-                animationDelay: w.delay,
-                animationDuration: w.duration,
-                ["--word-opacity" as any]: 0.14,
-              }}
-            >
-              {w.text}
-            </span>
-          ))}
+          {(() => {
+            const wordSets = [
+              ["Amor", "Família", "Cuidado", "Gratidão", "Memórias"],
+              ["Carinho", "Sabedoria", "Sorrisos", "Acolhimento", "Companhia"],
+              ["Ternura", "Respeito", "Histórias", "Abraços", "Serenidade"],
+            ];
+            const positions = [
+              { top: "14%", left: "5%", size: 52 },
+              { top: "75%", left: "62%", size: 44 },
+              { top: "65%", left: "2%", size: 48 },
+              { top: "8%", left: "50%", size: 42 },
+              { top: "40%", left: "75%", size: 42 },
+            ];
+            const cycleDuration = 9; // segundos por palavra
+            const setCount = wordSets.length;
+
+            return positions.map((pos, i) => (
+              <span
+                key={i}
+                className="floating-word-cycle"
+                style={{
+                  position: "absolute" as const,
+                  top: pos.top, left: pos.left,
+                  fontSize: pos.size,
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontWeight: 600,
+                  color: "#F5EFD8",
+                  pointerEvents: "none" as const,
+                  whiteSpace: "nowrap" as const,
+                  animation: `floatWord ${cycleDuration}s ease-in-out infinite`,
+                  animationDelay: `${i * 1.8}s`,
+                }}
+              >
+                <FloatingWordCycler words={wordSets.map((set) => set[i])} interval={cycleDuration * 1000} delay={i * 1800} />
+              </span>
+            ));
+          })()}
 
           {/* Conteúdo centrado */}
           <div style={{ position: "relative" as const, zIndex: 1, width: "100%", maxWidth: 680, padding: "0 24px" }}>
