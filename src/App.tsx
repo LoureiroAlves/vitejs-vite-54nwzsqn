@@ -1331,136 +1331,286 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
 
   const [familyLinkModal, setFamilyLinkModal] = useState<{ name: string; link: string } | null>(null);
 
-  const handleGeneratePIC = (u: Utente) => {
+  const handleGeneratePIC = async (u: Utente) => {
     const hoje = new Date().toLocaleDateString("pt-PT");
     const dataRevisao = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-PT");
     const meds = (u.medications || []).map((m) => `${m.name}${m.dose ? " — " + m.dose : ""}${m.schedule ? " (" + m.schedule + ")" : ""}`).join("; ") || u.medicationNotes || "";
 
-    const campo = (label: string, valor: string = "", linhas = 1) => {
-      const altura = linhas === 1 ? "28px" : `${linhas * 28}px`;
-      return `
-        <div class="campo">
-          <div class="label">${label}</div>
-          <div class="valor" style="min-height:${altura}">${valor || ""}</div>
-        </div>`;
+    // Notificar utilizador que está a gerar
+    const loadingAlert = document.createElement("div");
+    loadingAlert.id = "pic-loading";
+    loadingAlert.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#2A241C;color:#F5B944;padding:20px 32px;border-radius:16px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.4);text-align:center";
+    loadingAlert.innerHTML = "✨ A gerar PIC com IA...<br><span style='font-size:11px;color:#C9C2B5;font-weight:400'>A preparar o documento</span>";
+    document.body.appendChild(loadingAlert);
+
+    // Chamar Claude para gerar resumos inteligentes
+    let aiTexts: Record<string, string> = {};
+    try {
+      const dadosUtente = {
+        nome: u.name,
+        dataNasc: u.birthDate,
+        quarto: u.room,
+        dataAdmissao: u.entryDate,
+        medicacao: meds,
+        higiene: u.hygieneNotes,
+        alimentacao: u.feedingNotes,
+        outros: u.otherNotes,
+        registoRecente: u.dailyLogs?.[0]?.text,
+      };
+
+      const response = await fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: `És um assistente de saúde para um lar de idosos português (ERPI). Com base nos seguintes dados do utente, gera textos profissionais em português europeu para preencher o Plano Individual de Cuidados (PIC).
+
+DADOS DO UTENTE:
+${JSON.stringify(dadosUtente, null, 2)}
+
+Responde APENAS em JSON válido (sem markdown, sem texto extra) com esta estrutura:
+{
+  "motivo": "texto curto sobre motivo de admissão (2-3 frases)",
+  "habitos": "texto sobre hábitos de vida e preferências baseado na alimentação e higiene (2-3 frases)",
+  "obj_higiene": "objetivo específico para cuidados de higiene (1 frase)",
+  "act_higiene": "atividade/intervenção para higiene (1 frase)",
+  "obj_saude": "objetivo para saúde/medicação (1 frase)",
+  "act_saude": "atividade para saúde (1 frase)",
+  "obj_alimentacao": "objetivo para alimentação (1 frase)",
+  "act_alimentacao": "atividade para alimentação (1 frase)"
+}`
+          }]
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.content?.map((c: any) => c.text || "").join("") || "";
+        try {
+          aiTexts = JSON.parse(text.replace(/```json|```/g, "").trim());
+        } catch {}
+      }
+    } catch (e) {
+      console.warn("IA não disponível, gerando PDF sem resumos automáticos:", e);
+    }
+
+    loadingAlert.innerHTML = "📄 A criar o PDF...<br><span style='font-size:11px;color:#C9C2B5;font-weight:400'>Quase pronto</span>";
+
+    // Carregar pdf-lib dinamicamente
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js";
+    document.head.appendChild(script);
+    await new Promise((res) => { script.onload = res; });
+
+    const { PDFDocument, rgb, StandardFonts, PDFName } = (window as any).PDFLib;
+
+    const pdfDoc = await PDFDocument.create();
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontNormal = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+    const COR_AZUL = rgb(0.227, 0.353, 0.439);
+    const COR_ESCURO = rgb(0.165, 0.141, 0.110);
+    const COR_FUNDO = rgb(0.980, 0.980, 0.980);
+    const COR_BORDA = rgb(0.8, 0.8, 0.8);
+    const COR_SEC_FUNDO = rgb(0.91, 0.937, 0.953);
+
+    const mmToPt = (mm: number) => mm * 2.8346;
+    const W = 595.28, H = 841.89;
+    const MARGIN = mmToPt(15);
+    const CW = W - 2 * MARGIN;
+    const form = pdfDoc.getForm();
+
+    const addPage = () => {
+      const page = pdfDoc.addPage([W, H]);
+      return page;
     };
 
-    const duasColunas = (l1: string, v1: string, l2: string, v2: string) => `
-      <div class="row2">
-        <div class="campo">
-          <div class="label">${l1}</div>
-          <div class="valor">${v1 || ""}</div>
-        </div>
-        <div class="campo">
-          <div class="label">${l2}</div>
-          <div class="valor">${v2 || ""}</div>
-        </div>
-      </div>`;
+    const drawLabel = (page: any, text: string, x: number, y: number, size = 7) => {
+      page.drawText(text.toUpperCase(), { x, y, size, font: fontBold, color: COR_ESCURO });
+    };
 
-    const secao = (titulo: string) => `<div class="secao">${titulo}</div>`;
+    const drawSecao = (page: any, text: string, y: number) => {
+      page.drawRectangle({ x: MARGIN, y: y - mmToPt(5), width: CW, height: mmToPt(7), color: COR_AZUL });
+      page.drawText(text, { x: MARGIN + mmToPt(3), y: y - mmToPt(1.5), size: 9, font: fontBold, color: rgb(1,1,1) });
+      return y - mmToPt(12);
+    };
 
-    const tabelaObjetivos = (dimensao: string) => `
-      <div class="label" style="margin-top:8px">${dimensao}</div>
-      <table class="tabela-obj">
-        <thead><tr><th>Necessidade / Diagnóstico</th><th>Objetivo</th><th>Atividade / Intervenção</th><th>Responsável</th><th>Prazo</th></tr></thead>
-        <tbody><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></tbody>
-      </table>`;
+    const addTextField = (name: string, page: any, x: number, y: number, w: number, h: number, value = "", multiline = false) => {
+      try {
+        const field = form.createTextField(name + "_" + Math.random().toString(36).slice(2,6));
+        field.setText(value);
+        field.setFontSize(8);
+        if (multiline) field.enableMultiline();
+        field.addToPage(page, {
+          x, y, width: w, height: h,
+          backgroundColor: COR_FUNDO,
+          borderColor: COR_BORDA,
+          borderWidth: 0.5,
+        });
+      } catch(e) {}
+    };
 
-    const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">
-    <title>PIC — ${u.name}</title>
-    <style>
-      @page { size: A4; margin: 15mm; }
-      body { font-family: Arial, sans-serif; font-size: 9pt; color: #2A241C; margin: 0; }
-      .header { text-align: center; margin-bottom: 8px; }
-      .header h1 { font-size: 13pt; margin: 0 0 2px; color: #2A241C; }
-      .header h2 { font-size: 9pt; font-weight: normal; margin: 0 0 2px; color: #3A5A70; }
-      .header h3 { font-size: 12pt; color: #3A5A70; margin: 6px 0 0; letter-spacing: 1px; }
-      hr { border: none; border-top: 1.5px solid #3A5A70; margin: 6px 0; }
-      .secao { background: #3A5A70; color: white; padding: 4px 8px; font-weight: bold; font-size: 9pt; margin: 8px 0 4px; }
-      .campo { margin-bottom: 4px; }
-      .label { font-size: 7.5pt; font-weight: bold; color: #2A241C; margin-bottom: 1px; text-transform: uppercase; letter-spacing: 0.4px; }
-      .valor { border: 0.5px solid #CCC; padding: 3px 5px; min-height: 20px; background: #FAFAFA; font-size: 9pt; }
-      .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-      .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-      .tabela-obj { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-      .tabela-obj th, .tabela-obj td { border: 0.5px solid #CCC; padding: 3px 4px; font-size: 8pt; }
-      .tabela-obj th { background: #E8EEF5; font-weight: bold; }
-      .tabela-obj td { height: 18px; }
-      .tabela-riscos { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-      .tabela-riscos th, .tabela-riscos td { border: 0.5px solid #CCC; padding: 3px 4px; font-size: 8pt; }
-      .tabela-riscos th { background: #E8EEF5; }
-      .tabela-riscos td { height: 16px; }
-      .assinaturas { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px; }
-      .assin-box { border: 0.5px solid #CCC; padding: 6px; text-align: center; }
-      .assin-box .titulo { font-weight: bold; font-size: 8pt; margin-bottom: 20px; }
-      .assin-box .linha { border-top: 0.5px solid #999; margin: 0 10px 4px; }
-      .assin-box .data { font-size: 8pt; color: #666; }
-      .rodape { text-align: center; font-size: 7pt; color: #999; margin-top: 10px; border-top: 0.5px solid #CCC; padding-top: 4px; }
-    </style></head><body>
+    const addCheckbox = (name: string, page: any, x: number, y: number, size: number) => {
+      try {
+        const cb = form.createCheckBox(name + "_" + Math.random().toString(36).slice(2,6));
+        cb.addToPage(page, { x, y, width: size, height: size, borderColor: COR_BORDA, borderWidth: 0.5 });
+      } catch(e) {}
+    };
 
-    <div class="header">
-      <h1>ASSOCIAÇÃO OLIVEIRENSE DE SOCORROS MÚTUOS</h1>
-      <h2>Estrutura Residencial para Pessoas Idosas (ERPI)</h2>
-      <hr>
-      <h3>PLANO INDIVIDUAL DE CUIDADOS</h3>
-    </div>
+    // ── PÁG 1: Identificação + Avaliação diagnóstica ──
+    const p1 = addPage();
 
-    ${secao("1. IDENTIFICAÇÃO DO RESIDENTE")}
-    ${campo("Nome completo", u.name)}
-    ${duasColunas("Data de nascimento", u.birthDate || "", "Naturalidade", u.naturalidade || "")}
-    ${duasColunas("Nacionalidade", u.nacionalidade || "", "Estado civil", u.estadoCivil || "")}
-    ${duasColunas("NIF", u.nif || "", "Nº Cartão de Cidadão", u.ccNumber || "")}
-    ${campo("Morada anterior", u.morada || "")}
-    ${duasColunas("Data de admissão", u.entryDate || "", "Quarto", u.room || "")}
-    ${duasColunas("Familiar / representante legal", u.familyContact || "", "Contacto telefónico", u.familyPhone || "")}
-    ${campo("Técnico responsável pelo processo")}
+    // Cabeçalho
+    p1.drawText("ASSOCIAÇÃO OLIVEIRENSE DE SOCORROS MÚTUOS", { x: W/2 - 180, y: H - MARGIN, size: 13, font: fontBold, color: COR_ESCURO });
+    p1.drawText("Estrutura Residencial para Pessoas Idosas (ERPI)", { x: W/2 - 130, y: H - MARGIN - mmToPt(7), size: 9, font: fontNormal, color: COR_AZUL });
+    p1.drawLine({ start: {x: MARGIN, y: H - MARGIN - mmToPt(12)}, end: {x: W-MARGIN, y: H - MARGIN - mmToPt(12)}, thickness: 1.2, color: COR_AZUL });
+    p1.drawText("PLANO INDIVIDUAL DE CUIDADOS", { x: W/2 - 110, y: H - MARGIN - mmToPt(19), size: 12, font: fontBold, color: COR_AZUL });
 
-    ${secao("2. AVALIAÇÃO DIAGNÓSTICA")}
-    ${campo("Motivo de admissão / caracterização da situação", "", 3)}
-    ${campo("Historial clínico relevante (diagnósticos, cirurgias, internamentos)", "", 3)}
-    ${campo("Medicação em vigor", meds, meds ? 2 : 1)}
-    ${campo("Alergias conhecidas")}
-    ${duasColunas("Grau de dependência (AVD)", "", "Mobilidade", "")}
-    ${duasColunas("Estado cognitivo", "", "Estado emocional / psicológico", "")}
-    ${campo("Hábitos de vida, preferências e gostos pessoais", `${u.feedingNotes ? "Alimentação: " + u.feedingNotes + " " : ""}${u.hygieneNotes ? "Higiene: " + u.hygieneNotes : ""}`, 2)}
-    ${campo("Expectativas do residente / familiar", "", 2)}
+    let y = H - MARGIN - mmToPt(30);
 
-    ${secao("3. OBJETIVOS E INTERVENÇÕES")}
-    ${["Cuidados pessoais e higiene", "Saúde / Cuidados de enfermagem", "Alimentação e hidratação", "Animação sociocultural e ocupacional", "Psicossocial / bem-estar emocional"].map(tabelaObjetivos).join("")}
+    const linhaSimples = (titulo: string, nome: string, valor: string, linhas = 1) => {
+      const h = Math.max(linhas * mmToPt(8), mmToPt(8));
+      drawLabel(p1, titulo, MARGIN, y + h + mmToPt(1.5));
+      addTextField(nome, p1, MARGIN, y, CW, h, valor, linhas > 1);
+      y -= h + mmToPt(5);
+    };
 
-    ${secao("4. IDENTIFICAÇÃO DE RISCOS")}
-    <table class="tabela-riscos">
-      <thead><tr><th>Risco</th><th>Sim</th><th>Não</th><th>Medidas preventivas</th></tr></thead>
-      <tbody>
-        ${["Queda", "Úlcera de pressão", "Desnutrição / desidratação", "Isolamento social", "Deterioração cognitiva"].map((r) => `<tr><td>${r}</td><td></td><td></td><td></td></tr>`).join("")}
-        <tr><td>Outro: _______________</td><td></td><td></td><td></td></tr>
-      </tbody>
-    </table>
+    const doisCampos = (t1: string, n1: string, v1: string, t2: string, n2: string, v2: string, ratio = 0.5) => {
+      const w1 = CW * ratio - mmToPt(2); const w2 = CW * (1-ratio) - mmToPt(2);
+      const x2 = MARGIN + w1 + mmToPt(4); const h = mmToPt(8);
+      drawLabel(p1, t1, MARGIN, y + h + mmToPt(1.5));
+      addTextField(n1, p1, MARGIN, y, w1, h, v1);
+      drawLabel(p1, t2, x2, y + h + mmToPt(1.5));
+      addTextField(n2, p1, x2, y, w2, h, v2);
+      y -= h + mmToPt(5);
+    };
 
-    ${secao("5. VALIDAÇÃO E ASSINATURAS")}
-    <div class="row3" style="margin-bottom:8px">
-      <div class="campo"><div class="label">Data de elaboração</div><div class="valor">${hoje}</div></div>
-      <div class="campo"><div class="label">Data de 1.ª revisão prevista</div><div class="valor">${dataRevisao}</div></div>
-      <div class="campo"><div class="label">Data de última revisão</div><div class="valor">&nbsp;</div></div>
-    </div>
-    <div class="assinaturas">
-      ${["Diretor(a) Técnico(a)", "Residente / Representante legal", "Familiar / Responsável"].map((t) => `
-        <div class="assin-box">
-          <div class="titulo">${t}</div>
-          <div class="linha"></div>
-          <div class="data">Data: ___/___/______</div>
-        </div>`).join("")}
-    </div>
+    y = drawSecao(p1, "1. IDENTIFICAÇÃO DO RESIDENTE", y);
+    linhaSimples("Nome completo", "nome", u.name || "");
+    doisCampos("Data de nascimento", "data_nasc", u.birthDate || "", "Naturalidade", "naturalidade", u.naturalidade || "");
+    doisCampos("Nacionalidade", "nacionalidade", u.nacionalidade || "", "Estado civil", "estado_civil", u.estadoCivil || "");
+    doisCampos("NIF", "nif", u.nif || "", "Nº Cartão de Cidadão", "cc", u.ccNumber || "");
+    linhaSimples("Morada anterior", "morada", u.morada || "");
+    doisCampos("Data de admissão", "data_admissao", u.entryDate || "", "Quarto", "quarto", u.room || "", 0.65);
+    doisCampos("Familiar / representante legal", "familiar", u.familyContact || "", "Contacto", "telefone", u.familyPhone || "", 0.65);
+    linhaSimples("Técnico responsável", "tecnico", "");
 
-    <div class="rodape">Associação Oliveirense de Socorros Mútuos — ERPI · Documento a rever anualmente ou sempre que se justifique · Portaria n.º 67/2012 de 21 de março</div>
-    </body></html>`;
+    y -= mmToPt(3);
+    y = drawSecao(p1, "2. AVALIAÇÃO DIAGNÓSTICA", y);
+    linhaSimples("Motivo de admissão / caracterização da situação", "motivo", aiTexts.motivo || u.otherNotes || "", 3);
+    linhaSimples("Historial clínico relevante (diagnósticos, cirurgias, internamentos)", "historial", u.dailyLogs && u.dailyLogs.length > 0 ? u.dailyLogs[0].text : "", 3);
+    linhaSimples("Medicação em vigor (terapêutica atual)", "medicacao", meds, 2);
+    linhaSimples("Alergias conhecidas", "alergias", "");
+    doisCampos("Grau de dependência (AVD)", "dependencia", "", "Mobilidade", "mobilidade", "");
+    doisCampos("Estado cognitivo", "cognitivo", "", "Estado emocional / psicológico", "emocional", "");
+    linhaSimples("Hábitos de vida, preferências e gostos pessoais", "habitos", aiTexts.habitos || [u.feedingNotes ? `Alimentação: ${u.feedingNotes}` : "", u.hygieneNotes ? `Higiene: ${u.hygieneNotes}` : ""].filter(Boolean).join(" | "), 2);
+    linhaSimples("Expectativas do residente / familiar", "expectativas", "", 2);
 
-    const w = window.open("", "_blank");
-    if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
-    w.document.open(); w.document.write(html); w.document.close();
-    w.focus();
-    setTimeout(() => w.print(), 400);
+    // ── PÁG 2: Objetivos ──
+    const p2 = addPage();
+    let y2 = H - MARGIN;
+    y2 = drawSecao(p2, "3. OBJETIVOS E INTERVENÇÕES POR DIMENSÃO", y2);
+
+    const COL_W2 = [mmToPt(44), mmToPt(40), mmToPt(46), mmToPt(26), mmToPt(18)];
+    const COL_X2 = [MARGIN, ...COL_W2.slice(0,-1).map((_:number,i:number) => MARGIN + COL_W2.slice(0,i+1).reduce((a:number,b:number)=>a+b,0))];
+    const HEADERS2 = ["Necessidade/Diagnóstico","Objetivo","Atividade/Intervenção","Responsável","Prazo"];
+
+    // Dados para pré-preencher primeira linha de cada dimensão
+    const dadosDim = [
+      [u.hygieneNotes || "", aiTexts.obj_higiene || "Manutenção de higiene e conforto", aiTexts.act_higiene || "Higiene corporal assistida diária", "Auxiliar", "Diário"],
+      [meds || "", aiTexts.obj_saude || (meds ? "Administração correta da terapêutica" : ""), aiTexts.act_saude || (meds ? "Preparação e administração de medicação" : ""), meds ? "Enfermeiro(a)" : "", meds ? "Diário" : ""],
+      [u.feedingNotes || "", aiTexts.obj_alimentacao || (u.feedingNotes ? "Alimentação adequada às necessidades" : ""), aiTexts.act_alimentacao || (u.feedingNotes ? "Apoio às refeições" : ""), u.feedingNotes ? "Auxiliar" : "", u.feedingNotes ? "Diário" : ""],
+      ["", "", "", "", ""],
+      ["", "", "", "", ""],
+    ];
+
+    for (let di = 0; di < 5; di++) {
+      const dim = ["Cuidados pessoais e higiene","Saúde / Cuidados de enfermagem","Alimentação e hidratação","Animação sociocultural e ocupacional","Psicossocial / bem-estar emocional"][di];
+      if (y2 < mmToPt(55)) { const p2b = addPage(); y2 = H - MARGIN; }
+      p2.drawText(`Dimensão: ${dim}`, { x: MARGIN, y: y2, size: 8, font: fontBold, color: COR_ESCURO });
+      y2 -= mmToPt(5);
+      p2.drawRectangle({ x: MARGIN, y: y2 - mmToPt(6), width: CW, height: mmToPt(6), color: COR_SEC_FUNDO });
+      HEADERS2.forEach((h, i) => {
+        p2.drawText(h, { x: COL_X2[i] + mmToPt(1), y: y2 - mmToPt(4), size: 7, font: fontBold, color: COR_ESCURO });
+        p2.drawRectangle({ x: COL_X2[i], y: y2 - mmToPt(6), width: COL_W2[i], height: mmToPt(6), borderColor: COR_BORDA, borderWidth: 0.5, color: rgb(0,0,0,0) });
+      });
+      y2 -= mmToPt(6);
+      for (let row = 0; row < 2; row++) {
+        COL_X2.forEach((x: number, ci: number) => {
+          // Pré-preencher primeira linha com dados do utente
+          const valor = row === 0 ? (dadosDim[di][ci] || "") : "";
+          addTextField(`d${di}r${row}c${ci}`, p2, x, y2 - mmToPt(10), COL_W2[ci], mmToPt(10), valor);
+        });
+        y2 -= mmToPt(10);
+      }
+      y2 -= mmToPt(5);
+    }
+
+    // ── PÁG 3: Riscos + Assinaturas ──
+    const p3 = addPage();
+    let y3 = H - MARGIN;
+    y3 = drawSecao(p3, "4. IDENTIFICAÇÃO DE RISCOS E MEDIDAS PREVENTIVAS", y3);
+
+    const wR = mmToPt(52), wS = mmToPt(14), wN = mmToPt(14), wM = CW - wR - wS - wN;
+    const xS = MARGIN + wR, xN = xS + wS, xM = xN + wN;
+    p3.drawRectangle({ x: MARGIN, y: y3 - mmToPt(6), width: CW, height: mmToPt(6), color: COR_SEC_FUNDO });
+    [["Risco", MARGIN, wR],["Sim", xS, wS],["Não", xN, wN],["Medidas preventivas", xM, wM]].forEach(([t,x,w]) => {
+      p3.drawText(t as string, { x: (x as number) + mmToPt(1), y: y3 - mmToPt(4), size: 7.5, font: fontBold, color: COR_ESCURO });
+      p3.drawRectangle({ x: x as number, y: y3 - mmToPt(6), width: w as number, height: mmToPt(6), borderColor: COR_BORDA, borderWidth: 0.5, color: rgb(0,0,0,0) });
+    });
+    y3 -= mmToPt(6);
+
+    ["Queda","Úlcera de pressão","Desnutrição / desidratação","Isolamento social","Deterioração cognitiva","Outro"].forEach((risco, ri) => {
+      p3.drawRectangle({ x: MARGIN, y: y3 - mmToPt(9), width: wR, height: mmToPt(9), borderColor: COR_BORDA, borderWidth: 0.5, color: rgb(0,0,0,0) });
+      p3.drawText(risco, { x: MARGIN + mmToPt(1), y: y3 - mmToPt(5.5), size: 8, font: fontNormal, color: COR_ESCURO });
+      addCheckbox(`rsim${ri}`, p3, xS + mmToPt(4), y3 - mmToPt(8), mmToPt(5));
+      p3.drawRectangle({ x: xS, y: y3 - mmToPt(9), width: wS, height: mmToPt(9), borderColor: COR_BORDA, borderWidth: 0.5, color: rgb(0,0,0,0) });
+      addCheckbox(`rnao${ri}`, p3, xN + mmToPt(4), y3 - mmToPt(8), mmToPt(5));
+      p3.drawRectangle({ x: xN, y: y3 - mmToPt(9), width: wN, height: mmToPt(9), borderColor: COR_BORDA, borderWidth: 0.5, color: rgb(0,0,0,0) });
+      addTextField(`rmed${ri}`, p3, xM, y3 - mmToPt(9), wM, mmToPt(9));
+      y3 -= mmToPt(9);
+    });
+
+    y3 -= mmToPt(8);
+    y3 = drawSecao(p3, "5. VALIDAÇÃO E ASSINATURAS", y3);
+    const wT = (CW - mmToPt(4)) / 3;
+    [["Data de elaboração", hoje],["Data de 1.ª revisão prevista", dataRevisao],["Data de última revisão",""]].forEach(([t,v],i) => {
+      const x = MARGIN + i*(wT + mmToPt(2));
+      drawLabel(p3, t, x, y3 + mmToPt(9.5));
+      addTextField(`data${i}`, p3, x, y3, wT, mmToPt(8), v);
+    });
+    y3 -= mmToPt(15);
+
+    const wA = (CW - mmToPt(4)) / 3;
+    ["Diretor(a) Técnico(a)","Residente / Representante legal","Familiar / Responsável"].forEach((titulo, i) => {
+      const x = MARGIN + i*(wA + mmToPt(2));
+      p3.drawRectangle({ x, y: y3 - mmToPt(30), width: wA, height: mmToPt(30), borderColor: COR_BORDA, borderWidth: 0.5, color: rgb(0,0,0,0) });
+      p3.drawText(titulo, { x: x + wA/2 - titulo.length*2.5, y: y3 - mmToPt(7), size: 7.5, font: fontBold, color: COR_ESCURO });
+      p3.drawLine({ start: {x: x + mmToPt(4), y: y3 - mmToPt(22)}, end: {x: x + wA - mmToPt(4), y: y3 - mmToPt(22)}, thickness: 0.5, color: rgb(0.6,0.6,0.6) });
+      p3.drawText("Data: ___/___/______", { x: x + wA/2 - 30, y: y3 - mmToPt(27), size: 7.5, font: fontNormal, color: rgb(0.5,0.5,0.5) });
+    });
+
+    // Rodapé em todas as páginas
+    [p1, p2, p3].forEach((page) => {
+      page.drawLine({ start: {x: MARGIN, y: mmToPt(10)}, end: {x: W-MARGIN, y: mmToPt(10)}, thickness: 0.5, color: COR_BORDA });
+      page.drawText("Associação Oliveirense de Socorros Mútuos — ERPI · Portaria n.º 67/2012 de 21 de março · Documento a rever anualmente", { x: MARGIN + mmToPt(10), y: mmToPt(5), size: 6, font: fontNormal, color: rgb(0.6,0.6,0.6) });
+    });
+
+    // Gerar e descarregar PDF
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `PIC_${u.name.replace(/\s+/g, "_")}_${hoje.replace(/\//g, "-")}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    document.getElementById("pic-loading")?.remove();
   };
 
   const handleGetFamilyLink = (utente: Utente) => {
