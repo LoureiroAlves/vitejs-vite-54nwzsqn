@@ -1635,6 +1635,172 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
 
 // ============================================================
 
+// ============================================================
+// PAINEL DE PESQUISA RÁPIDA — detalhe de colaborador ou utente
+// ============================================================
+const MONTH_NAMES_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const TURNO_LABELS: Record<string, string> = {
+  M: "Manhã (07h-16h)", T: "Tarde", N: "Noite",
+  FC: "Folga compensatória", FO: "Folga obrigatória",
+  FE: "Férias", FR: "Feriado", BM: "Baixa médica", EX: "Falta injustificada", FA: "Falta",
+};
+
+function QuickSearchPanel({ target, schedule, onClose }: {
+  target: { type: "utente" | "colaborador"; name: string; photo?: string };
+  schedule: Record<string, Record<string, Record<number, string>>>;
+  onClose: () => void;
+}) {
+  const today = new Date();
+  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
+  const [utenteData, setUtenteData] = useState<any>(null);
+
+  useEffect(() => {
+    if (target.type === "utente") {
+      const stored = loadUtentesData()?.utentes ?? [];
+      const found = stored.find((u: any) => u.name === target.name);
+      setUtenteData(found || null);
+    }
+  }, [target]);
+
+  const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const monthSchedule = schedule?.[monthKey]?.[target.name] || {};
+  const numDays = new Date(year, month + 1, 0).getDate();
+
+  const summary: Record<string, number> = {};
+  Object.values(monthSchedule).forEach((t) => {
+    if (t) summary[t] = (summary[t] || 0) + 1;
+  });
+
+  return (
+    <>
+      <div style={{ position: "fixed" as const, inset: 0, background: "rgba(20,18,14,0.5)", zIndex: 200 }} onClick={onClose} />
+      <div style={{
+        position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+        width: "min(520px, 92vw)", maxHeight: "85vh", overflowY: "auto" as const,
+        background: "#FFFFFF", borderRadius: 24, zIndex: 201, boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: "24px 24px 20px", display: "flex", alignItems: "center", gap: 14,
+          background: target.type === "utente" ? "#E8EEF5" : "#F0E8D5",
+          borderRadius: "24px 24px 0 0",
+        }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: "50%", flexShrink: 0, overflow: "hidden",
+            background: target.type === "utente" ? "#3A5A70" : "#B08A4E",
+            color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 18, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif",
+          }}>
+            {target.photo ? <img src={target.photo} alt={target.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : target.name.slice(0, 2).toUpperCase()}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, color: "#2A241C" }}>{target.name}</div>
+            <div style={{ fontSize: 12, color: "#6B6358", textTransform: "uppercase" as const, letterSpacing: "0.05em", fontWeight: 600 }}>
+              {target.type === "utente" ? "Utente" : "Colaborador"}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ border: "none", background: "rgba(255,255,255,0.5)", borderRadius: 10, padding: 8, cursor: "pointer", color: "#2A241C" }}>
+            <IconX size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: 24 }}>
+          {target.type === "utente" ? (
+            // ---------- Informação de utente ----------
+            utenteData ? (
+              <div style={{ display: "flex", flexDirection: "column" as const, gap: 14 }}>
+                {[
+                  { label: "Data de nascimento", value: utenteData.birthDate },
+                  { label: "Quarto", value: utenteData.room },
+                  { label: "Data de entrada", value: utenteData.entryDate },
+                  { label: "Contacto familiar", value: utenteData.familyContact },
+                  { label: "Telefone familiar", value: utenteData.familyPhone },
+                ].filter((f) => f.value).map((f) => (
+                  <div key={f.label}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 3 }}>{f.label}</div>
+                    <div style={{ fontSize: 14, color: "#2A241C" }}>{f.value}</div>
+                  </div>
+                ))}
+                {utenteData.notes && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 3 }}>Observações / Informação clínica</div>
+                    <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, background: "#F7F5F0", borderRadius: 10, padding: "10px 12px", lineHeight: 1.5 }}>{utenteData.notes}</div>
+                  </div>
+                )}
+                {(utenteData.files?.length ?? 0) > 0 && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 6 }}>Documentos ({utenteData.files.length})</div>
+                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 5 }}>
+                      {utenteData.files.map((f: any, i: number) => (
+                        <a key={i} href={f.data} download={f.name} style={{ fontSize: 12, color: "#3A5A70", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
+                          📎 {f.name}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ textAlign: "center" as const, color: "#A39B8E", fontSize: 13, padding: "20px 0" }}>Sem ficha detalhada guardada para este utente.</div>
+            )
+          ) : (
+            // ---------- Informação de colaborador (horário) ----------
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <button onClick={() => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); }}
+                  style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>
+                  <IconChevronLeft size={16} />
+                </button>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15 }}>{MONTH_NAMES_FULL[month]} {year}</div>
+                <button onClick={() => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); }}
+                  style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>
+                  <IconChevronRight size={16} />
+                </button>
+              </div>
+
+              {Object.keys(monthSchedule).length === 0 ? (
+                <div style={{ textAlign: "center" as const, color: "#A39B8E", fontSize: 13, padding: "20px 0" }}>Sem turnos registados para este mês.</div>
+              ) : (
+                <>
+                  {/* Resumo do mês */}
+                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8, marginBottom: 16 }}>
+                    {Object.entries(summary).map(([turno, count]) => (
+                      <div key={turno} style={{ background: "#F0E8D5", borderRadius: 10, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: "#8A6A2E" }}>
+                        {TURNO_LABELS[turno] || turno}: <strong>{count}</strong>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Grelha de dias */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+                    {Array.from({ length: numDays }, (_, i) => i + 1).map((day) => {
+                      const turno = monthSchedule[day];
+                      const date = new Date(year, month, day);
+                      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                      return (
+                        <div key={day} style={{
+                          aspectRatio: "1", borderRadius: 8, display: "flex", flexDirection: "column" as const,
+                          alignItems: "center", justifyContent: "center", fontSize: 10,
+                          background: turno ? "#F0E8D5" : isWeekend ? "#FAFAF8" : "#F7F5F0",
+                          border: turno ? "1px solid #D8C28A" : "1px solid #EFEAE2",
+                        }}>
+                          <div style={{ fontSize: 9, color: "#A39B8E" }}>{day}</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#2A241C" }}>{turno || "—"}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function App() {
   const today = new Date();
   const [activePage, setActivePage] = useState<"home" | "schedule" | "stock" | "utentes">("home");
@@ -1642,6 +1808,9 @@ export default function App() {
   const [month, setMonth] = useState(today.getMonth());
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
   const [syncDone, setSyncDone] = useState(false);
+  const [quickSearch, setQuickSearch] = useState("");
+  const [quickSearchOpen, setQuickSearchOpen] = useState(false);
+  const [quickSearchTarget, setQuickSearchTarget] = useState<{ type: "utente" | "colaborador"; name: string; photo?: string } | null>(null);
 
   const [employees, setEmployees] = useState<string[]>(() => {
     const stored = loadStoredData();
@@ -2749,6 +2918,30 @@ export default function App() {
     });
     return alerts;
   }, [today]);
+
+  // ---------- Pesquisa rápida universal ----------
+  const quickSearchResults = useMemo(() => {
+    const term = quickSearch.trim().toLowerCase();
+    if (!term) return [];
+    const results: { type: "utente" | "colaborador"; name: string; photo?: string }[] = [];
+
+    // Colaboradores (escala + recibo verde)
+    [...employees, ...rvEmployees].forEach((name) => {
+      if (name.toLowerCase().includes(term)) {
+        results.push({ type: "colaborador", name });
+      }
+    });
+
+    // Utentes (do localStorage)
+    const storedUtentes = loadUtentesData()?.utentes ?? [];
+    storedUtentes.forEach((u: any) => {
+      if (u.name?.toLowerCase().includes(term)) {
+        results.push({ type: "utente", name: u.name, photo: u.photo });
+      }
+    });
+
+    return results.slice(0, 8);
+  }, [quickSearch, employees, rvEmployees]);
   const isUtentesPage = (activePage as string) === "utentes";
   const isSchedulePage = (activePage as string) === "schedule";
 
@@ -2817,6 +3010,10 @@ export default function App() {
         @keyframes bounce {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-6px); }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
         @keyframes slideUp {
           0%   { transform: translateY(100%); }
@@ -2939,37 +3136,90 @@ export default function App() {
 
             {/* Título */}
             <div className="home-center" style={{ textAlign: "center" as const, marginBottom: 48 }}>
-              <div className="home-icon-wrap" style={{ width: 80, height: 80, borderRadius: 24, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F5B944" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <button
+                className="home-icon-wrap"
+                onClick={syncFromSupabase}
+                disabled={syncStatus === "syncing"}
+                style={{
+                  width: 80, height: 80, borderRadius: 24,
+                  background: syncStatus === "error" ? "rgba(226,108,90,0.18)" : "rgba(255,255,255,0.12)",
+                  border: `1px solid ${syncStatus === "error" ? "rgba(226,108,90,0.4)" : "rgba(255,255,255,0.2)"}`,
+                  display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px",
+                  cursor: syncStatus === "syncing" ? "default" : "pointer", padding: 0,
+                  animation: syncStatus === "syncing" ? "spin 1s linear infinite" : undefined,
+                  transition: "transform 0.15s",
+                }}
+                title={
+                  syncStatus === "synced" ? "Sincronizado — clique para atualizar" :
+                  syncStatus === "syncing" ? "A sincronizar..." :
+                  syncStatus === "error" ? "Sem ligação — clique para tentar" : "Clique para sincronizar"
+                }
+                onMouseEnter={(e) => { if (syncStatus !== "syncing") (e.currentTarget as HTMLElement).style.transform = "scale(1.08)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+              >
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={syncStatus === "error" ? "#E26C5A" : "#F5B944"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 21V7l9-4 9 4v14"/>
                   <path d="M9 21V13h6v8"/>
                   <path d="M9 9h.01M12 9h.01M15 9h.01M9 13h.01M15 13h.01"/>
                 </svg>
-              </div>
+              </button>
               <h1 className="home-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 700, margin: "0 0 8px", color: "#FFFFFF" }}>
                 Associação Oliveirense de Socorros Mútuos
               </h1>
-              <p style={{ fontSize: 14, color: "#8FBF8F", margin: 0 }}>Complexo Intergeracional Quinta dos Avós</p>
+              <p style={{ fontSize: 14, color: "#8FBF8F", margin: "0 0 18px" }}>Complexo Intergeracional Quinta dos Avós</p>
 
-              {/* Indicador de sincronização + botão manual */}
-              <button
-                onClick={syncFromSupabase}
-                disabled={syncStatus === "syncing"}
-                style={{
-                  marginTop: 14, display: "inline-flex", alignItems: "center", gap: 5,
-                  background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: 20, padding: "6px 12px", cursor: syncStatus === "syncing" ? "default" : "pointer",
-                  fontSize: 11, fontWeight: 600, fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const,
-                  color: syncStatus === "synced" ? "#8FBF8F" : syncStatus === "error" ? "#E8A398" : "#E8D5A0",
-                  maxWidth: "90vw", overflow: "hidden" as const, textOverflow: "ellipsis" as const,
-                }}
-                title="Forçar sincronização com a nuvem"
-              >
-                {syncStatus === "syncing" && <>⟳ A sincronizar...</>}
-                {syncStatus === "synced" && <>✓ Sincronizado</>}
-                {syncStatus === "error" && <>⚠ Sem ligação</>}
-                {syncStatus === "idle" && <>↻ Sincronizar</>}
-              </button>
+              {/* Pesquisa rápida universal */}
+              <div style={{ position: "relative" as const, maxWidth: 380, margin: "0 auto" }}>
+                <input
+                  value={quickSearch}
+                  onChange={(e) => { setQuickSearch(e.target.value); setQuickSearchOpen(true); }}
+                  onFocus={() => setQuickSearchOpen(true)}
+                  placeholder="🔍 Pesquisar colaborador ou utente..."
+                  style={{
+                    width: "100%", boxSizing: "border-box" as const,
+                    background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: 14, padding: "10px 16px", fontSize: 13, fontFamily: "'Inter', sans-serif",
+                    outline: "none", color: "#FFFFFF", colorScheme: "dark" as const,
+                  }}
+                />
+                {quickSearchOpen && quickSearch.trim() && (
+                  <div style={{
+                    position: "absolute" as const, top: "calc(100% + 6px)", left: 0, right: 0,
+                    background: "#FFFFFF", borderRadius: 14, boxShadow: "0 8px 28px rgba(0,0,0,0.25)",
+                    maxHeight: 280, overflowY: "auto" as const, zIndex: 50, textAlign: "left" as const,
+                  }}>
+                    {quickSearchResults.length === 0 ? (
+                      <div style={{ padding: "16px", fontSize: 13, color: "#A39B8E", textAlign: "center" as const }}>Nenhum resultado encontrado</div>
+                    ) : quickSearchResults.map((r) => (
+                      <button
+                        key={r.type + r.name}
+                        onClick={() => { setQuickSearchTarget(r); setQuickSearchOpen(false); setQuickSearch(""); }}
+                        style={{
+                          width: "100%", display: "flex", alignItems: "center", gap: 10,
+                          padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer",
+                          borderBottom: "1px solid #F0EDE6", textAlign: "left" as const,
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "#F7F5F0"}
+                        onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
+                      >
+                        <div style={{
+                          width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                          background: r.type === "utente" ? "#E8EEF5" : "#F0E8D5",
+                          color: r.type === "utente" ? "#3A5A70" : "#B08A4E",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 12, fontWeight: 700, overflow: "hidden",
+                        }}>
+                          {r.photo ? <img src={r.photo} alt={r.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : r.name.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "#2A241C", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{r.name}</div>
+                          <div style={{ fontSize: 11, color: "#A39B8E" }}>{r.type === "utente" ? "Utente" : "Colaborador"}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Aniversários */}
@@ -3040,6 +3290,15 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Painel de detalhe da pesquisa rápida */}
+      {quickSearchTarget && (
+        <QuickSearchPanel
+          target={quickSearchTarget}
+          schedule={schedule}
+          onClose={() => setQuickSearchTarget(null)}
+        />
       )}
 
       {/* Página de stock */}
@@ -4379,3 +4638,4 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
+                      
