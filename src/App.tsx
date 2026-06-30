@@ -2817,25 +2817,26 @@ export default function App() {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-6px); }
         }
-        @keyframes revealUp {
-          0% { clip-path: inset(100% 0 0 0); }
-          100% { clip-path: inset(0% 0 0 0); }
+        @keyframes slideUp {
+          0%   { transform: translateY(100%); }
+          100% { transform: translateY(0%); }
         }
-        @keyframes revealDown {
-          0% { clip-path: inset(0% 0 0 0); }
-          100% { clip-path: inset(100% 0 0 0); }
+        @keyframes slideDown {
+          0%   { transform: translateY(0%); }
+          100% { transform: translateY(100%); }
         }
         .page-enter {
-          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          position: fixed; inset: 0;
           z-index: 100; overflow-y: auto;
-          animation: revealUp 0.45s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+          will-change: transform;
+          animation: slideUp 0.42s cubic-bezier(0.32, 0.72, 0, 1) both;
         }
         .page-exit {
-          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          position: fixed; inset: 0;
           z-index: 100; overflow-y: auto;
-          animation: revealDown 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+          will-change: transform;
+          animation: slideDown 0.32s cubic-bezier(0.32, 0.72, 0, 1) both;
         }
-        body { background: #1E3A1E !important; margin: 0; }
         .utente-avatar { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; }
         .utente-avatar:hover { transform: scale(2); box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 10; position: relative; }
         input[type="number"]::-webkit-outer-spin-button,
