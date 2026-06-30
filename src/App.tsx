@@ -2902,6 +2902,7 @@ export default function App() {
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Utentes
                 </div>
+                <div style={{ width: 40, height: 4, borderRadius: 2, background: "#5B8DBE" }} />
               </button>
 
               <button onClick={() => setActivePage("schedule")} className="home-btn"
@@ -2914,6 +2915,7 @@ export default function App() {
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Colaboradores
                 </div>
+                <div style={{ width: 40, height: 4, borderRadius: 2, background: "#E8B14A" }} />
               </button>
 
               <button onClick={() => setActivePage("stock")} className="home-btn"
@@ -2926,6 +2928,7 @@ export default function App() {
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Stock
                 </div>
+                <div style={{ width: 40, height: 4, borderRadius: 2, background: "#6FA86F" }} />
               </button>
             </div>
           </div>
