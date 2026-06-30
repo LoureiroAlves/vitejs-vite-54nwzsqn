@@ -1700,8 +1700,7 @@ export default function App() {
   };
   const hideTip = () => setTooltip(null);
 
-  // Carregar do Supabase ao iniciar (sincronização em background)
-  useEffect(() => {
+  const syncFromSupabase = () => {
     setSyncStatus("syncing");
     Promise.all([
       loadFromSupabase("escala_data"),
@@ -1718,8 +1717,6 @@ export default function App() {
         if (escala.schedule_link) setScheduleLink(escala.schedule_link);
         if (escala.last_published && Object.keys(escala.last_published).length) setLastPublished(escala.last_published);
       }
-      // Não temos acesso direto aos estados do StockPage e UtentesPage aqui,
-      // mas podemos guardar no localStorage para que sejam carregados por eles
       if (stock) {
         try {
           window.localStorage?.setItem?.("turnos-stock-data-v1", JSON.stringify({
@@ -1737,9 +1734,15 @@ export default function App() {
         } catch (e) {}
       }
       setSyncStatus(escala ? "synced" : "idle");
-      setSyncDone(true);
+      setSyncDone((prev) => !prev);
     }).catch(() => setSyncStatus("error"));
+  };
+
+  // Carregar do Supabase ao iniciar (sincronização em background)
+  useEffect(() => {
+    syncFromSupabase();
   }, []);
+
 
   // Guardar tudo automaticamente
   useEffect(() => {
@@ -2893,6 +2896,25 @@ export default function App() {
                 Associação Oliveirense de Socorros Mútuos
               </h1>
               <p style={{ fontSize: 14, color: "#8FBF8F", margin: 0 }}>Complexo Intergeracional Quinta dos Avós</p>
+
+              {/* Indicador de sincronização + botão manual */}
+              <button
+                onClick={syncFromSupabase}
+                disabled={syncStatus === "syncing"}
+                style={{
+                  marginTop: 16, display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: 20, padding: "6px 14px", cursor: syncStatus === "syncing" ? "default" : "pointer",
+                  fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif",
+                  color: syncStatus === "synced" ? "#8FBF8F" : syncStatus === "error" ? "#E8A398" : "#E8D5A0",
+                }}
+                title="Forçar sincronização com a nuvem"
+              >
+                {syncStatus === "syncing" && <>⟳ A sincronizar...</>}
+                {syncStatus === "synced" && <>✓ Sincronizado — clique para atualizar</>}
+                {syncStatus === "error" && <>⚠ Sem ligação — clique para tentar</>}
+                {syncStatus === "idle" && <>↻ Sincronizar agora</>}
+              </button>
             </div>
 
             {/* Aniversários */}
