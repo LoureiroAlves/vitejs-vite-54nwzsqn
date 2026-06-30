@@ -3398,6 +3398,10 @@ export default function App() {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+        @keyframes treeSway {
+          0%, 100% { transform: rotate(-2.5deg); }
+          50% { transform: rotate(2.5deg); }
+        }
         @keyframes slideUp {
           0%   { transform: translateY(100%); }
           100% { transform: translateY(0%); }
@@ -3501,32 +3505,36 @@ export default function App() {
       {true && (
         <div style={{ position: "fixed" as const, inset: 0, background: "#1E3A1E", display: "flex", alignItems: "center", justifyContent: "center", overflow: "auto" }}>
 
-          {/* Logo SVG marca de água — canto superior esquerdo, triplicado, pode sair de quadro */}
+          {/* Logo SVG marca de água — canto superior esquerdo, triplicado, com balanço suave */}
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
             style={{ position: "absolute" as const, top: -120, left: -120, width: 780, height: 780, opacity: 0.15, pointerEvents: "none" as const }}>
             <circle cx="50" cy="50" r="48" fill="#4A8A4A"/>
             <rect x="46" y="62" width="8" height="22" rx="3" fill="white"/>
             <path d="M46 80 Q36 82 30 88" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
             <path d="M54 80 Q64 82 70 88" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
-            <ellipse cx="50" cy="40" rx="16" ry="20" fill="white"/>
-            <ellipse cx="34" cy="47" rx="13" ry="16" fill="white" transform="rotate(-15 34 47)"/>
-            <ellipse cx="66" cy="47" rx="13" ry="16" fill="white" transform="rotate(15 66 47)"/>
-            <ellipse cx="50" cy="24" rx="10" ry="14" fill="white"/>
+            {/* Copa — anima com balanço suave, ponto de origem na base do tronco */}
+            <g style={{ transformOrigin: "50px 62px", animation: "treeSway 6s ease-in-out infinite" }}>
+              <ellipse cx="50" cy="40" rx="16" ry="20" fill="white"/>
+              <ellipse cx="34" cy="47" rx="13" ry="16" fill="white" transform="rotate(-15 34 47)"/>
+              <ellipse cx="66" cy="47" rx="13" ry="16" fill="white" transform="rotate(15 66 47)"/>
+              <ellipse cx="50" cy="24" rx="10" ry="14" fill="white"/>
+            </g>
           </svg>
 
           {/* Palavras flutuantes — movimento suave em loop */}
           {(() => {
             const wordSets = [
-              ["Amor", "Família", "Cuidado", "Gratidão", "Memórias"],
-              ["Carinho", "Sabedoria", "Sorrisos", "Acolhimento", "Companhia"],
-              ["Ternura", "Respeito", "Histórias", "Abraços", "Serenidade"],
+              ["Amor", "Família", "Cuidado", "Gratidão", "Memórias", "Acolhimento"],
+              ["Carinho", "Sabedoria", "Sorrisos", "Acolhimento", "Companhia", "Ternura"],
+              ["Ternura", "Respeito", "Histórias", "Abraços", "Serenidade", "Amizade"],
             ];
             const positions = [
-              { top: "10%", left: "62%", size: 56, color: "#F5EFD8" },
-              { top: "78%", left: "68%", size: 36, color: "#E8D5A0" },
-              { top: "45%", left: "82%", size: 50, color: "#A8C5A0" },
-              { top: "8%", left: "86%", size: 30, color: "#D9C9E8" },
-              { top: "68%", left: "4%", size: 42, color: "#F0C5A8" },
+              { top: "10%", left: "62%", size: 112, color: "#F5EFD8" },
+              { top: "78%", left: "68%", size: 72, color: "#E8D5A0" },
+              { top: "45%", left: "82%", size: 100, color: "#A8C5A0" },
+              { top: "8%", left: "86%", size: 60, color: "#D9C9E8" },
+              { top: "68%", left: "4%", size: 84, color: "#F0C5A8" },
+              { top: "30%", left: "16%", size: 50, color: "#C9E0D9" },
             ];
             const cycleDuration = 9; // segundos por palavra
 
@@ -3675,11 +3683,11 @@ export default function App() {
             {/* 3 botões */}
             <div className="home-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
               <button onClick={() => setActivePage("utentes")} className="home-btn"
-                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "40px 18px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 18, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(91,141,190,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 72, height: 72, borderRadius: 22, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <IconUserCircle size={36} color="#3A5A70" />
+                <div style={{ width: 65, height: 65, borderRadius: 20, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconUserCircle size={32} color="#3A5A70" />
                 </div>
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Utentes
@@ -3688,11 +3696,11 @@ export default function App() {
               </button>
 
               <button onClick={() => setActivePage("schedule")} className="home-btn"
-                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "40px 18px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 18, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(232,177,74,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 72, height: 72, borderRadius: 22, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <IconUsers size={36} color="#B08A4E" />
+                <div style={{ width: 65, height: 65, borderRadius: 20, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconUsers size={32} color="#B08A4E" />
                 </div>
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Colaboradores
@@ -3701,11 +3709,11 @@ export default function App() {
               </button>
 
               <button onClick={() => setActivePage("stock")} className="home-btn"
-                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "44px 20px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 20, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "40px 18px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 18, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(111,168,111,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 72, height: 72, borderRadius: 22, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <IconBox size={36} color="#3B6D11" />
+                <div style={{ width: 65, height: 65, borderRadius: 20, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconBox size={32} color="#3B6D11" />
                 </div>
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Stock
