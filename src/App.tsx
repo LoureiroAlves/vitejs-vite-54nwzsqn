@@ -1908,19 +1908,165 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
 
             {/* ── GERAL ── */}
             {utenteTab === "geral" && (
-              <div style={{ maxWidth: 600, margin: "0 auto", display: "flex", flexDirection: "column" as const, gap: 14 }}>
-                {[
-                  { key: "room", label: "Quarto", placeholder: "Ex: 12A" },
-                ].map(({ key, label, placeholder }) => (
-                  <div key={key}>
-                    <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
-                    <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
-                      style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 12px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", boxSizing: "border-box" as const }} />
+              <div style={{ maxWidth: 700, margin: "0 auto", display: "flex", flexDirection: "column" as const, gap: 20 }}>
+
+                {/* Leitura do CC com IA */}
+                <div style={{ background: "#2A241C", borderRadius: 14, padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#F5B944", marginBottom: 2 }}>✨ Ler Cartão de Cidadão com IA</div>
+                    <div style={{ fontSize: 11, color: "#A39B8E" }}>Fotografa ou faz upload do CC — a IA preenche os dados automaticamente</div>
                   </div>
-                ))}
+                  <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                    <button
+                      onClick={() => {
+                        const input = document.createElement("input");
+                        input.type = "file"; input.accept = "image/*"; input.setAttribute("capture", "environment");
+                        input.onchange = async (ev: Event) => {
+                          const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
+                          const loadingEl = document.getElementById("cc-loading");
+                          if (loadingEl) loadingEl.style.display = "block";
+                          try {
+                            const base64 = await new Promise<string>((res, rej) => {
+                              const r = new FileReader(); r.onload = (e) => res((e.target?.result as string).split(",")[1]); r.onerror = rej; r.readAsDataURL(file);
+                            });
+                            const response = await fetch("/api/claude", {
+                              method: "POST", headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 500, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: file.type, data: base64 } }, { type: "text", text: "Extrai os dados deste Cartão de Cidadão português. Responde APENAS em JSON válido sem markdown: {\"name\":\"nome completo\",\"birthDate\":\"DD/MM/AAAA\",\"ccNumber\":\"número do CC\",\"ccValidity\":\"DD/MM/AAAA\",\"nif\":\"NIF\",\"naturalidade\":\"naturalidade\",\"nacionalidade\":\"nacionalidade\",\"estadoCivil\":\"estado civil\",\"morada\":\"morada se visível\"}" }] }] })
+                            });
+                            if (response.ok) {
+                              const data = await response.json();
+                              const text = data.content?.map((c: any) => c.text || "").join("") || "";
+                              const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+                              const updates: any = {};
+                              if (parsed.name) updates.name = parsed.name;
+                              if (parsed.birthDate) updates.birthDate = parsed.birthDate;
+                              if (parsed.ccNumber) updates.ccNumber = parsed.ccNumber;
+                              if (parsed.ccValidity) updates.ccValidity = parsed.ccValidity;
+                              if (parsed.nif) updates.nif = parsed.nif;
+                              if (parsed.naturalidade) updates.naturalidade = parsed.naturalidade;
+                              if (parsed.nacionalidade) updates.nacionalidade = parsed.nacionalidade;
+                              if (parsed.estadoCivil) updates.estadoCivil = parsed.estadoCivil;
+                              if (parsed.morada) updates.morada = parsed.morada;
+                              updateUtente(u.id, updates);
+                              alert("✅ Dados do CC preenchidos automaticamente! Verifique e corrija se necessário.");
+                            }
+                          } catch (e) { alert("❌ Não foi possível ler o CC. Tente novamente ou preencha manualmente."); }
+                          if (loadingEl) loadingEl.style.display = "none";
+                        };
+                        document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                      }}
+                      style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", display: "flex", alignItems: "center", gap: 6 }}
+                    >📷 Câmara</button>
+                    <button
+                      onClick={() => {
+                        const input = document.createElement("input");
+                        input.type = "file"; input.accept = "image/*";
+                        input.onchange = async (ev: Event) => {
+                          const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
+                          const loadingEl = document.getElementById("cc-loading");
+                          if (loadingEl) loadingEl.style.display = "block";
+                          try {
+                            const base64 = await new Promise<string>((res, rej) => {
+                              const r = new FileReader(); r.onload = (e) => res((e.target?.result as string).split(",")[1]); r.onerror = rej; r.readAsDataURL(file);
+                            });
+                            const response = await fetch("/api/claude", {
+                              method: "POST", headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 500, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: file.type, data: base64 } }, { type: "text", text: "Extrai os dados deste Cartão de Cidadão português. Responde APENAS em JSON válido sem markdown: {\"name\":\"nome completo\",\"birthDate\":\"DD/MM/AAAA\",\"ccNumber\":\"número do CC\",\"ccValidity\":\"DD/MM/AAAA\",\"nif\":\"NIF\",\"naturalidade\":\"naturalidade\",\"nacionalidade\":\"nacionalidade\",\"estadoCivil\":\"estado civil\",\"morada\":\"morada se visível\"}" }] }] })
+                            });
+                            if (response.ok) {
+                              const data = await response.json();
+                              const text = data.content?.map((c: any) => c.text || "").join("") || "";
+                              const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+                              const updates: any = {};
+                              if (parsed.name) updates.name = parsed.name;
+                              if (parsed.birthDate) updates.birthDate = parsed.birthDate;
+                              if (parsed.ccNumber) updates.ccNumber = parsed.ccNumber;
+                              if (parsed.ccValidity) updates.ccValidity = parsed.ccValidity;
+                              if (parsed.nif) updates.nif = parsed.nif;
+                              if (parsed.naturalidade) updates.naturalidade = parsed.naturalidade;
+                              if (parsed.nacionalidade) updates.nacionalidade = parsed.nacionalidade;
+                              if (parsed.estadoCivil) updates.estadoCivil = parsed.estadoCivil;
+                              if (parsed.morada) updates.morada = parsed.morada;
+                              updateUtente(u.id, updates);
+                              alert("✅ Dados do CC preenchidos automaticamente! Verifique e corrija se necessário.");
+                            }
+                          } catch (e) { alert("❌ Não foi possível ler o CC. Tente novamente ou preencha manualmente."); }
+                          if (loadingEl) loadingEl.style.display = "none";
+                        };
+                        document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                      }}
+                      style={{ background: "#3A5A70", color: "white", border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", display: "flex", alignItems: "center", gap: 6 }}
+                    >⬆️ Upload</button>
+                  </div>
+                </div>
+                <div id="cc-loading" style={{ display: "none", background: "#FFF8E1", borderRadius: 10, padding: "10px 16px", fontSize: 13, color: "#8A6A2E", textAlign: "center" as const }}>
+                  ✨ A ler o Cartão de Cidadão com IA...
+                </div>
+
+                {/* Dados básicos */}
+                <div style={{ background: "#FFFFFF", borderRadius: 14, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 14 }}>🏠 Dados Gerais</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    {[
+                      { key: "room", label: "Quarto", placeholder: "Ex: 14 cama 2" },
+                      { key: "entryDate", label: "Data de entrada", placeholder: "Ex: 15/03/2022" },
+                      { key: "birthDate", label: "Data de nascimento", placeholder: "Ex: 01/01/1940" },
+                    ].map(({ key, label, placeholder }) => (
+                      <div key={key}>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
+                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
+                          style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Contacto familiar */}
+                <div style={{ background: "#FFFFFF", borderRadius: 14, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 14 }}>👨‍👩‍👧 Contacto Familiar</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    {[
+                      { key: "familyContact", label: "Nome do familiar", placeholder: "Ex: João Silva (filho)" },
+                      { key: "familyPhone", label: "Telefone", placeholder: "Ex: 912 345 678" },
+                    ].map(({ key, label, placeholder }) => (
+                      <div key={key}>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
+                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
+                          style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Dados do Cartão de Cidadão */}
+                <div style={{ background: "#FFFFFF", borderRadius: 14, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 14 }}>📇 Cartão de Cidadão</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    {[
+                      { key: "ccNumber", label: "Nº do CC", placeholder: "Ex: 12345678 9 ZZ0" },
+                      { key: "ccValidity", label: "Validade do CC", placeholder: "DD/MM/AAAA" },
+                      { key: "nif", label: "NIF", placeholder: "Ex: 123456789" },
+                      { key: "naturalidade", label: "Naturalidade", placeholder: "Ex: Vila Nova de Gaia" },
+                      { key: "nacionalidade", label: "Nacionalidade", placeholder: "Ex: Portuguesa" },
+                      { key: "estadoCivil", label: "Estado civil", placeholder: "Ex: Viúvo(a)" },
+                    ].map(({ key, label, placeholder }) => (
+                      <div key={key}>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
+                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
+                          style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>Morada</label>
+                    <input value={u.morada || ""} onChange={(e) => updateUtente(u.id, { morada: e.target.value })} placeholder="Endereço completo"
+                      style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
+                  </div>
+                </div>
+
                 {/* Documentos */}
-                <div style={{ paddingTop: 14, borderTop: "1px solid #EFEAE2" }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>📎 Documentos</label>
+                <div style={{ background: "#FFFFFF", borderRadius: 14, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 14 }}>📎 Documentos</div>
                   {(u.files || []).map((f, fi) => (
                     <div key={fi} style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F5F0", borderRadius: 8, padding: "8px 12px", marginBottom: 6 }}>
                       <span style={{ flex: 1, fontSize: 13, color: "#2A241C" }}>📎 {f.name}</span>
