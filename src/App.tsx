@@ -1169,6 +1169,7 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
   const [utenteTab, setUtenteTab] = useState<"geral" | "registo" | "medicacao" | "cuidados" | "pic">("geral");
+  const [importResult, setImportResult] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState("");
