@@ -1440,6 +1440,10 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
         const k = el.getAttribute('data-key');
         if (k) campos[k] = el.innerText.trim();
       });
+      // Guardar estado dos checkboxes dos riscos
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        campos[cb.name] = cb.checked ? "1" : "0";
+      });
       if (window.opener && window.opener.__savePIC) {
         window.opener.__savePIC(campos);
         const btn = event.target;
@@ -1495,12 +1499,12 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
         <th style="border:.5px solid #CCC;padding:3px 4px;text-align:left">Medidas preventivas</th>
       </tr></thead>
       <tbody>
-        ${["Queda","Úlcera de pressão","Desnutrição / desidratação","Isolamento social","Deterioração cognitiva","Outro"].map(r => `
+        ${["Queda","Úlcera de pressão","Desnutrição / desidratação","Isolamento social","Deterioração cognitiva","Outro"].map((r, ri) => `
         <tr>
           <td style="border:.5px solid #CCC;padding:3px 4px;font-size:8pt">${r}</td>
-          <td style="border:.5px solid #CCC;padding:2px;text-align:center;font-size:11pt"><div contenteditable="true" style="min-height:16px;outline:none;text-align:center" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background=''">☐</div></td>
-          <td style="border:.5px solid #CCC;padding:2px;text-align:center;font-size:11pt"><div contenteditable="true" style="min-height:16px;outline:none;text-align:center" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background=''">☐</div></td>
-          <td style="border:.5px solid #CCC;padding:0"><div contenteditable="true" style="padding:2px 4px;min-height:16px;outline:none;font-size:8pt" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background=''"></div></td>
+          <td style="border:.5px solid #CCC;padding:2px;text-align:center"><input type="checkbox" name="risco_sim_${ri}" style="width:14px;height:14px;cursor:pointer" ${picData[`risco_sim_${ri}`] === "1" ? "checked" : ""}></td>
+          <td style="border:.5px solid #CCC;padding:2px;text-align:center"><input type="checkbox" name="risco_nao_${ri}" style="width:14px;height:14px;cursor:pointer" ${picData[`risco_nao_${ri}`] === "1" ? "checked" : ""}></td>
+          <td style="border:.5px solid #CCC;padding:0"><div contenteditable="true" data-key="risco_med_${ri}" style="padding:2px 4px;min-height:16px;outline:none;font-size:8pt" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background=''">${picData[`risco_med_${ri}`] || ""}</div></td>
         </tr>`).join("")}
       </tbody>
     </table>
