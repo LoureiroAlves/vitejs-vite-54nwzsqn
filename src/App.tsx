@@ -1161,6 +1161,8 @@ interface Utente {
   hygieneNotes?: string;
   feedingNotes?: string;
   otherNotes?: string;
+  // Plano Individual de Cuidados (campos extra preenchidos manualmente)
+  picData?: Record<string, string>;
 }
 
 function UtentesPage({ onBack }: { onBack: () => void }) {
@@ -1364,22 +1366,29 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
 
     document.getElementById("pic-loading")?.remove();
 
-    const campo = (label: string, valor: string, linhas = 1) => {
+    // Carregar dados guardados anteriormente do PIC
+    const picData = u.picData || {};
+
+    const campo = (label: string, valor: string, linhas = 1, key = "") => {
       const minH = linhas === 1 ? "20px" : `${linhas * 20}px`;
+      // Se tiver dados guardados anteriormente para este campo, usa-os
+      const savedValue = key && picData[key] ? picData[key] : valor;
       return `<div style="margin-bottom:5px">
         <div style="font-size:6.5pt;font-weight:bold;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:1px">${label}</div>
-        <div contenteditable="true" style="border:.5px solid #BBB;background:#FAFAFA;min-height:${minH};padding:3px 5px;font-size:8.5pt;color:#2A241C;line-height:1.4;outline:none" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background='#FAFAFA'">${valor ? valor.replace(/\n/g, "<br>") : ""}</div>
+        <div contenteditable="true" data-key="${key || label}" style="border:.5px solid #BBB;background:#FAFAFA;min-height:${minH};padding:3px 5px;font-size:8.5pt;color:#2A241C;line-height:1.4;outline:none" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background='#FAFAFA'">${savedValue ? savedValue.replace(/\n/g, "<br>") : ""}</div>
       </div>`;
     };
 
-    const duasColunas = (t1: string, v1: string, t2: string, v2: string, r = "1fr 1fr") => `
+    const duasColunas = (t1: string, v1: string, t2: string, v2: string, r = "1fr 1fr", k1 = "", k2 = "") => `
       <div style="display:grid;grid-template-columns:${r};gap:6px;margin-bottom:0">
-        ${campo(t1, v1)} ${campo(t2, v2)}
+        ${campo(t1, v1, 1, k1)} ${campo(t2, v2, 1, k2)}
       </div>`;
 
     const secao = (t: string) => `<div style="background:#3A5A70;color:white;padding:3px 7px;font-size:8.5pt;font-weight:bold;margin:8px 0 5px;letter-spacing:.3px">${t}</div>`;
 
-    const tabelaObj = (dim: string, need: string, obj: string, act: string, resp: string, prazo: string) => `
+    const tabelaObj = (dim: string, need: string, obj: string, act: string, resp: string, prazo: string, keyPrefix: string) => {
+      const sv = (k: string, def: string) => picData[k] || def;
+      return `
       <div style="font-size:7.5pt;font-weight:bold;color:#2A241C;margin:5px 0 2px">Dimensão: ${dim}</div>
       <table style="width:100%;border-collapse:collapse;margin-bottom:5px;font-size:7.5pt;table-layout:fixed">
         <thead><tr style="background:#E8EEF5">
@@ -1390,14 +1399,17 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
           <th style="border:.5px solid #CCC;padding:2px 3px;text-align:left;width:12%">Prazo</th>
         </tr></thead>
         <tbody>
-          <tr>
-            ${[need,obj,act,resp,prazo].map(v => `<td style="border:.5px solid #CCC;padding:0;height:16px"><div contenteditable="true" style="padding:2px 3px;min-height:16px;outline:none;font-size:7.5pt" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background=''">${v}</div></td>`).join("")}
-          </tr>
-          <tr>
-            ${Array(5).fill(`<td style="border:.5px solid #CCC;padding:0;height:16px"><div contenteditable="true" style="padding:2px 3px;min-height:16px;outline:none;font-size:7.5pt" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background=''"></div></td>`).join("")}
-          </tr>
+          ${[0,1].map(row => `<tr>${[
+            [keyPrefix+`_r${row}_need`, row===0?need:""],
+            [keyPrefix+`_r${row}_obj`, row===0?obj:""],
+            [keyPrefix+`_r${row}_act`, row===0?act:""],
+            [keyPrefix+`_r${row}_resp`, row===0?resp:""],
+            [keyPrefix+`_r${row}_prazo`, row===0?prazo:""],
+          ].map(([k,def]) => `<td style="border:.5px solid #CCC;padding:0;height:16px"><div contenteditable="true" data-key="${k}" style="padding:2px 3px;min-height:16px;outline:none;font-size:7.5pt" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background=''">${sv(k as string, def as string)}</div></td>`).join("")}</tr>`).join("")}
         </tbody>
       </table>`;
+    };
+
 
     const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>PIC — ${u.name}</title>
     <style>
@@ -1415,8 +1427,30 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
 
     <div class="no-print" style="background:#2A241C;color:#F5B944;padding:10px 16px;margin-bottom:12px;border-radius:8px;font-size:11pt;font-weight:600;display:flex;align-items:center;justify-content:space-between">
       <span>📋 PIC — ${u.name}</span>
-      <button onclick="window.print()" style="background:#F5B944;color:#2A241C;border:none;padding:6px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:10pt">🖨️ Imprimir / Guardar PDF</button>
+      <div style="display:flex;gap:8px">
+        <button onclick="guardarNaApp()" style="background:#3A5A70;color:white;border:none;padding:6px 14px;border-radius:6px;font-weight:700;cursor:pointer;font-size:10pt">💾 Guardar na app</button>
+        <button onclick="window.print()" style="background:#F5B944;color:#2A241C;border:none;padding:6px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:10pt">🖨️ Imprimir / PDF</button>
+      </div>
     </div>
+
+    <script>
+    function guardarNaApp() {
+      const campos = {};
+      document.querySelectorAll('[data-key]').forEach(el => {
+        const k = el.getAttribute('data-key');
+        if (k) campos[k] = el.innerText.trim();
+      });
+      if (window.opener && window.opener.__savePIC) {
+        window.opener.__savePIC(campos);
+        const btn = event.target;
+        btn.textContent = '✅ Guardado!';
+        btn.style.background = '#3B6D11';
+        setTimeout(() => { btn.textContent = '💾 Guardar na app'; btn.style.background = '#3A5A70'; }, 2000);
+      } else {
+        alert('⚠️ Não foi possível comunicar com a app. Feche e abra o PIC novamente.');
+      }
+    }
+    </script>
 
     <div style="text-align:center;margin-bottom:8px">
       <div style="font-size:13pt;font-weight:bold;color:#2A241C">ASSOCIAÇÃO OLIVEIRENSE DE SOCORROS MÚTUOS</div>
@@ -1426,31 +1460,31 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
     </div>
 
     ${secao("1. IDENTIFICAÇÃO DO RESIDENTE")}
-    ${campo("Nome completo", u.name || "")}
-    ${duasColunas("Data de nascimento", u.birthDate || "", "Naturalidade", u.naturalidade || "")}
-    ${duasColunas("Nacionalidade", u.nacionalidade || "", "Estado civil", u.estadoCivil || "")}
-    ${duasColunas("NIF", u.nif || "", "Nº Cartão de Cidadão", u.ccNumber || "")}
-    ${campo("Morada anterior", u.morada || "")}
-    ${duasColunas("Data de admissão", u.entryDate || "", "Quarto", u.room || "")}
-    ${duasColunas("Familiar / representante legal", u.familyContact || "", "Contacto telefónico", u.familyPhone || "")}
-    ${campo("Técnico responsável", "")}
+    ${campo("Nome completo", u.name || "", 1, "nome")}
+    ${duasColunas("Data de nascimento", u.birthDate || "", "Naturalidade", u.naturalidade || "", "1fr 1fr", "data_nasc", "naturalidade")}
+    ${duasColunas("Nacionalidade", u.nacionalidade || "", "Estado civil", u.estadoCivil || "", "1fr 1fr", "nacionalidade", "estado_civil")}
+    ${duasColunas("NIF", u.nif || "", "Nº Cartão de Cidadão", u.ccNumber || "", "1fr 1fr", "nif", "cc")}
+    ${campo("Morada anterior", u.morada || "", 1, "morada")}
+    ${duasColunas("Data de admissão", u.entryDate || "", "Quarto", u.room || "", "2fr 1fr", "data_admissao", "quarto")}
+    ${duasColunas("Familiar / representante legal", u.familyContact || "", "Contacto telefónico", u.familyPhone || "", "2fr 1fr", "familiar", "telefone")}
+    ${campo("Técnico responsável", "", 1, "tecnico")}
 
     ${secao("2. AVALIAÇÃO DIAGNÓSTICA")}
-    ${campo("Motivo de admissão / caracterização da situação", aiTexts.motivo || u.otherNotes || "", 3)}
-    ${campo("Historial clínico relevante", u.dailyLogs?.[0]?.text || "", 3)}
-    ${campo("Medicação em vigor", meds, 2)}
-    ${campo("Alergias conhecidas", "")}
-    ${duasColunas("Grau de dependência (AVD)", "", "Mobilidade", "")}
-    ${duasColunas("Estado cognitivo", "", "Estado emocional / psicológico", "")}
-    ${campo("Hábitos de vida, preferências e gostos pessoais", aiTexts.habitos || [u.feedingNotes ? "Alimentação: " + u.feedingNotes : "", u.hygieneNotes ? "Higiene: " + u.hygieneNotes : ""].filter(Boolean).join(" | "), 2)}
-    ${campo("Expectativas do residente / familiar", "", 2)}
+    ${campo("Motivo de admissão / caracterização da situação", aiTexts.motivo || u.otherNotes || "", 3, "motivo")}
+    ${campo("Historial clínico relevante", u.dailyLogs?.[0]?.text || "", 3, "historial")}
+    ${campo("Medicação em vigor", meds, 2, "medicacao")}
+    ${campo("Alergias conhecidas", "", 1, "alergias")}
+    ${duasColunas("Grau de dependência (AVD)", "", "Mobilidade", "", "1fr 1fr", "dependencia", "mobilidade")}
+    ${duasColunas("Estado cognitivo", "", "Estado emocional / psicológico", "", "1fr 1fr", "cognitivo", "emocional")}
+    ${campo("Hábitos de vida, preferências e gostos pessoais", aiTexts.habitos || [u.feedingNotes ? "Alimentação: " + u.feedingNotes : "", u.hygieneNotes ? "Higiene: " + u.hygieneNotes : ""].filter(Boolean).join(" | "), 2, "habitos")}
+    ${campo("Expectativas do residente / familiar", "", 2, "expectativas")}
 
     ${secao("3. OBJETIVOS E INTERVENÇÕES POR DIMENSÃO")}
-    ${tabelaObj("Cuidados pessoais e higiene", u.hygieneNotes || "", aiTexts.obj_higiene || "Manutenção de higiene e conforto", aiTexts.act_higiene || "Higiene corporal assistida diária", "Auxiliar", "Diário")}
-    ${tabelaObj("Saúde / Cuidados de enfermagem", meds, aiTexts.obj_saude || (meds ? "Administração correta da terapêutica" : ""), aiTexts.act_saude || (meds ? "Preparação e administração de medicação" : ""), meds ? "Enfermeiro(a)" : "", meds ? "Diário" : "")}
-    ${tabelaObj("Alimentação e hidratação", u.feedingNotes || "", aiTexts.obj_alimentacao || (u.feedingNotes ? "Alimentação adequada às necessidades" : ""), aiTexts.act_alimentacao || (u.feedingNotes ? "Apoio às refeições" : ""), u.feedingNotes ? "Auxiliar" : "", u.feedingNotes ? "Diário" : "")}
-    ${tabelaObj("Animação sociocultural e ocupacional", "", "", "", "", "")}
-    ${tabelaObj("Psicossocial / bem-estar emocional", "", "", "", "", "")}
+    ${tabelaObj("Cuidados pessoais e higiene", u.hygieneNotes || "", aiTexts.obj_higiene || "Manutenção de higiene e conforto", aiTexts.act_higiene || "Higiene corporal assistida diária", "Auxiliar", "Diário", "dim0")}
+    ${tabelaObj("Saúde / Cuidados de enfermagem", meds, aiTexts.obj_saude || (meds ? "Administração correta da terapêutica" : ""), aiTexts.act_saude || (meds ? "Preparação e administração de medicação" : ""), meds ? "Enfermeiro(a)" : "", meds ? "Diário" : "", "dim1")}
+    ${tabelaObj("Alimentação e hidratação", u.feedingNotes || "", aiTexts.obj_alimentacao || (u.feedingNotes ? "Alimentação adequada às necessidades" : ""), aiTexts.act_alimentacao || (u.feedingNotes ? "Apoio às refeições" : ""), u.feedingNotes ? "Auxiliar" : "", u.feedingNotes ? "Diário" : "", "dim2")}
+    ${tabelaObj("Animação sociocultural e ocupacional", "", "", "", "", "", "dim3")}
+    ${tabelaObj("Psicossocial / bem-estar emocional", "", "", "", "", "", "dim4")}
 
     ${secao("4. IDENTIFICAÇÃO DE RISCOS E MEDIDAS PREVENTIVAS")}
     <table style="width:100%;border-collapse:collapse;font-size:8pt;margin-bottom:10px">
@@ -1493,6 +1527,12 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
 
     const w = window.open("", "_blank");
     if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+
+    // Expor função de callback para guardar dados de volta na app
+    (window as any).__savePIC = (campos: Record<string, string>) => {
+      updateUtente(u.id, { picData: { ...(u.picData || {}), ...campos } });
+    };
+
     w.document.open(); w.document.write(html); w.document.close();
     w.focus();
   };
