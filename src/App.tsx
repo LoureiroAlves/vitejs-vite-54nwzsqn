@@ -1177,7 +1177,7 @@ interface Utente {
   notes?: string;
   photo?: string;
   familyCode?: string;
-  dailyLogs?: { date: string; text: string; author?: string }[];
+  dailyLogs?: { date: string; text: string; author?: string; attachments?: { name: string; url: string; type: string }[] }[];
   files?: { name: string; type: string; data: string; url?: string; uploadedAt: string }[];
   // Dados do Cartão de Cidadão
   ccNumber?: string;
@@ -2240,6 +2240,23 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                               <>
                                 <button onClick={() => { if (editable || requestUnlock(u.id, idx)) { setEditingLogIdx(idx); setEditingLogText(log.text); } }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}>✏️</button>
                                 <button onClick={() => printDailyLog(u, log)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}>🖨️</button>
+                                <button onClick={() => {
+                                  const input = document.createElement("input"); input.type = "file"; input.accept = "image/*,application/pdf";
+                                  input.onchange = async (ev: Event) => {
+                                    const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
+                                    const url = await uploadUtenteDoc(u.id + "_logs", file);
+                                    if (!url) { alert("❌ Erro ao fazer upload."); return; }
+                                    setUtentes((prev) => prev.map((uu) => {
+                                      if (uu.id !== u.id) return uu;
+                                      const logs = [...(uu.dailyLogs || [])];
+                                      logs[idx] = { ...logs[idx], attachments: [...(logs[idx].attachments || []), { name: file.name, url, type: file.type }] };
+                                      const updated = { ...uu, dailyLogs: logs };
+                                      if (openUtente?.id === u.id) setOpenUtente(updated);
+                                      return updated;
+                                    }));
+                                  };
+                                  document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                                }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#3A5A70", fontSize: 13 }} title="Adicionar foto/documento">📎</button>
                                 <button onClick={() => { if (!editable && !requestUnlock(u.id, idx)) return; if (!window.confirm("Remover este registo?")) return; setUtentes((prev) => prev.map((uu) => { if (uu.id !== u.id) return uu; const updated = { ...uu, dailyLogs: (uu.dailyLogs || []).filter((_, i) => i !== idx) }; if (openUtente?.id === u.id) setOpenUtente(updated); return updated; })); }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }}>🗑️</button>
                               </>
                             )}
@@ -2249,6 +2266,33 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                           ? <textarea rows={3} value={editingLogText} onChange={(e) => setEditingLogText(e.target.value)} autoFocus style={{ width: "100%", border: "1px solid #B8CCE0", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", resize: "vertical" as const, boxSizing: "border-box" as const }} />
                           : <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.6 }}>{log.text}</div>
                         }
+                        {/* Anexos do registo */}
+                        {(log.attachments || []).length > 0 && (
+                          <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                            {log.attachments!.map((att, ai) => (
+                              <div key={ai} style={{ position: "relative" as const }}>
+                                {att.type.startsWith("image/")
+                                  ? <a href={att.url} target="_blank" rel="noopener noreferrer">
+                                      <img src={att.url} alt={att.name} style={{ width: 80, height: 80, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} />
+                                    </a>
+                                  : <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, background: "#F7F5F0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#3A5A70", textDecoration: "none" }}>
+                                      📄 {att.name}
+                                    </a>
+                                }
+                                <button onClick={() => {
+                                  setUtentes((prev) => prev.map((uu) => {
+                                    if (uu.id !== u.id) return uu;
+                                    const logs = [...(uu.dailyLogs || [])];
+                                    logs[idx] = { ...logs[idx], attachments: (logs[idx].attachments || []).filter((_, i) => i !== ai) };
+                                    const updated = { ...uu, dailyLogs: logs };
+                                    if (openUtente?.id === u.id) setOpenUtente(updated);
+                                    return updated;
+                                  }));
+                                }} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
