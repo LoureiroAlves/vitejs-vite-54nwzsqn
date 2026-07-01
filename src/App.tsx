@@ -1876,13 +1876,9 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                 onChange={(e) => updateUtente(u.id, { name: e.target.value })}
                 style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, border: "none", borderBottom: "1px solid #4A3E30", background: "transparent", outline: "none", width: "100%", color: "#FFFFFF", padding: "2px 0" }}
               />
-              <button onClick={() => setShowCCPanel(u.id)} style={{ fontSize: 12, color: "#F5B944", marginTop: 3, border: "none", background: "transparent", padding: 0, cursor: "pointer", fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 2 }}>
-                📇 Ficha do utente (dados do CC)
-              </button>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => handleGetFamilyLink(u)} style={{ background: "#3A5A70", color: "white", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🔗 Família</button>
-              <button onClick={() => handleGeneratePIC(u)} style={{ background: "#3B6D11", color: "white", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>📋 PIC</button>
               <button onClick={() => setOpenUtente(null)} style={{ background: "transparent", border: "1px solid #4A3E30", borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: "#C9C2B5" }}><IconX size={16} /></button>
             </div>
           </div>
@@ -1908,7 +1904,7 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
 
             {/* ── GERAL ── */}
             {utenteTab === "geral" && (
-              <div style={{ maxWidth: 700, margin: "0 auto", display: "flex", flexDirection: "column" as const, gap: 20 }}>
+              <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", flexDirection: "column" as const, gap: 12 }}>
 
                 {/* Leitura do CC com IA */}
                 <div style={{ background: "#2A241C", borderRadius: 14, padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -2004,8 +2000,8 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                 </div>
 
                 {/* Dados básicos */}
-                <div style={{ background: "#FFFFFF", borderRadius: 14, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 14 }}>🏠 Dados Gerais</div>
+                <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>🏠 Dados Gerais</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     {[
                       { key: "room", label: "Quarto", placeholder: "Ex: 14 cama 2" },
@@ -2015,15 +2011,15 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                       <div key={key}>
                         <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
                         <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
-                          style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
+                          style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {/* Contacto familiar */}
-                <div style={{ background: "#FFFFFF", borderRadius: 14, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 14 }}>👨‍👩‍👧 Contacto Familiar</div>
+                <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>👨‍👩‍👧 Contacto Familiar</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     {[
                       { key: "familyContact", label: "Nome do familiar", placeholder: "Ex: João Silva (filho)" },
@@ -2032,15 +2028,15 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                       <div key={key}>
                         <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
                         <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
-                          style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
+                          style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {/* Dados do Cartão de Cidadão */}
-                <div style={{ background: "#FFFFFF", borderRadius: 14, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 14 }}>📇 Cartão de Cidadão</div>
+                <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>📇 Cartão de Cidadão</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     {[
                       { key: "ccNumber", label: "Nº do CC", placeholder: "Ex: 12345678 9 ZZ0" },
@@ -2053,20 +2049,20 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                       <div key={key}>
                         <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
                         <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
-                          style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
+                          style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                       </div>
                     ))}
                   </div>
                   <div style={{ marginTop: 12 }}>
                     <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>Morada</label>
                     <input value={u.morada || ""} onChange={(e) => updateUtente(u.id, { morada: e.target.value })} placeholder="Endereço completo"
-                      style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
+                      style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                   </div>
                 </div>
 
                 {/* Documentos */}
-                <div style={{ background: "#FFFFFF", borderRadius: 14, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 14 }}>📎 Documentos</div>
+                <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>📎 Documentos</div>
                   {(u.files || []).map((f, fi) => (
                     <div key={fi} style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F5F0", borderRadius: 8, padding: "8px 12px", marginBottom: 6 }}>
                       <span style={{ flex: 1, fontSize: 13, color: "#2A241C" }}>📎 {f.name}</span>
@@ -2190,17 +2186,17 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                 ))}
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8, marginBottom: 8 }}>
-                    <input value={newMedName} onChange={(e) => setNewMedName(e.target.value)} placeholder="Medicamento" style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
-                    <input value={newMedDose} onChange={(e) => setNewMedDose(e.target.value)} placeholder="Dose" style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
+                    <input value={newMedName} onChange={(e) => setNewMedName(e.target.value)} placeholder="Medicamento" style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
+                    <input value={newMedDose} onChange={(e) => setNewMedDose(e.target.value)} placeholder="Dose" style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <input value={newMedSchedule} onChange={(e) => setNewMedSchedule(e.target.value)} placeholder="Horário (ex: 8h, 13h, 20h)" style={{ flex: 1, border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
+                    <input value={newMedSchedule} onChange={(e) => setNewMedSchedule(e.target.value)} placeholder="Horário (ex: 8h, 13h, 20h)" style={{ flex: 1, border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
                     <button onClick={() => addMedication(u.id)} disabled={!newMedName.trim()} style={{ background: newMedName.trim() ? "#2A241C" : "#E4DED3", color: newMedName.trim() ? "#F5B944" : "#A39B8E", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: newMedName.trim() ? "pointer" : "default", fontFamily: "'Inter', sans-serif" }}>+ Adicionar</button>
                   </div>
                 </div>
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                   <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>Notas adicionais</label>
-                  <textarea rows={3} value={u.medicationNotes || ""} onChange={(e) => updateUtente(u.id, { medicationNotes: e.target.value })} placeholder="Notas sobre medicação..." style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }} />
+                  <textarea rows={3} value={u.medicationNotes || ""} onChange={(e) => updateUtente(u.id, { medicationNotes: e.target.value })} placeholder="Notas sobre medicação..." style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }} />
                 </div>
               </div>
             )}
