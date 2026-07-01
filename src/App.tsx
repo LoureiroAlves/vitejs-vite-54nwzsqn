@@ -234,6 +234,39 @@ async function saveToSupabase(table: string, data: any): Promise<void> {
   } catch (e) {}
 }
 
+// ---------- Supabase Storage para documentos de utentes ----------
+async function uploadUtenteDoc(utenteId: string, file: File): Promise<string | null> {
+  try {
+    const ext = file.name.split(".").pop() || "bin";
+    const path = `${utenteId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/utentes-docs/${path}`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": file.type || "application/octet-stream",
+        "x-upsert": "true",
+      },
+      body: file,
+    });
+    if (!res.ok) return null;
+    return `${SUPABASE_URL}/storage/v1/object/public/utentes-docs/${path}`;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function deleteUtenteDoc(url: string): Promise<void> {
+  try {
+    const path = url.split("/utentes-docs/")[1];
+    if (!path) return;
+    await fetch(`${SUPABASE_URL}/storage/v1/object/utentes-docs/${path}`, {
+      method: "DELETE",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` },
+    });
+  } catch (e) {}
+}
+
 // ---------- localStorage (fallback e cache local) ----------
 const STORAGE_KEY = "turnos-app-data-v2";
 
@@ -1146,7 +1179,7 @@ interface Utente {
   photo?: string;
   familyCode?: string;
   dailyLogs?: { date: string; text: string; author?: string }[];
-  files?: { name: string; type: string; data: string; uploadedAt: string }[];
+  files?: { name: string; type: string; data: string; url?: string; uploadedAt: string }[];
   // Dados do Cartão de Cidadão
   ccNumber?: string;
   ccValidity?: string;
@@ -1892,8 +1925,8 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                   {(u.files || []).map((f, fi) => (
                     <div key={fi} style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F5F0", borderRadius: 8, padding: "8px 12px", marginBottom: 6 }}>
                       <span style={{ flex: 1, fontSize: 13, color: "#2A241C" }}>📎 {f.name}</span>
-                      <a href={f.data} download={f.name} style={{ fontSize: 12, color: "#3A5A70", textDecoration: "none", fontWeight: 600 }}>⬇️</a>
-                      <button onClick={() => updateUtente(u.id, { files: (u.files || []).filter((_, i) => i !== fi) })} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }}>✕</button>
+                      <a href={f.url || f.data} download={f.name} target={f.url ? "_blank" : undefined} style={{ fontSize: 12, color: "#3A5A70", textDecoration: "none", fontWeight: 600 }}>⬇️</a>
+                      <button onClick={() => { if (f.url) deleteUtenteDoc(f.url); updateUtente(u.id, { files: (u.files || []).filter((_, i) => i !== fi) }); }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }}>✕</button>
                     </div>
                   ))}
                   <button onClick={() => {
@@ -1901,7 +1934,43 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                     input.onchange = (ev: Event) => {
                       const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
                       const reader = new FileReader();
-                      reader.onload = (r) => updateUtente(u.id, { files: [...(u.files || []), { name: file.name, type: file.type, data: r.target?.result as string, uploadedAt: new Date().toISOString() }] });
+                      // Comprimir imagens antes de guardar (reduz tamanho até 70%)
+                      const compressAndUpload = async (f: File) => {
+                        if (!f.type.startsWith("image/")) return uploadUtenteDoc(u.id, f);
+                        return new Promise<string | null>((resolve) => {
+                          const img = new Image();
+                          const url = URL.createObjectURL(f);
+                          img.onload = () => {
+                            const canvas = document.createElement("canvas");
+                            const MAX = 1200;
+                            let { width, height } = img;
+                            if (width > MAX || height > MAX) {
+                              if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+                              else { width = Math.round(width * MAX / height); height = MAX; }
+                            }
+                            canvas.width = width; canvas.height = height;
+                            canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+                            canvas.toBlob((blob) => {
+                              URL.revokeObjectURL(url);
+                              if (!blob) { resolve(uploadUtenteDoc(u.id, f)); return; }
+                              const compressed = new File([blob], f.name, { type: "image/jpeg" });
+                              resolve(uploadUtenteDoc(u.id, compressed));
+                            }, "image/jpeg", 0.8);
+                          };
+                          img.onerror = () => { URL.revokeObjectURL(url); resolve(uploadUtenteDoc(u.id, f)); };
+                          img.src = url;
+                        });
+                      };
+
+                      compressAndUpload(file).then((url) => {
+                        if (url) {
+                          updateUtente(u.id, { files: [...(u.files || []), { name: file.name, type: file.type, data: "", url, uploadedAt: new Date().toISOString() }] });
+                        } else {
+                          // Fallback para base64 se o upload falhar
+                          reader.onload = (r) => updateUtente(u.id, { files: [...(u.files || []), { name: file.name, type: file.type, data: r.target?.result as string, uploadedAt: new Date().toISOString() }] });
+                          reader.readAsDataURL(file);
+                        }
+                      });
                       reader.readAsDataURL(file);
                     };
                     document.body.appendChild(input); input.click(); document.body.removeChild(input);
@@ -2353,7 +2422,7 @@ function FamilyPage({ code }: { code: string }) {
             <div style={{ fontSize: 12, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 10 }}>Documentos</div>
             <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
               {utente.files!.map((f, i) => (
-                <a key={i} href={f.data} download={f.name} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#3A5A70", textDecoration: "none", background: "#F7F5F0", borderRadius: 8, padding: "8px 12px" }}>
+                <a key={i} href={f.url || f.data} download={f.name} target={f.url ? "_blank" : undefined} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#3A5A70", textDecoration: "none", background: "#F7F5F0", borderRadius: 8, padding: "8px 12px" }}>
                   📎 {f.name}
                 </a>
               ))}
@@ -2742,7 +2811,7 @@ function QuickSearchPanel({ target, schedule, onClose }: {
                     <div style={{ fontSize: 11, fontWeight: 600, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 6 }}>Documentos ({utenteData.files.length})</div>
                     <div style={{ display: "flex", flexDirection: "column" as const, gap: 5 }}>
                       {utenteData.files.map((f: any, i: number) => (
-                        <a key={i} href={f.data} download={f.name} style={{ fontSize: 12, color: "#3A5A70", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
+                        <a key={i} href={f.url || f.data} download={f.name} target={f.url ? "_blank" : undefined} style={{ fontSize: 12, color: "#3A5A70", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
                           📎 {f.name}
                         </a>
                       ))}
@@ -2878,7 +2947,7 @@ export default function App() {
     schedule?: string;
     notes?: string;
     preferredShift?: "M" | "T" | "N" | "";
-    files?: { name: string; type: string; data: string; uploadedAt: string }[];
+    files?: { name: string; type: string; data: string; url?: string; uploadedAt: string }[];
   }>>(() => {
     const stored = loadStoredData();
     return stored?.employeeProfiles ?? {};
