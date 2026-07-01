@@ -1438,7 +1438,7 @@ Responde APENAS em JSON válido (sem markdown, sem texto extra) com esta estrutu
       return y - mmToPt(12);
     };
 
-    const addTextField = (name: string, page: any, x: number, y: number, w: number, h: number, value = "", multiline = false) => {
+    const addTextField = (_name: string, page: any, x: number, y: number, w: number, h: number, value = "", _multiline = false) => {
       // Fundo e borda
       page.drawRectangle({ x, y, width: w, height: h, color: COR_FUNDO, borderColor: COR_BORDA, borderWidth: 0.5 });
       if (!value) return;
