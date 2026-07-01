@@ -1922,12 +1922,39 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                           const loadingEl = document.getElementById("cc-loading");
                           if (loadingEl) loadingEl.style.display = "block";
                           try {
-                            const base64 = await new Promise<string>((res, rej) => {
-                              const r = new FileReader(); r.onload = (e) => res((e.target?.result as string).split(",")[1]); r.onerror = rej; r.readAsDataURL(file);
-                            });
+                            // Converter HEIC/HEIF para JPEG via canvas (compatibilidade com iPhone)
+                            const convertToJpeg = (f: File): Promise<{ base64: string; mediaType: string }> => {
+                              return new Promise((res, rej) => {
+                                const url = URL.createObjectURL(f);
+                                const img = new Image();
+                                img.onload = () => {
+                                  const canvas = document.createElement("canvas");
+                                  canvas.width = img.width; canvas.height = img.height;
+                                  canvas.getContext("2d")!.drawImage(img, 0, 0);
+                                  canvas.toBlob((blob) => {
+                                    URL.revokeObjectURL(url);
+                                    if (!blob) { rej(new Error("Conversão falhou")); return; }
+                                    const r = new FileReader();
+                                    r.onload = (e) => res({ base64: (e.target?.result as string).split(",")[1], mediaType: "image/jpeg" });
+                                    r.onerror = rej;
+                                    r.readAsDataURL(blob);
+                                  }, "image/jpeg", 0.9);
+                                };
+                                img.onerror = () => {
+                                  // Fallback: ler ficheiro directamente
+                                  URL.revokeObjectURL(url);
+                                  const r = new FileReader();
+                                  r.onload = (e) => res({ base64: (e.target?.result as string).split(",")[1], mediaType: file.type || "image/jpeg" });
+                                  r.onerror = rej;
+                                  r.readAsDataURL(f);
+                                };
+                                img.src = url;
+                              });
+                            };
+                            const { base64, mediaType } = await convertToJpeg(file);
                             const response = await fetch("/api/claude", {
                               method: "POST", headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 800, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: file.type || "image/jpeg", data: base64 } }, { type: "text", text: "Extrai os dados deste Cartão de Cidadão português. Responde APENAS em JSON válido sem markdown: {\"name\":\"nome completo\",\"birthDate\":\"DD/MM/AAAA\",\"ccNumber\":\"número do CC\",\"ccValidity\":\"DD/MM/AAAA\",\"nif\":\"NIF\",\"naturalidade\":\"naturalidade\",\"nacionalidade\":\"nacionalidade\",\"estadoCivil\":\"estado civil\",\"morada\":\"morada se visível\"}" }] }] })
+                              body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 800, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: mediaType, data: base64 } }, { type: "text", text: "Extrai os dados deste Cartão de Cidadão português. Responde APENAS em JSON válido sem markdown: {\"name\":\"nome completo\",\"birthDate\":\"DD/MM/AAAA\",\"ccNumber\":\"número do CC\",\"ccValidity\":\"DD/MM/AAAA\",\"nif\":\"NIF\",\"naturalidade\":\"naturalidade\",\"nacionalidade\":\"nacionalidade\",\"estadoCivil\":\"estado civil\",\"morada\":\"morada se visível\"}" }] }] })
                             });
                             const responseText = await response.text();
                             if (!response.ok) {
@@ -1974,12 +2001,39 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                           const loadingEl = document.getElementById("cc-loading");
                           if (loadingEl) loadingEl.style.display = "block";
                           try {
-                            const base64 = await new Promise<string>((res, rej) => {
-                              const r = new FileReader(); r.onload = (e) => res((e.target?.result as string).split(",")[1]); r.onerror = rej; r.readAsDataURL(file);
-                            });
+                            // Converter HEIC/HEIF para JPEG via canvas (compatibilidade com iPhone)
+                            const convertToJpeg = (f: File): Promise<{ base64: string; mediaType: string }> => {
+                              return new Promise((res, rej) => {
+                                const url = URL.createObjectURL(f);
+                                const img = new Image();
+                                img.onload = () => {
+                                  const canvas = document.createElement("canvas");
+                                  canvas.width = img.width; canvas.height = img.height;
+                                  canvas.getContext("2d")!.drawImage(img, 0, 0);
+                                  canvas.toBlob((blob) => {
+                                    URL.revokeObjectURL(url);
+                                    if (!blob) { rej(new Error("Conversão falhou")); return; }
+                                    const r = new FileReader();
+                                    r.onload = (e) => res({ base64: (e.target?.result as string).split(",")[1], mediaType: "image/jpeg" });
+                                    r.onerror = rej;
+                                    r.readAsDataURL(blob);
+                                  }, "image/jpeg", 0.9);
+                                };
+                                img.onerror = () => {
+                                  // Fallback: ler ficheiro directamente
+                                  URL.revokeObjectURL(url);
+                                  const r = new FileReader();
+                                  r.onload = (e) => res({ base64: (e.target?.result as string).split(",")[1], mediaType: file.type || "image/jpeg" });
+                                  r.onerror = rej;
+                                  r.readAsDataURL(f);
+                                };
+                                img.src = url;
+                              });
+                            };
+                            const { base64, mediaType } = await convertToJpeg(file);
                             const response = await fetch("/api/claude", {
                               method: "POST", headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 800, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: file.type || "image/jpeg", data: base64 } }, { type: "text", text: "Extrai os dados deste Cartão de Cidadão português. Responde APENAS em JSON válido sem markdown: {\"name\":\"nome completo\",\"birthDate\":\"DD/MM/AAAA\",\"ccNumber\":\"número do CC\",\"ccValidity\":\"DD/MM/AAAA\",\"nif\":\"NIF\",\"naturalidade\":\"naturalidade\",\"nacionalidade\":\"nacionalidade\",\"estadoCivil\":\"estado civil\",\"morada\":\"morada se visível\"}" }] }] })
+                              body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 800, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: mediaType, data: base64 } }, { type: "text", text: "Extrai os dados deste Cartão de Cidadão português. Responde APENAS em JSON válido sem markdown: {\"name\":\"nome completo\",\"birthDate\":\"DD/MM/AAAA\",\"ccNumber\":\"número do CC\",\"ccValidity\":\"DD/MM/AAAA\",\"nif\":\"NIF\",\"naturalidade\":\"naturalidade\",\"nacionalidade\":\"nacionalidade\",\"estadoCivil\":\"estado civil\",\"morada\":\"morada se visível\"}" }] }] })
                             });
                             const responseText = await response.text();
                             if (!response.ok) {
