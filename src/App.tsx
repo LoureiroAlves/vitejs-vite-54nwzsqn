@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -1168,44 +1169,6 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
   const [utenteTab, setUtenteTab] = useState<"geral" | "registo" | "medicacao" | "cuidados" | "pic">("geral");
-  const [importingMedical, setImportingMedical] = useState(false);
-  const [medicalImportResult, setMedicalImportResult] = useState<string | null>(null);
-  const [importResult, setImportResult] = useState<string | null>(null);
-
-  const handleImportMedicalReport = (useCamera: boolean) => {
-    const currentUtente = openUtente;
-    if (!currentUtente) return;
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*,.pdf";
-    if (useCamera) input.setAttribute("capture", "environment");
-    input.onchange = async (e: Event) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      setImportingMedical(true);
-      setMedicalImportResult(null);
-      try {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => resolve((ev.target?.result as string).split(",")[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        const now = new Date();
-        const dateStr = now.toLocaleDateString("pt-PT").replace(/\//g, "-");
-        const timeStr = now.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" }).replace(":", "h");
-        const docName = `relatorio_${dateStr}_${timeStr}.${file.name.split(".").pop() || "jpg"}`;
-        const fileData = `data:${file.type};base64,${base64}`;
-        const newFile = { name: docName, type: file.type, data: fileData, uploadedAt: now.toISOString() };
-        updateUtente(currentUtente.id, { files: [...(currentUtente.files || []), newFile] });
-        setMedicalImportResult("📸 Documento guardado! Envie-o no chat do Claude para eu extrair a informação médica.");
-      } catch {
-        setMedicalImportResult("❌ Erro ao guardar o documento.");
-      }
-      setImportingMedical(false);
-    };
-    document.body.appendChild(input); input.click(); document.body.removeChild(input);
-  };
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState("");
@@ -1596,10 +1559,6 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
     const words = name.trim().split(/\s+/);
     return words.length >= 2 ? (words[0][0] + words[words.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
   };
-
-  const UTENTE_FIELDS: { key: string; label: string; placeholder: string; type?: string; multiline?: boolean }[] = [
-    { key: "room", label: "Quarto", placeholder: "Ex: 12A" },
-  ];
 
   const [showCCPanel, setShowCCPanel] = useState<string | null>(null);
   const [newMedName, setNewMedName] = useState("");
