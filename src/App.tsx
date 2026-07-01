@@ -1763,9 +1763,14 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
         >
           🗑️
         </button>
-
-
-        {showAdd ? (
+        <button
+          onClick={handleGerarRelatorioERPI}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#F0E8F5", color: "#7B3FA0", border: "1px solid #D4B8E8", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
+          onMouseEnter={(e) => showTip(e, "Gerar Relatório de Actividade ERPI")}
+          onMouseLeave={hideTip}
+        >
+          🏠 Rel. ERPI
+        </button>
           <div style={{ display: "flex", gap: 8 }}>
             <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") addUtente(); if (e.key === "Escape") { setShowAdd(false); setNewName(""); } }}
@@ -3964,6 +3969,235 @@ export default function App() {
     }
   };
 
+  // ─── Relatório Único ───────────────────────────────────────────────────
+  const handleGerarRelatorioUnico = () => {
+    const anoRef = year;
+    const totalColabs = [...employees, ...rvEmployees].length;
+    const horasMes: Record<string, number> = {};
+    const scheduleAno = Object.entries(schedule || {}).filter(([k]) => k.startsWith(String(anoRef)));
+    scheduleAno.forEach(([, mesData]) => {
+      Object.entries(mesData || {}).forEach(([nome, dias]) => {
+        const horas = Object.values(dias as Record<number, string>).filter(t => ["M","T","N"].includes(t)).length * 8;
+        horasMes[nome] = (horasMes[nome] || 0) + horas;
+      });
+    });
+
+    const campo = (label: string, valor: string, linhas = 1) => {
+      const minH = linhas === 1 ? "20px" : `${linhas * 20}px`;
+      return `<div style="margin-bottom:6px">
+        <div style="font-size:6.5pt;font-weight:bold;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:1px">${label}</div>
+        <div contenteditable="true" style="border:.5px solid #BBB;background:#FAFAFA;min-height:${minH};padding:3px 5px;font-size:8.5pt;color:#2A241C;line-height:1.4;outline:none" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background='#FAFAFA'">${valor}</div>
+      </div>`;
+    };
+    const secao = (t: string) => `<div style="background:#3A5A70;color:white;padding:3px 7px;font-size:8.5pt;font-weight:bold;margin:8px 0 5px">${t}</div>`;
+
+    const tabelaColabs = [...employees, ...rvEmployees].map(nome => {
+      const perfil = employeeProfiles[nome] || {};
+      const horas = horasMes[nome] || 0;
+      const tipo = rvEmployees.includes(nome) ? "Recibo Verde" : "Contrato";
+      return `<tr>
+        <td style="border:.5px solid #CCC;padding:3px 5px;font-size:8pt">${nome}</td>
+        <td style="border:.5px solid #CCC;padding:3px 5px;font-size:8pt">${perfil.category || ""}</td>
+        <td style="border:.5px solid #CCC;padding:3px 5px;font-size:8pt">${tipo}</td>
+        <td style="border:.5px solid #CCC;padding:3px 5px;font-size:8pt">${perfil.schedule || ""}</td>
+        <td style="border:.5px solid #CCC;padding:3px 5px;font-size:8pt;text-align:center">${horas}h</td>
+      </tr>`;
+    }).join("");
+
+    const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Relatório Único ${anoRef}</title>
+    <style>
+      @page { size: A4; margin: 12mm 15mm; }
+      @media print { .no-print { display:none!important; } [contenteditable] { background:#FAFAFA!important; } }
+      body { font-family:Arial,sans-serif;font-size:8.5pt;color:#2A241C;width:180mm;margin:0 auto;padding:8mm;box-sizing:border-box }
+      table { width:100%;border-collapse:collapse;margin-bottom:8px }
+      th { background:#E8EEF5;border:.5px solid #CCC;padding:3px 5px;font-size:8pt;text-align:left }
+    </style></head><body>
+    <div class="no-print" style="background:#2A241C;color:#F5B944;padding:8px 14px;margin-bottom:10px;border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+      <span>📊 Relatório Único ${anoRef} — AOSM</span>
+      <button onclick="window.print()" style="background:#F5B944;color:#2A241C;border:none;padding:5px 14px;border-radius:6px;font-weight:700;cursor:pointer">🖨️ Imprimir / PDF</button>
+    </div>
+    <div style="text-align:center;margin-bottom:8px">
+      <div style="font-size:13pt;font-weight:bold">ASSOCIAÇÃO OLIVEIRENSE DE SOCORROS MÚTUOS</div>
+      <div style="font-size:9pt;color:#3A5A70">Relatório Único — Ano de referência: ${anoRef}</div>
+      <hr style="border:none;border-top:1.5px solid #3A5A70;margin:4px 0">
+    </div>
+
+    ${secao("I. IDENTIFICAÇÃO DA ENTIDADE")}
+    ${campo("Designação social", "Associação Oliveirense de Socorros Mútuos")}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${campo("NIF", "")}${campo("CAE", "")}
+    </div>
+    ${campo("Morada", "")}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${campo("Código Postal", "")}${campo("Localidade", "Oliveira do Douro")}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${campo("Telefone", "")}${campo("Email", "")}
+    </div>
+    ${campo("Nome do responsável pelo preenchimento", "")}
+
+    ${secao("II. QUADRO DE PESSOAL")}
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+      ${campo("Total de trabalhadores", String(totalColabs))}
+      ${campo("Trabalhadores efectivos", String(employees.length))}
+      ${campo("Prestadores de serviço (RV)", String(rvEmployees.length))}
+    </div>
+    <table>
+      <thead><tr>
+        <th>Nome</th><th>Categoria</th><th>Vínculo</th><th>Horário contratual</th><th>Horas ${anoRef}</th>
+      </tr></thead>
+      <tbody>${tabelaColabs}</tbody>
+    </table>
+
+    ${secao("III. ADMISSÕES E SAÍDAS")}
+    ${campo("Admissões no ano", "", 2)}
+    ${campo("Cessações de contrato no ano", "", 2)}
+
+    ${secao("IV. FORMAÇÃO PROFISSIONAL")}
+    ${campo("Acções de formação realizadas", "", 2)}
+    ${campo("Nº de trabalhadores abrangidos", "")}
+    ${campo("Total de horas de formação", "")}
+
+    ${secao("V. SEGURANÇA E SAÚDE NO TRABALHO")}
+    ${campo("Acidentes de trabalho", "")}
+    ${campo("Doenças profissionais", "")}
+    ${campo("Medidas implementadas", "", 3)}
+
+    ${secao("VI. TRABALHO SUPLEMENTAR")}
+    ${campo("Total de horas suplementares", "")}
+    ${campo("Observações", "", 2)}
+
+    <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="border:.5px solid #CCC;padding:8px;text-align:center">
+        <div style="font-size:7.5pt;font-weight:bold;margin-bottom:20px">Responsável pela entidade</div>
+        <div style="border-top:.5px solid #999;margin:0 8px 4px"></div>
+        <div style="font-size:7.5pt;color:#666">Data: ___/___/______</div>
+      </div>
+      <div style="border:.5px solid #CCC;padding:8px;text-align:center">
+        <div style="font-size:7.5pt;font-weight:bold;margin-bottom:20px">Responsável pelo preenchimento</div>
+        <div style="border-top:.5px solid #999;margin:0 8px 4px"></div>
+        <div style="font-size:7.5pt;color:#666">Data: ___/___/______</div>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:7pt;color:#999;margin-top:10px;border-top:.5px solid #CCC;padding-top:4px">
+      Relatório Único — Portaria n.º 55/2010 · Associação Oliveirense de Socorros Mútuos · ${anoRef}
+    </div>
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+    w.document.open(); w.document.write(html); w.document.close(); w.focus();
+  };
+
+  // ─── Relatório ERPI (ISS) ─────────────────────────────────────────────
+  const handleGerarRelatorioERPI = () => {
+    const hoje = new Date().toLocaleDateString("pt-PT");
+    const anoRef = year;
+    const totalUtentes = utentes.length;
+
+    const campo = (label: string, valor: string, linhas = 1) => {
+      const minH = linhas === 1 ? "20px" : `${linhas * 20}px`;
+      return `<div style="margin-bottom:6px">
+        <div style="font-size:6.5pt;font-weight:bold;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:1px">${label}</div>
+        <div contenteditable="true" style="border:.5px solid #BBB;background:#FAFAFA;min-height:${minH};padding:3px 5px;font-size:8.5pt;color:#2A241C;line-height:1.4;outline:none" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background='#FAFAFA'">${valor}</div>
+      </div>`;
+    };
+    const secao = (t: string) => `<div style="background:#3A5A70;color:white;padding:3px 7px;font-size:8.5pt;font-weight:bold;margin:8px 0 5px">${t}</div>`;
+
+    const tabelaUtentes = utentes.map(u => `<tr>
+      <td style="border:.5px solid #CCC;padding:3px 5px;font-size:8pt">${u.name}</td>
+      <td style="border:.5px solid #CCC;padding:3px 5px;font-size:8pt">${u.birthDate || ""}</td>
+      <td style="border:.5px solid #CCC;padding:3px 5px;font-size:8pt">${u.entryDate || ""}</td>
+      <td style="border:.5px solid #CCC;padding:3px 5px;font-size:8pt">${u.room || ""}</td>
+      <td style="border:.5px solid #CCC;padding:3px 5px;font-size:8pt">${u.familyContact || ""}</td>
+    </tr>`).join("");
+
+    const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Relatório ERPI ${anoRef}</title>
+    <style>
+      @page { size: A4; margin: 12mm 15mm; }
+      @media print { .no-print { display:none!important; } [contenteditable] { background:#FAFAFA!important; } }
+      body { font-family:Arial,sans-serif;font-size:8.5pt;color:#2A241C;width:180mm;margin:0 auto;padding:8mm;box-sizing:border-box }
+      table { width:100%;border-collapse:collapse;margin-bottom:8px }
+      th { background:#E8EEF5;border:.5px solid #CCC;padding:3px 5px;font-size:8pt;text-align:left }
+    </style></head><body>
+    <div class="no-print" style="background:#2A241C;color:#F5B944;padding:8px 14px;margin-bottom:10px;border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+      <span>🏠 Relatório ERPI ${anoRef} — AOSM</span>
+      <button onclick="window.print()" style="background:#F5B944;color:#2A241C;border:none;padding:5px 14px;border-radius:6px;font-weight:700;cursor:pointer">🖨️ Imprimir / PDF</button>
+    </div>
+    <div style="text-align:center;margin-bottom:8px">
+      <div style="font-size:13pt;font-weight:bold">ASSOCIAÇÃO OLIVEIRENSE DE SOCORROS MÚTUOS</div>
+      <div style="font-size:9pt;color:#3A5A70">Estrutura Residencial para Pessoas Idosas (ERPI)</div>
+      <div style="font-size:9pt;color:#3A5A70">Relatório de Actividade — Ano ${anoRef}</div>
+      <hr style="border:none;border-top:1.5px solid #3A5A70;margin:4px 0">
+    </div>
+
+    ${secao("I. IDENTIFICAÇÃO DO ESTABELECIMENTO")}
+    ${campo("Designação", "Associação Oliveirense de Socorros Mútuos")}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${campo("NIF", "")}${campo("Nº de acordo com o ISS", "")}
+    </div>
+    ${campo("Morada", "")}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${campo("Director(a) técnico(a)", "")}${campo("Contacto", "")}
+    </div>
+
+    ${secao("II. CAPACIDADE E OCUPAÇÃO")}
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      ${campo("Capacidade total (camas)", "")}
+      ${campo("Utentes no início do ano", "")}
+      ${campo("Utentes no final do ano", String(totalUtentes))}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${campo("Entradas no ano", "")}
+      ${campo("Saídas no ano (altas/óbitos)", "")}
+    </div>
+    ${campo("Taxa de ocupação média (%)", "")}
+
+    ${secao("III. LISTA DE UTENTES")}
+    <table>
+      <thead><tr>
+        <th>Nome</th><th>Data Nasc.</th><th>Data Entrada</th><th>Quarto</th><th>Contacto Familiar</th>
+      </tr></thead>
+      <tbody>${tabelaUtentes}</tbody>
+    </table>
+
+    ${secao("IV. RECURSOS HUMANOS")}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${campo("Total de colaboradores", String([...employees, ...rvEmployees].length))}
+      ${campo("Rácio utente/colaborador", "")}
+    </div>
+    ${campo("Categorias profissionais presentes", [...new Set(Object.values(employeeProfiles).map(p => p.category).filter(Boolean))].join(", "), 2)}
+
+    ${secao("V. CUIDADOS PRESTADOS")}
+    ${campo("Cuidados de higiene e conforto", "", 2)}
+    ${campo("Apoio à alimentação", "", 2)}
+    ${campo("Administração de medicação", "", 2)}
+    ${campo("Actividades de animação sociocultural", "", 2)}
+    ${campo("Outros cuidados prestados", "", 2)}
+
+    ${secao("VI. AVALIAÇÃO DA QUALIDADE")}
+    ${campo("Reclamações recebidas", "")}
+    ${campo("Acções de melhoria implementadas", "", 3)}
+    ${campo("Objectivos para o próximo ano", "", 3)}
+
+    <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      ${["Director(a) Técnico(a)","Responsável pela entidade","Técnico(a) ISS"].map(t => `
+        <div style="border:.5px solid #CCC;padding:8px;text-align:center">
+          <div style="font-size:7.5pt;font-weight:bold;margin-bottom:20px">${t}</div>
+          <div style="border-top:.5px solid #999;margin:0 6px 4px"></div>
+          <div style="font-size:7.5pt;color:#666">Data: ___/___/______</div>
+        </div>`).join("")}
+    </div>
+    <div style="text-align:center;font-size:7pt;color:#999;margin-top:10px;border-top:.5px solid #CCC;padding-top:4px">
+      Relatório de Actividade ERPI · Portaria n.º 67/2012 (alterada pela Portaria n.º 349/2023) · AOSM · ${anoRef}
+    </div>
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+    w.document.open(); w.document.write(html); w.document.close(); w.focus();
+  };
+
   const handleGenerateByRules = () => {
     let nextMonth = month + 1;
     let nextYear = year;
@@ -5116,6 +5350,10 @@ export default function App() {
             <button className="tool-btn" style={{ ...styles.toolBtn, color: "#3B6D11", fontWeight: 700, fontSize: 12 }} onClick={() => setShowGenerateModal(true)}
               onMouseEnter={(e) => showTip(e, "Gerar escala do próximo mês automaticamente")} onMouseLeave={hideTip} aria-label="Gerar próximo mês">
               🪄&nbsp;Gerar mês
+            </button>
+            <button className="tool-btn" style={{ ...styles.toolBtn, color: "#7B3FA0", fontWeight: 700, fontSize: 12 }} onClick={handleGerarRelatorioUnico}
+              onMouseEnter={(e) => showTip(e, "Gerar Relatório Único (obrigação anual)")} onMouseLeave={hideTip}>
+              📊&nbsp;Rel. Único
             </button>
 
             {/* Menu impressão/PDF (dropdown) */}
