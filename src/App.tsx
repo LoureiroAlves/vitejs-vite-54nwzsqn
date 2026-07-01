@@ -1365,43 +1365,52 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
     document.getElementById("pic-loading")?.remove();
 
     const campo = (label: string, valor: string, linhas = 1) => {
-      const h = linhas === 1 ? "22px" : `${linhas * 22}px`;
-      const v = valor ? `<div style="padding:3px 6px;font-size:9pt;color:#2A241C;line-height:1.4">${valor.replace(/\n/g, "<br>")}</div>` : "";
-      return `<div style="margin-bottom:6px">
-        <div style="font-size:7pt;font-weight:bold;color:#444;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">${label}</div>
-        <div style="border:.5px solid #CCC;background:#FAFAFA;min-height:${h};padding:2px 4px">${v}</div>
+      const minH = linhas === 1 ? "20px" : `${linhas * 20}px`;
+      return `<div style="margin-bottom:5px">
+        <div style="font-size:6.5pt;font-weight:bold;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:1px">${label}</div>
+        <div contenteditable="true" style="border:.5px solid #BBB;background:#FAFAFA;min-height:${minH};padding:3px 5px;font-size:8.5pt;color:#2A241C;line-height:1.4;outline:none" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background='#FAFAFA'">${valor ? valor.replace(/\n/g, "<br>") : ""}</div>
       </div>`;
     };
 
-    const duasColunas = (t1: string, v1: string, t2: string, v2: string) => `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
+    const duasColunas = (t1: string, v1: string, t2: string, v2: string, r = "1fr 1fr") => `
+      <div style="display:grid;grid-template-columns:${r};gap:6px;margin-bottom:0">
         ${campo(t1, v1)} ${campo(t2, v2)}
       </div>`;
 
-    const secao = (t: string) => `<div style="background:#3A5A70;color:white;padding:4px 8px;font-size:9pt;font-weight:bold;margin:10px 0 6px">${t}</div>`;
+    const secao = (t: string) => `<div style="background:#3A5A70;color:white;padding:3px 7px;font-size:8.5pt;font-weight:bold;margin:8px 0 5px;letter-spacing:.3px">${t}</div>`;
 
     const tabelaObj = (dim: string, need: string, obj: string, act: string, resp: string, prazo: string) => `
-      <div style="font-size:8pt;font-weight:bold;color:#2A241C;margin:6px 0 2px">Dimensão: ${dim}</div>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:6px;font-size:8pt">
+      <div style="font-size:7.5pt;font-weight:bold;color:#2A241C;margin:5px 0 2px">Dimensão: ${dim}</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:5px;font-size:7.5pt;table-layout:fixed">
         <thead><tr style="background:#E8EEF5">
-          <th style="border:.5px solid #CCC;padding:3px 4px;text-align:left;width:22%">Necessidade/Diagnóstico</th>
-          <th style="border:.5px solid #CCC;padding:3px 4px;text-align:left;width:22%">Objetivo</th>
-          <th style="border:.5px solid #CCC;padding:3px 4px;text-align:left;width:28%">Atividade/Intervenção</th>
-          <th style="border:.5px solid #CCC;padding:3px 4px;text-align:left;width:16%">Responsável</th>
-          <th style="border:.5px solid #CCC;padding:3px 4px;text-align:left;width:12%">Prazo</th>
+          <th style="border:.5px solid #CCC;padding:2px 3px;text-align:left;width:22%">Necessidade/Diagnóstico</th>
+          <th style="border:.5px solid #CCC;padding:2px 3px;text-align:left;width:22%">Objetivo</th>
+          <th style="border:.5px solid #CCC;padding:2px 3px;text-align:left;width:28%">Atividade/Intervenção</th>
+          <th style="border:.5px solid #CCC;padding:2px 3px;text-align:left;width:16%">Responsável</th>
+          <th style="border:.5px solid #CCC;padding:2px 3px;text-align:left;width:12%">Prazo</th>
         </tr></thead>
         <tbody>
-          <tr><td style="border:.5px solid #CCC;padding:4px;height:18px">${need}</td><td style="border:.5px solid #CCC;padding:4px">${obj}</td><td style="border:.5px solid #CCC;padding:4px">${act}</td><td style="border:.5px solid #CCC;padding:4px">${resp}</td><td style="border:.5px solid #CCC;padding:4px">${prazo}</td></tr>
-          <tr><td style="border:.5px solid #CCC;padding:4px;height:18px"></td><td style="border:.5px solid #CCC;padding:4px"></td><td style="border:.5px solid #CCC;padding:4px"></td><td style="border:.5px solid #CCC;padding:4px"></td><td style="border:.5px solid #CCC;padding:4px"></td></tr>
+          <tr>
+            ${[need,obj,act,resp,prazo].map(v => `<td style="border:.5px solid #CCC;padding:0;height:16px"><div contenteditable="true" style="padding:2px 3px;min-height:16px;outline:none;font-size:7.5pt" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background=''">${v}</div></td>`).join("")}
+          </tr>
+          <tr>
+            ${Array(5).fill(`<td style="border:.5px solid #CCC;padding:0;height:16px"><div contenteditable="true" style="padding:2px 3px;min-height:16px;outline:none;font-size:7.5pt" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background=''"></div></td>`).join("")}
+          </tr>
         </tbody>
       </table>`;
 
     const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>PIC — ${u.name}</title>
     <style>
-      @page { size: A4; margin: 15mm; }
-      @media print { body { margin: 0; } .no-print { display: none; } }
-      body { font-family: Arial, sans-serif; font-size: 9pt; color: #2A241C; max-width: 180mm; margin: 0 auto; padding: 10mm; }
+      @page { size: A4; margin: 12mm 15mm; }
+      @media print {
+        .no-print { display: none !important; }
+        [contenteditable] { background: #FAFAFA !important; outline: none !important; border-color: #BBB !important; }
+        body { padding: 0 !important; }
+      }
+      body { font-family: Arial, sans-serif; font-size: 8.5pt; color: #2A241C; width: 180mm; margin: 0 auto; padding: 8mm; box-sizing: border-box; }
+      [contenteditable]:focus { background: #EEF4FF !important; }
       table { page-break-inside: avoid; }
+      .secao-break { page-break-before: always; }
     </style></head><body>
 
     <div class="no-print" style="background:#2A241C;color:#F5B944;padding:10px 16px;margin-bottom:12px;border-radius:8px;font-size:11pt;font-weight:600;display:flex;align-items:center;justify-content:space-between">
@@ -1454,10 +1463,10 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
       <tbody>
         ${["Queda","Úlcera de pressão","Desnutrição / desidratação","Isolamento social","Deterioração cognitiva","Outro"].map(r => `
         <tr>
-          <td style="border:.5px solid #CCC;padding:4px;height:16px">${r}</td>
-          <td style="border:.5px solid #CCC;padding:4px;text-align:center">☐</td>
-          <td style="border:.5px solid #CCC;padding:4px;text-align:center">☐</td>
-          <td style="border:.5px solid #CCC;padding:4px"></td>
+          <td style="border:.5px solid #CCC;padding:3px 4px;font-size:8pt">${r}</td>
+          <td style="border:.5px solid #CCC;padding:2px;text-align:center;font-size:11pt"><div contenteditable="true" style="min-height:16px;outline:none;text-align:center" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background=''">☐</div></td>
+          <td style="border:.5px solid #CCC;padding:2px;text-align:center;font-size:11pt"><div contenteditable="true" style="min-height:16px;outline:none;text-align:center" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background=''">☐</div></td>
+          <td style="border:.5px solid #CCC;padding:0"><div contenteditable="true" style="padding:2px 4px;min-height:16px;outline:none;font-size:8pt" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background=''"></div></td>
         </tr>`).join("")}
       </tbody>
     </table>
