@@ -1197,7 +1197,7 @@ interface Utente {
   picData?: Record<string, string>;
 }
 
-function UtentesPage({ onBack }: { onBack: () => void }) {
+function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
   const [utenteTab, setUtenteTab] = useState<"geral" | "registo" | "medicacao" | "cuidados" | "pic">("geral");
@@ -1764,7 +1764,7 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
           🗑️
         </button>
         <button
-          onClick={handleGerarRelatorioERPI}
+          onClick={onGerarERPI}
           style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#F0E8F5", color: "#7B3FA0", border: "1px solid #D4B8E8", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
           onMouseEnter={(e) => showTip(e, "Gerar Relatório de Actividade ERPI")}
           onMouseLeave={hideTip}
@@ -4092,10 +4092,12 @@ export default function App() {
   };
 
   // ─── Relatório ERPI (ISS) ─────────────────────────────────────────────
-  const handleGerarRelatorioERPI = () => {
-    const hoje = new Date().toLocaleDateString("pt-PT");
+  const handleGerarRelatorioERPI = async () => {
     const anoRef = year;
-    const totalUtentes = utentes.length;
+    // Carregar utentes do Supabase
+    const row = await loadFromSupabase("utentes_data").catch(() => null);
+    const utentesData: Utente[] = row?.utentes ?? [];
+    const totalUtentes = utentesData.length;
 
     const campo = (label: string, valor: string, linhas = 1) => {
       const minH = linhas === 1 ? "20px" : `${linhas * 20}px`;
@@ -4106,7 +4108,7 @@ export default function App() {
     };
     const secao = (t: string) => `<div style="background:#3A5A70;color:white;padding:3px 7px;font-size:8.5pt;font-weight:bold;margin:8px 0 5px">${t}</div>`;
 
-    const tabelaUtentes = utentes.map(u => `<tr>
+    const tabelaUtentes = utentesData.map(u => `<tr>
       <td style="border:.5px solid #CCC;padding:3px 5px;font-size:8pt">${u.name}</td>
       <td style="border:.5px solid #CCC;padding:3px 5px;font-size:8pt">${u.birthDate || ""}</td>
       <td style="border:.5px solid #CCC;padding:3px 5px;font-size:8pt">${u.entryDate || ""}</td>
@@ -5239,7 +5241,7 @@ export default function App() {
       {/* Página de utentes */}
       {isUtentesPage && (
         <div className="page-enter" style={{ background: "#E8EEF5" }}>
-          <UtentesPage key={`utentes-${syncDone}`} onBack={() => navigateHome()} />
+          <UtentesPage key={`utentes-${syncDone}`} onBack={() => navigateHome()} onGerarERPI={handleGerarRelatorioERPI} />
         </div>
       )}
 
