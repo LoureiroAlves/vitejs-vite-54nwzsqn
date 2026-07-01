@@ -1771,6 +1771,8 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
         >
           🏠 Rel. ERPI
         </button>
+
+        {showAdd ? (
           <div style={{ display: "flex", gap: 8 }}>
             <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") addUtente(); if (e.key === "Escape") { setShowAdd(false); setNewName(""); } }}
