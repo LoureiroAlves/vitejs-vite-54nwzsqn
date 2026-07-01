@@ -237,7 +237,6 @@ async function saveToSupabase(table: string, data: any): Promise<void> {
 // ---------- Supabase Storage para documentos de utentes ----------
 async function uploadUtenteDoc(utenteId: string, file: File): Promise<string | null> {
   try {
-    const ext = file.name.split(".").pop() || "bin";
     const path = `${utenteId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/utentes-docs/${path}`, {
       method: "POST",
