@@ -1927,26 +1927,38 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                             });
                             const response = await fetch("/api/claude", {
                               method: "POST", headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 500, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: file.type, data: base64 } }, { type: "text", text: "Extrai os dados deste Cartão de Cidadão português. Responde APENAS em JSON válido sem markdown: {\"name\":\"nome completo\",\"birthDate\":\"DD/MM/AAAA\",\"ccNumber\":\"número do CC\",\"ccValidity\":\"DD/MM/AAAA\",\"nif\":\"NIF\",\"naturalidade\":\"naturalidade\",\"nacionalidade\":\"nacionalidade\",\"estadoCivil\":\"estado civil\",\"morada\":\"morada se visível\"}" }] }] })
+                              body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 800, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: file.type || "image/jpeg", data: base64 } }, { type: "text", text: "Extrai os dados deste Cartão de Cidadão português. Responde APENAS em JSON válido sem markdown: {\"name\":\"nome completo\",\"birthDate\":\"DD/MM/AAAA\",\"ccNumber\":\"número do CC\",\"ccValidity\":\"DD/MM/AAAA\",\"nif\":\"NIF\",\"naturalidade\":\"naturalidade\",\"nacionalidade\":\"nacionalidade\",\"estadoCivil\":\"estado civil\",\"morada\":\"morada se visível\"}" }] }] })
                             });
-                            if (response.ok) {
-                              const data = await response.json();
-                              const text = data.content?.map((c: any) => c.text || "").join("") || "";
-                              const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
-                              const updates: any = {};
-                              if (parsed.name) updates.name = parsed.name;
-                              if (parsed.birthDate) updates.birthDate = parsed.birthDate;
-                              if (parsed.ccNumber) updates.ccNumber = parsed.ccNumber;
-                              if (parsed.ccValidity) updates.ccValidity = parsed.ccValidity;
-                              if (parsed.nif) updates.nif = parsed.nif;
-                              if (parsed.naturalidade) updates.naturalidade = parsed.naturalidade;
-                              if (parsed.nacionalidade) updates.nacionalidade = parsed.nacionalidade;
-                              if (parsed.estadoCivil) updates.estadoCivil = parsed.estadoCivil;
-                              if (parsed.morada) updates.morada = parsed.morada;
-                              updateUtente(u.id, updates);
-                              alert("✅ Dados do CC preenchidos automaticamente! Verifique e corrija se necessário.");
+                            const responseText = await response.text();
+                            if (!response.ok) {
+                              alert("❌ Erro na API: " + response.status + " — " + responseText.slice(0, 100));
+                            } else {
+                              try {
+                                const data = JSON.parse(responseText);
+                                const text = data.content?.map((c: any) => c.text || "").join("") || "";
+                                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                                const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+                                const updates: any = {};
+                                if (parsed.name) updates.name = parsed.name;
+                                if (parsed.birthDate) updates.birthDate = parsed.birthDate;
+                                if (parsed.ccNumber) updates.ccNumber = parsed.ccNumber;
+                                if (parsed.ccValidity) updates.ccValidity = parsed.ccValidity;
+                                if (parsed.nif) updates.nif = parsed.nif;
+                                if (parsed.naturalidade) updates.naturalidade = parsed.naturalidade;
+                                if (parsed.nacionalidade) updates.nacionalidade = parsed.nacionalidade;
+                                if (parsed.estadoCivil) updates.estadoCivil = parsed.estadoCivil;
+                                if (parsed.morada) updates.morada = parsed.morada;
+                                if (Object.keys(updates).length === 0) {
+                                  alert("⚠️ A IA não conseguiu extrair dados. Certifique-se que a foto está nítida e o CC visível.");
+                                } else {
+                                  updateUtente(u.id, updates);
+                                  alert("✅ " + Object.keys(updates).length + " campo(s) preenchidos automaticamente! Verifique e corrija se necessário.");
+                                }
+                              } catch (parseErr) {
+                                alert("❌ Erro ao interpretar resposta da IA. Tente com uma foto mais nítida.");
+                              }
                             }
-                          } catch (e) { alert("❌ Não foi possível ler o CC. Tente novamente ou preencha manualmente."); }
+                          } catch (e: any) { alert("❌ Erro de ligação: " + (e?.message || "Verifique a sua ligação à internet.")); }
                           if (loadingEl) loadingEl.style.display = "none";
                         };
                         document.body.appendChild(input); input.click(); document.body.removeChild(input);
@@ -1967,26 +1979,38 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
                             });
                             const response = await fetch("/api/claude", {
                               method: "POST", headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 500, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: file.type, data: base64 } }, { type: "text", text: "Extrai os dados deste Cartão de Cidadão português. Responde APENAS em JSON válido sem markdown: {\"name\":\"nome completo\",\"birthDate\":\"DD/MM/AAAA\",\"ccNumber\":\"número do CC\",\"ccValidity\":\"DD/MM/AAAA\",\"nif\":\"NIF\",\"naturalidade\":\"naturalidade\",\"nacionalidade\":\"nacionalidade\",\"estadoCivil\":\"estado civil\",\"morada\":\"morada se visível\"}" }] }] })
+                              body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 800, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: file.type || "image/jpeg", data: base64 } }, { type: "text", text: "Extrai os dados deste Cartão de Cidadão português. Responde APENAS em JSON válido sem markdown: {\"name\":\"nome completo\",\"birthDate\":\"DD/MM/AAAA\",\"ccNumber\":\"número do CC\",\"ccValidity\":\"DD/MM/AAAA\",\"nif\":\"NIF\",\"naturalidade\":\"naturalidade\",\"nacionalidade\":\"nacionalidade\",\"estadoCivil\":\"estado civil\",\"morada\":\"morada se visível\"}" }] }] })
                             });
-                            if (response.ok) {
-                              const data = await response.json();
-                              const text = data.content?.map((c: any) => c.text || "").join("") || "";
-                              const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
-                              const updates: any = {};
-                              if (parsed.name) updates.name = parsed.name;
-                              if (parsed.birthDate) updates.birthDate = parsed.birthDate;
-                              if (parsed.ccNumber) updates.ccNumber = parsed.ccNumber;
-                              if (parsed.ccValidity) updates.ccValidity = parsed.ccValidity;
-                              if (parsed.nif) updates.nif = parsed.nif;
-                              if (parsed.naturalidade) updates.naturalidade = parsed.naturalidade;
-                              if (parsed.nacionalidade) updates.nacionalidade = parsed.nacionalidade;
-                              if (parsed.estadoCivil) updates.estadoCivil = parsed.estadoCivil;
-                              if (parsed.morada) updates.morada = parsed.morada;
-                              updateUtente(u.id, updates);
-                              alert("✅ Dados do CC preenchidos automaticamente! Verifique e corrija se necessário.");
+                            const responseText = await response.text();
+                            if (!response.ok) {
+                              alert("❌ Erro na API: " + response.status + " — " + responseText.slice(0, 100));
+                            } else {
+                              try {
+                                const data = JSON.parse(responseText);
+                                const text = data.content?.map((c: any) => c.text || "").join("") || "";
+                                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                                const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+                                const updates: any = {};
+                                if (parsed.name) updates.name = parsed.name;
+                                if (parsed.birthDate) updates.birthDate = parsed.birthDate;
+                                if (parsed.ccNumber) updates.ccNumber = parsed.ccNumber;
+                                if (parsed.ccValidity) updates.ccValidity = parsed.ccValidity;
+                                if (parsed.nif) updates.nif = parsed.nif;
+                                if (parsed.naturalidade) updates.naturalidade = parsed.naturalidade;
+                                if (parsed.nacionalidade) updates.nacionalidade = parsed.nacionalidade;
+                                if (parsed.estadoCivil) updates.estadoCivil = parsed.estadoCivil;
+                                if (parsed.morada) updates.morada = parsed.morada;
+                                if (Object.keys(updates).length === 0) {
+                                  alert("⚠️ A IA não conseguiu extrair dados. Certifique-se que a foto está nítida e o CC visível.");
+                                } else {
+                                  updateUtente(u.id, updates);
+                                  alert("✅ " + Object.keys(updates).length + " campo(s) preenchidos automaticamente! Verifique e corrija se necessário.");
+                                }
+                              } catch (parseErr) {
+                                alert("❌ Erro ao interpretar resposta da IA. Tente com uma foto mais nítida.");
+                              }
                             }
-                          } catch (e) { alert("❌ Não foi possível ler o CC. Tente novamente ou preencha manualmente."); }
+                          } catch (e: any) { alert("❌ Erro de ligação: " + (e?.message || "Verifique a sua ligação à internet.")); }
                           if (loadingEl) loadingEl.style.display = "none";
                         };
                         document.body.appendChild(input); input.click(); document.body.removeChild(input);
