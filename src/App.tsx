@@ -1418,6 +1418,7 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
         .no-print { display: none !important; }
         [contenteditable] { background: #FAFAFA !important; outline: none !important; border-color: #BBB !important; }
         body { padding: 0 !important; }
+        .no-print-never { display: block !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       }
       body { font-family: Arial, sans-serif; font-size: 8.5pt; color: #2A241C; width: 180mm; margin: 0 auto; padding: 8mm; box-sizing: border-box; }
       [contenteditable]:focus { background: #EEF4FF !important; }
@@ -1425,6 +1426,10 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
       .secao-break { page-break-before: always; }
     </style></head><body>
 
+    <div class="no-print-never" style="position:fixed;bottom:12mm;right:15mm;display:flex;align-items:center;gap:8px;opacity:0.18;pointer-events:none;z-index:0">
+      <span style="font-size:13pt;font-weight:900;color:#1a7a3a;font-family:Arial,sans-serif;letter-spacing:1px">4Trevo</span>
+      <span style="font-size:18pt">🍀</span>
+    </div>
     <div class="no-print" style="background:#2A241C;color:#F5B944;padding:10px 16px;margin-bottom:12px;border-radius:8px;font-size:11pt;font-weight:600;display:flex;align-items:center;justify-content:space-between">
       <span>📋 PIC — ${u.name}</span>
       <div style="display:flex;gap:8px">
