@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -1168,6 +1167,7 @@ interface Utente {
 function UtentesPage({ onBack }: { onBack: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
+  const [utenteTab, setUtenteTab] = useState<"geral" | "registo" | "medicacao" | "cuidados" | "pic">("geral");
   const [importingMedical, setImportingMedical] = useState(false);
   const [medicalImportResult, setMedicalImportResult] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<string | null>(null);
@@ -1856,381 +1856,219 @@ function UtentesPage({ onBack }: { onBack: () => void }) {
 
       {/* Painel lateral da ficha do utente */}
       {openUtente && (() => { const u = openUtente; return (
-        <>
-          <div style={{ position: "fixed" as const, inset: 0, background: "rgba(42,36,28,0.3)", zIndex: 50 }} onClick={() => setOpenUtente(null)} />
-          <div className="side-panel-mobile" style={{ position: "fixed" as const, top: 0, right: 0, bottom: 0, width: 400, maxWidth: "100vw", background: "#FFFFFF", boxShadow: "-4px 0 24px rgba(42,36,28,0.12)", zIndex: 51, display: "flex", flexDirection: "column" as const, overflow: "hidden" as const }}>
-            {/* Header do painel */}
-            <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #EFEAE2", display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", flexShrink: 0, overflow: "hidden", cursor: "pointer", position: "relative" as const }}
-                onClick={() => {
-                  const input = document.createElement("input");
-                  input.type = "file";
-                  input.accept = "image/*";
-                  input.onchange = (ev: Event) => {
-                    const file = (ev.target as HTMLInputElement).files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (r) => updateUtente(u.id, { photo: r.target?.result as string });
-                    reader.readAsDataURL(file);
-                  };
-                  document.body.appendChild(input); input.click(); document.body.removeChild(input);
-                }}
-                title="Clique para alterar a foto"
-              >
-                {u.photo
-                  ? <img src={u.photo} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : getInitials(u.name)
-                }
-              </div>
-              <div style={{ flex: 1 }}>
-                <input
-                  value={u.name}
-                  onChange={(e) => updateUtente(u.id, { name: e.target.value })}
-                  onKeyDown={(e) => { if (e.key === "Enter") setOpenUtente(null); }}
-                  style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, border: "none", borderBottom: "1px solid #E4DED3", background: "transparent", outline: "none", width: "100%", color: "#2A241C", padding: "2px 0" }}
-                />
-                <button
-                  onClick={() => setShowCCPanel(u.id)}
-                  style={{ fontSize: 12, color: "#3A5A70", marginTop: 2, border: "none", background: "transparent", padding: 0, cursor: "pointer", fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 2 }}
-                >
-                  📇 Ficha do utente (dados do CC)
-                </button>
-              </div>
-              <button style={{ border: "none", background: "transparent", cursor: "pointer", color: "#A39B8E", padding: 4 }} onClick={() => setOpenUtente(null)}>
-                <IconX size={20} />
+        <div style={{ position: "fixed" as const, inset: 0, zIndex: 60, background: "#F0F4F8", display: "flex", flexDirection: "column" as const, animation: "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1) both" }}>
+
+          {/* Header */}
+          <div style={{ background: "#2A241C", padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+            <div
+              style={{ width: 52, height: 52, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", flexShrink: 0, overflow: "hidden", cursor: "pointer" }}
+              onClick={() => {
+                const input = document.createElement("input");
+                input.type = "file"; input.accept = "image/*";
+                input.onchange = (ev: Event) => {
+                  const file = (ev.target as HTMLInputElement).files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (r) => updateUtente(u.id, { photo: r.target?.result as string });
+                  reader.readAsDataURL(file);
+                };
+                document.body.appendChild(input); input.click(); document.body.removeChild(input);
+              }}
+              title="Clique para alterar a foto"
+            >
+              {u.photo ? <img src={u.photo} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : u.name.slice(0, 2).toUpperCase()}
+            </div>
+            <div style={{ flex: 1 }}>
+              <input
+                value={u.name}
+                onChange={(e) => updateUtente(u.id, { name: e.target.value })}
+                style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, border: "none", borderBottom: "1px solid #4A3E30", background: "transparent", outline: "none", width: "100%", color: "#FFFFFF", padding: "2px 0" }}
+              />
+              <button onClick={() => setShowCCPanel(u.id)} style={{ fontSize: 12, color: "#F5B944", marginTop: 3, border: "none", background: "transparent", padding: 0, cursor: "pointer", fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 2 }}>
+                📇 Ficha do utente (dados do CC)
               </button>
             </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => handleGetFamilyLink(u)} style={{ background: "#3A5A70", color: "white", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🔗 Família</button>
+              <button onClick={() => handleGeneratePIC(u)} style={{ background: "#3B6D11", color: "white", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>📋 PIC</button>
+              <button onClick={() => setOpenUtente(null)} style={{ background: "transparent", border: "1px solid #4A3E30", borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: "#C9C2B5" }}><IconX size={16} /></button>
+            </div>
+          </div>
 
-            {/* Campos */}
-            <div style={{ flex: 1, overflowY: "auto" as const, padding: "20px 24px" }}>
-              {UTENTE_FIELDS.map(({ key, label, placeholder, multiline }) => {
-                const value = (openUtente as any)[key] || "";
-                const isDate = key === "birthDate" || key === "entryDate";
+          {/* Separadores */}
+          <div style={{ background: "#2A241C", display: "flex", gap: 0, flexShrink: 0, borderTop: "1px solid #3A3028", overflowX: "auto" as const }}>
+            {([
+              { key: "geral", label: "🏠 Geral" },
+              { key: "registo", label: "📝 Registo do Dia" },
+              { key: "medicacao", label: "💊 Medicação" },
+              { key: "cuidados", label: "🧼 Cuidados" },
+              { key: "pic", label: "📋 PIC" },
+            ] as { key: typeof utenteTab; label: string }[]).map((tab) => (
+              <button key={tab.key} onClick={() => setUtenteTab(tab.key)}
+                style={{ padding: "10px 18px", border: "none", background: "transparent", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const, color: utenteTab === tab.key ? "#F5B944" : "#A39B8E", borderBottom: utenteTab === tab.key ? "2px solid #F5B944" : "2px solid transparent" }}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-                const handleDateInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-                  // Remove tudo que não seja número
-                  const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
-                  // Formata automaticamente: DD/MM/AAAA
-                  let formatted = digits;
-                  if (digits.length > 2) formatted = digits.slice(0, 2) + "/" + digits.slice(2);
-                  if (digits.length > 4) formatted = digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4);
-                  updateUtente(u.id, { [key]: formatted });
-                };
+          {/* Conteúdo do separador activo */}
+          <div style={{ flex: 1, overflowY: "auto" as const, padding: 20 }}>
 
-                return (
-                  <div key={key} style={{ marginBottom: 16 }}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
-                    {multiline ? (
-                      <textarea rows={3} value={value} placeholder={placeholder}
-                        onChange={(e) => updateUtente(u.id, { [key]: e.target.value })}
-                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); setOpenUtente(null); } }}
-                        style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }} />
-                    ) : isDate ? (
-                      <input
-                        type="text"
-                        value={value}
-                        placeholder="DD/MM/AAAA"
-                        inputMode="numeric"
-                        maxLength={10}
-                        onChange={handleDateInput}
-                        onKeyDown={(e) => { if (e.key === "Enter") setOpenUtente(null); }}
-                        style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, colorScheme: "light" as const, letterSpacing: "0.05em" }}
-                      />
-                    ) : (
-                      <input type="text" value={value} placeholder={placeholder}
-                        onChange={(e) => updateUtente(u.id, { [key]: e.target.value })}
-                        onKeyDown={(e) => { if (e.key === "Enter") setOpenUtente(null); }}
-                        style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, colorScheme: "light" as const }} />
-                    )}
+            {/* ── GERAL ── */}
+            {utenteTab === "geral" && (
+              <div style={{ maxWidth: 600, margin: "0 auto", display: "flex", flexDirection: "column" as const, gap: 14 }}>
+                {[
+                  { key: "room", label: "Quarto", placeholder: "Ex: 12A" },
+                ].map(({ key, label, placeholder }) => (
+                  <div key={key}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
+                    <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
+                      style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 12px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", boxSizing: "border-box" as const }} />
                   </div>
-                );
-              })}
+                ))}
+                {/* Documentos */}
+                <div style={{ paddingTop: 14, borderTop: "1px solid #EFEAE2" }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>📎 Documentos</label>
+                  {(u.files || []).map((f, fi) => (
+                    <div key={fi} style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F5F0", borderRadius: 8, padding: "8px 12px", marginBottom: 6 }}>
+                      <span style={{ flex: 1, fontSize: 13, color: "#2A241C" }}>📎 {f.name}</span>
+                      <a href={f.data} download={f.name} style={{ fontSize: 12, color: "#3A5A70", textDecoration: "none", fontWeight: 600 }}>⬇️</a>
+                      <button onClick={() => updateUtente(u.id, { files: (u.files || []).filter((_, i) => i !== fi) })} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }}>✕</button>
+                    </div>
+                  ))}
+                  <button onClick={() => {
+                    const input = document.createElement("input"); input.type = "file";
+                    input.onchange = (ev: Event) => {
+                      const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (r) => updateUtente(u.id, { files: [...(u.files || []), { name: file.name, type: file.type, data: r.target?.result as string, uploadedAt: new Date().toISOString() }] });
+                      reader.readAsDataURL(file);
+                    };
+                    document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                  }} style={{ background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                    + Adicionar documento
+                  </button>
+                </div>
+              </div>
+            )}
 
-              {/* Registo do dia — diário clínico */}
-              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
-                  📝 Registo do dia
-                </label>
-
-                {/* Campo para adicionar novo registo (hoje) */}
-                <div style={{ marginBottom: 14 }}>
-                  <textarea
-                    rows={3}
-                    value={newLogText}
-                    onChange={(e) => setNewLogText(e.target.value)}
+            {/* ── REGISTO DO DIA ── */}
+            {utenteTab === "registo" && (
+              <div style={{ maxWidth: 700, margin: "0 auto" }}>
+                <div style={{ marginBottom: 16 }}>
+                  <textarea rows={3} value={newLogText} onChange={(e) => setNewLogText(e.target.value)}
                     placeholder={`Escrever registo de hoje (${todayStr})...`}
-                    style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const, marginBottom: 8 }}
-                  />
-                  <button
-                    onClick={() => addDailyLog(u.id)}
-                    disabled={!newLogText.trim()}
-                    style={{ background: newLogText.trim() ? "#2A241C" : "#E4DED3", color: newLogText.trim() ? "#F5B944" : "#A39B8E", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: newLogText.trim() ? "pointer" : "default", fontFamily: "'Inter', sans-serif" }}
-                  >
+                    style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const, marginBottom: 8 }} />
+                  <button onClick={() => addDailyLog(u.id)} disabled={!newLogText.trim()}
+                    style={{ background: newLogText.trim() ? "#2A241C" : "#E4DED3", color: newLogText.trim() ? "#F5B944" : "#A39B8E", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 700, cursor: newLogText.trim() ? "pointer" : "default", fontFamily: "'Inter', sans-serif" }}>
                     + Adicionar registo de hoje
                   </button>
                 </div>
-
-                {/* Histórico de registos anteriores */}
-                {(u.dailyLogs?.length ?? 0) > 0 ? (
-                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, maxHeight: 280, overflowY: "auto" as const }}>
-                    {u.dailyLogs!.map((log, idx) => {
-                      const editable = isLogEditable(u.id, idx, log.date);
-                      const isEditing = editingLogIdx === idx;
-                      return (
-                        <div key={idx} style={{ background: "#F7F5F0", borderRadius: 10, padding: "10px 12px" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: "#5B8DBE" }}>
-                              {log.date}{log.date === todayStr ? " (hoje)" : ""}
-                              {!editable && <span style={{ marginLeft: 5 }} title="Bloqueado — requer autorização">🔒</span>}
-                            </span>
-                            <div style={{ display: "flex", gap: 6 }}>
-                              {isEditing ? (
-                                <>
-                                  <button onClick={() => saveEditedLog(u.id, idx)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#3B6D11", fontSize: 13, fontWeight: 700 }} title="Guardar">✓</button>
-                                  <button onClick={() => { setEditingLogIdx(null); setEditingLogText(""); }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }} title="Cancelar">✕</button>
-                                </>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={() => {
-                                      if (editable) {
-                                        setEditingLogIdx(idx);
-                                        setEditingLogText(log.text);
-                                      } else {
-                                        if (requestUnlock(u.id, idx)) {
-                                          setEditingLogIdx(idx);
-                                          setEditingLogText(log.text);
-                                        }
-                                      }
-                                    }}
-                                    style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}
-                                    title={editable ? "Editar registo" : "Editar (requer autorização)"}
-                                  >✏️</button>
-                                  <button
-                                    onClick={() => printDailyLog(u, log)}
-                                    style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}
-                                    title="Imprimir este registo"
-                                  >🖨️</button>
-                                  <button
-                                    onClick={() => {
-                                      if (!editable) { if (!requestUnlock(u.id, idx)) return; }
-                                      if (!window.confirm("Remover este registo?")) return;
-                                      setUtentes((prev) => prev.map((uu) => {
-                                        if (uu.id !== u.id) return uu;
-                                        const updated = { ...uu, dailyLogs: (uu.dailyLogs || []).filter((_, i) => i !== idx) };
-                                        if (openUtente?.id === u.id) setOpenUtente(updated);
-                                        return updated;
-                                      }));
-                                    }}
-                                    style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }}
-                                  >🗑️</button>
-                                </>
-                              )}
-                            </div>
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+                  {(u.dailyLogs || []).map((log, idx) => {
+                    const editable = isLogEditable(u.id, idx, log.date);
+                    const isEditing = editingLogIdx === idx;
+                    return (
+                      <div key={idx} style={{ background: "#FFFFFF", borderRadius: 12, padding: "14px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70" }}>
+                            {log.date}{log.date === todayStr ? " (hoje)" : ""}
+                            {!editable && <span style={{ marginLeft: 5 }}>🔒</span>}
+                          </span>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            {isEditing ? (
+                              <>
+                                <button onClick={() => saveEditedLog(u.id, idx)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#3B6D11", fontSize: 14, fontWeight: 700 }}>✓</button>
+                                <button onClick={() => { setEditingLogIdx(null); setEditingLogText(""); }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC" }}>✕</button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={() => { if (editable || requestUnlock(u.id, idx)) { setEditingLogIdx(idx); setEditingLogText(log.text); } }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}>✏️</button>
+                                <button onClick={() => printDailyLog(u, log)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}>🖨️</button>
+                                <button onClick={() => { if (!editable && !requestUnlock(u.id, idx)) return; if (!window.confirm("Remover este registo?")) return; setUtentes((prev) => prev.map((uu) => { if (uu.id !== u.id) return uu; const updated = { ...uu, dailyLogs: (uu.dailyLogs || []).filter((_, i) => i !== idx) }; if (openUtente?.id === u.id) setOpenUtente(updated); return updated; })); }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }}>🗑️</button>
+                              </>
+                            )}
                           </div>
-                          {isEditing ? (
-                            <textarea
-                              rows={3}
-                              value={editingLogText}
-                              onChange={(e) => setEditingLogText(e.target.value)}
-                              autoFocus
-                              style={{ width: "100%", border: "1px solid #B8CCE0", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }}
-                            />
-                          ) : (
-                            <div style={{ fontSize: 13, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.5 }}>{log.text}</div>
-                          )}
                         </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 12, color: "#A39B8E", textAlign: "center" as const, padding: "10px 0" }}>Nenhum registo ainda.</div>
-                )}
-              </div>
-
-              {/* Medicação Diária */}
-              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
-                  💊 Medicação Diária
-                </label>
-                {(u.medications?.length ?? 0) > 0 && (
-                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 6, marginBottom: 10 }}>
-                    {u.medications!.map((med) => (
-                      <div key={med.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F5F0", borderRadius: 8, padding: "8px 10px" }}>
-                        <div style={{ flex: 1 }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: "#2A241C" }}>{med.name}</span>
-                          {med.dose && <span style={{ fontSize: 12, color: "#6B6358" }}> · {med.dose}</span>}
-                          {med.schedule && <span style={{ fontSize: 12, color: "#8A6A2E" }}> · {med.schedule}</span>}
-                        </div>
-                        <button onClick={() => removeMedication(u.id, med.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }}>✕</button>
+                        {isEditing
+                          ? <textarea rows={3} value={editingLogText} onChange={(e) => setEditingLogText(e.target.value)} autoFocus style={{ width: "100%", border: "1px solid #B8CCE0", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", resize: "vertical" as const, boxSizing: "border-box" as const }} />
+                          : <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.6 }}>{log.text}</div>
+                        }
                       </div>
-                    ))}
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── MEDICAÇÃO ── */}
+            {utenteTab === "medicacao" && (
+              <div style={{ maxWidth: 600, margin: "0 auto", display: "flex", flexDirection: "column" as const, gap: 12 }}>
+                {(u.medications || []).map((med) => (
+                  <div key={med.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#FFFFFF", borderRadius: 10, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: "#2A241C" }}>{med.name}</span>
+                      {med.dose && <span style={{ fontSize: 13, color: "#6B6358" }}> · {med.dose}</span>}
+                      {med.schedule && <span style={{ fontSize: 13, color: "#8A6A2E" }}> · {med.schedule}</span>}
+                    </div>
+                    <button onClick={() => removeMedication(u.id, med.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 14 }}>✕</button>
                   </div>
-                )}
-                <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                  <input value={newMedName} onChange={(e) => setNewMedName(e.target.value)} placeholder="Medicamento" style={{ flex: 2, border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 9px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
-                  <input value={newMedDose} onChange={(e) => setNewMedDose(e.target.value)} placeholder="Dose" style={{ flex: 1, border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 9px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
-                </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <input value={newMedSchedule} onChange={(e) => setNewMedSchedule(e.target.value)} placeholder="Horário (ex: 8h, 13h, 20h)" style={{ flex: 1, border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 9px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
-                  <button onClick={() => addMedication(u.id)} disabled={!newMedName.trim()} style={{ background: newMedName.trim() ? "#2A241C" : "#E4DED3", color: newMedName.trim() ? "#F5B944" : "#A39B8E", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: newMedName.trim() ? "pointer" : "default", fontFamily: "'Inter', sans-serif" }}>+ Add</button>
-                </div>
-                <textarea
-                  rows={2}
-                  value={u.medicationNotes || ""}
-                  onChange={(e) => updateUtente(u.id, { medicationNotes: e.target.value })}
-                  placeholder="Notas adicionais sobre medicação..."
-                  style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const, marginTop: 8 }}
-                />
-              </div>
-
-              {/* Cuidados de Higiene */}
-              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
-                  🧼 Cuidados de Higiene
-                </label>
-                <textarea
-                  rows={3}
-                  value={u.hygieneNotes || ""}
-                  onChange={(e) => updateUtente(u.id, { hygieneNotes: e.target.value })}
-                  placeholder="Rotina de higiene, banho assistido, cuidados especiais..."
-                  style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }}
-                />
-              </div>
-
-              {/* Alimentação */}
-              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
-                  🍽️ Alimentação
-                </label>
-                <textarea
-                  rows={3}
-                  value={u.feedingNotes || ""}
-                  onChange={(e) => updateUtente(u.id, { feedingNotes: e.target.value })}
-                  placeholder="Restrições alimentares, alergias, dieta especial, apetite..."
-                  style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }}
-                />
-              </div>
-
-              {/* Outros */}
-              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
-                  📌 Outros
-                </label>
-                <textarea
-                  rows={3}
-                  value={u.otherNotes || ""}
-                  onChange={(e) => updateUtente(u.id, { otherNotes: e.target.value })}
-                  placeholder="Outras informações relevantes..."
-                  style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }}
-                />
-              </div>
-
-              {/* Documentos */}
-              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "#6B6358", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>Documentos</label>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {/* Câmara — relatório médico */}
-                    <button
-                      style={{ display: "inline-flex", alignItems: "center", gap: 4, background: importingMedical ? "#A39B8E" : "#2A241C", color: "#F5B944", border: "none", borderRadius: 7, padding: "5px 8px", fontSize: 11, fontWeight: 600, cursor: importingMedical ? "default" : "pointer", fontFamily: "'Inter', sans-serif" }}
-                      onClick={() => !importingMedical && handleImportMedicalReport(true)}
-                      title="Fotografar relatório médico"
-                    >
-                      {importingMedical ? "⏳" : "📷"}
-                    </button>
-                    {/* Galeria */}
-                    <button
-                      style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 7, padding: "5px 8px", fontSize: 11, fontWeight: 600, cursor: importingMedical ? "default" : "pointer", fontFamily: "'Inter', sans-serif" }}
-                      onClick={() => !importingMedical && handleImportMedicalReport(false)}
-                      title="Importar de galeria ou PDF"
-                    >
-                      🖼️
-                    </button>
-                    {/* Adicionar ficheiro normal */}
-                    <button
-                      style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#F7F5F0", border: "1px solid #E4DED3", borderRadius: 7, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#2A241C", fontFamily: "'Inter', sans-serif" }}
-                      onClick={() => {
-                      const input = document.createElement("input");
-                      input.type = "file";
-                      input.accept = ".pdf,.jpg,.jpeg,.png,.doc,.docx";
-                      input.multiple = true;
-                      input.onchange = (e: Event) => {
-                        Array.from((e.target as HTMLInputElement).files || []).forEach((file) => {
-                          if (file.size > 5 * 1024 * 1024) { alert(`"${file.name}" é maior que 5MB.`); return; }
-                          const reader = new FileReader();
-                          reader.onload = (ev) => {
-                            const fileData = ev.target?.result as string;
-                            const newFile = { name: file.name, type: file.type, data: fileData, uploadedAt: new Date().toISOString() };
-                            updateUtente(u.id, { files: [...(u.files || []), newFile] });
-                          };
-                          reader.readAsDataURL(file);
-                        });
-                      };
-                      document.body.appendChild(input); input.click(); document.body.removeChild(input);
-                    }}
-                  >
-                    <IconUpload size={13} /> Ficheiro
-                  </button>
+                ))}
+                <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8, marginBottom: 8 }}>
+                    <input value={newMedName} onChange={(e) => setNewMedName(e.target.value)} placeholder="Medicamento" style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
+                    <input value={newMedDose} onChange={(e) => setNewMedDose(e.target.value)} placeholder="Dose" style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input value={newMedSchedule} onChange={(e) => setNewMedSchedule(e.target.value)} placeholder="Horário (ex: 8h, 13h, 20h)" style={{ flex: 1, border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
+                    <button onClick={() => addMedication(u.id)} disabled={!newMedName.trim()} style={{ background: newMedName.trim() ? "#2A241C" : "#E4DED3", color: newMedName.trim() ? "#F5B944" : "#A39B8E", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: newMedName.trim() ? "pointer" : "default", fontFamily: "'Inter', sans-serif" }}>+ Adicionar</button>
                   </div>
                 </div>
+                <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>Notas adicionais</label>
+                  <textarea rows={3} value={u.medicationNotes || ""} onChange={(e) => updateUtente(u.id, { medicationNotes: e.target.value })} placeholder="Notas sobre medicação..." style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }} />
+                </div>
+              </div>
+            )}
 
-                {/* Resultado da importação médica */}
-                {medicalImportResult && (
-                  <div style={{ background: medicalImportResult.startsWith("✅") ? "#E8F5E9" : "#FFF5F4", border: `1px solid ${medicalImportResult.startsWith("✅") ? "#A5D6A7" : "#F2C4BC"}`, borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 500, color: medicalImportResult.startsWith("✅") ? "#2E7D32" : "#9B3A2F", marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
-                    <span>{medicalImportResult}</span>
-                    <button onClick={() => setMedicalImportResult(null)} style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 14, color: "#A39B8E" }}>✕</button>
+            {/* ── CUIDADOS ── */}
+            {utenteTab === "cuidados" && (
+              <div style={{ maxWidth: 600, margin: "0 auto", display: "flex", flexDirection: "column" as const, gap: 14 }}>
+                {[
+                  { key: "hygieneNotes", label: "🧼 Cuidados de Higiene", placeholder: "Rotina de higiene, banho assistido, cuidados especiais..." },
+                  { key: "feedingNotes", label: "🍽️ Alimentação", placeholder: "Restrições alimentares, alergias, dieta especial, apetite..." },
+                  { key: "otherNotes", label: "📌 Outros", placeholder: "Outras informações relevantes..." },
+                ].map(({ key, label, placeholder }) => (
+                  <div key={key} style={{ background: "#FFFFFF", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
+                    <textarea rows={4} value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
+                      style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }} />
                   </div>
-                )}
+                ))}
+              </div>
+            )}
 
-                {(u.files || []).length === 0 ? (
-                  <div style={{ background: "#F7F5F0", borderRadius: 8, padding: "12px", fontSize: 13, color: "#A39B8E", textAlign: "center" as const }}>
-                    Nenhum documento ainda.<br /><span style={{ fontSize: 11 }}>PDF, imagens, Word (máx. 5MB)</span>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
-                    {(u.files || []).map((file, idx) => (
-                      <div key={idx} style={{ display: "flex", alignItems: "center", gap: 10, background: "#F7F5F0", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 12px" }}>
-                        <span style={{ fontSize: 18 }}>{file.type.startsWith("image/") ? "🖼️" : file.type === "application/pdf" ? "📄" : "📎"}</span>
-                        <div style={{ flex: 1, overflow: "hidden" }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{file.name}</div>
-                          <div style={{ fontSize: 11, color: "#A39B8E" }}>{new Date(file.uploadedAt).toLocaleDateString("pt-PT")}</div>
-                        </div>
-                        <button style={{ border: "none", background: "#FFFFFF", borderRadius: 6, padding: "5px 8px", cursor: "pointer", color: "#5B8DBE" }}
-                          onClick={() => { const a = document.createElement("a"); a.href = file.data; a.download = file.name; a.click(); }}>
-                          <IconDownload size={14} />
-                        </button>
-                        <button style={{ border: "none", background: "#FFFFFF", borderRadius: 6, padding: "5px 8px", cursor: "pointer", color: "#C2554A" }}
-                          onClick={() => { if (!window.confirm(`Remover "${file.name}"?`)) return; updateUtente(u.id, { files: (u.files || []).filter((_, i) => i !== idx) }); }}>
-                          <IconX size={14} />
-                        </button>
-                      </div>
-                    ))}
+            {/* ── PIC ── */}
+            {utenteTab === "pic" && (
+              <div style={{ maxWidth: 500, margin: "0 auto", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", paddingTop: 40, gap: 16, textAlign: "center" as const }}>
+                <div style={{ fontSize: 56 }}>📋</div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, color: "#2A241C" }}>Plano Individual de Cuidados</div>
+                <div style={{ fontSize: 14, color: "#6B6358", lineHeight: 1.6, maxWidth: 360 }}>
+                  Gera o PIC com os dados já preenchidos automaticamente. A IA completa os campos com base na informação disponível na ficha do utente.
+                </div>
+                <button onClick={() => handleGeneratePIC(u)} style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", marginTop: 8 }}>
+                  ✨ Gerar PIC com IA
+                </button>
+                {u.picData && Object.keys(u.picData).length > 0 && (
+                  <div style={{ fontSize: 12, color: "#3B6D11", background: "#E8F0E8", borderRadius: 8, padding: "8px 16px" }}>
+                    ✅ Tem dados guardados do último PIC
                   </div>
                 )}
               </div>
-            </div>
+            )}
 
-            {/* Footer */}
-            <div style={{ padding: "12px 24px", borderTop: "1px solid #EFEAE2", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-              <button
-                onClick={() => handleGetFamilyLink(u)}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
-                title="Gerar/copiar link de acesso para a família"
-              >
-                🔗 Link Família
-              </button>
-              <button
-                onClick={() => handleGeneratePIC(u)}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#E8F0E8", color: "#3B6D11", border: "1px solid #A8C8A0", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
-                title="Gerar Plano Individual de Cuidados em PDF"
-              >
-                📋 Gerar PIC
-              </button>
-              <button style={{ background: "#2A241C", color: "#FBF9F5", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }} onClick={() => setOpenUtente(null)}>Fechar</button>
-            </div>
           </div>
-        </>
+        </div>
       ); })()}
 
       {/* Modal de dados do Cartão de Cidadão */}
@@ -4719,7 +4557,7 @@ export default function App() {
           })()}
 
           {/* Marca de água 4Trevo — canto inferior direito */}
-          <div style={{ position: "absolute" as const, bottom: 16, right: 20, display: "flex", alignItems: "center", gap: 2, opacity: 0.3, pointerEvents: "none" as const, zIndex: 0 }}>
+          <div style={{ position: "absolute" as const, bottom: 16, right: 20, display: "flex", alignItems: "center", gap: 0, opacity: 0.3, pointerEvents: "none" as const, zIndex: 0 }}>
             <svg width="36" height="40" viewBox="0 0 300 320" xmlns="http://www.w3.org/2000/svg">
               <g transform="translate(150,160) rotate(60)">
                 <path d="M0,-4 C-4,-12 -18,-14 -30,-28 C-44,-44 -42,-68 -22,-76 C-4,-82 14,-72 18,-54 C22,-38 12,-18 0,-4Z" fill="none" stroke="white" strokeWidth="4.5" strokeLinejoin="round"/>
