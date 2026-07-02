@@ -2241,7 +2241,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                                 <button onClick={() => { if (editable || requestUnlock(u.id, idx)) { setEditingLogIdx(idx); setEditingLogText(log.text); } }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}>✏️</button>
                                 <button onClick={() => printDailyLog(u, log)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}>🖨️</button>
                                 <button onClick={() => {
-                                  const input = document.createElement("input"); input.type = "file"; input.accept = "image/*,application/pdf";
+                                  const input = document.createElement("input"); input.type = "file";
                                   input.onchange = async (ev: Event) => {
                                     const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
                                     const url = await uploadUtenteDoc(u.id + "_logs", file);
