@@ -4862,7 +4862,7 @@ export default function App() {
           color: fg,
           outline,
           outlineOffset: outline ? "-2px" : undefined,
-          borderRight: isToday && !isSelected ? "1px solid #2A241C" : "1px solid #EFEAE2",
+          borderRight: isToday && !isSelected ? "1px solid #8A8378" : "1px solid #EFEAE2",
         }}
         title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : def ? def.label : "Sem turno — clique para atribuir"}
       >
@@ -5054,7 +5054,7 @@ export default function App() {
       const bg = isSelected
         ? "#B5483D"
         : isToday
-        ? "#2A241C"
+        ? "#6B6358"
         : isWeekend
         ? "#F4EFE6"
         : "#FBF9F5";
