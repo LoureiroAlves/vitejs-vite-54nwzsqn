@@ -1887,7 +1887,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", flexDirection: "column" as const, gap: 12 }}>
 
                 {/* Leitura do CC com IA — desactivado temporariamente */}
-                {false && (
+                <div style={{ display: "none" }}>
                 <div style={{ background: "#2A241C", borderRadius: 14, padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#F5B944", marginBottom: 2 }}>✨ Ler Cartão de Cidadão com IA</div>
@@ -2057,7 +2057,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                 <div id="cc-loading" style={{ display: "none", background: "#FFF8E1", borderRadius: 10, padding: "10px 16px", fontSize: 13, color: "#8A6A2E", textAlign: "center" as const }}>
                   ✨ A ler o Cartão de Cidadão com IA...
                 </div>
-                )}
+                </div>
 
                 {/* Dados básicos */}
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
