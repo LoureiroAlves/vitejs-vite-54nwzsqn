@@ -2783,7 +2783,7 @@ function FamilyPage({ code }: { code: string }) {
 
         {/* Registo do dia — calendário interativo (mostra sempre, mesmo sem registos) */}
         {(() => {
-          const logsByDate: Record<string, { date: string; text: string }> = {};
+          const logsByDate: Record<string, { date: string; text: string; photos?: { url: string; uploadedAt: string }[]; attachments?: { name: string; url: string; type: string }[] }> = {};
           (utente.dailyLogs || []).forEach((log) => { logsByDate[log.date] = log; });
           const numDaysF = new Date(year, month + 1, 0).getDate();
           const firstDayOfWeekF = new Date(year, month, 1).getDay();
@@ -3125,7 +3125,7 @@ function QuickSearchPanel({ target, schedule, onClose }: {
                 ))}
                 {(utenteData.dailyLogs?.length ?? 0) > 0 && (() => {
                   // Criar mapa rápido data -> log
-                  const logsByDate: Record<string, { date: string; text: string }> = {};
+                  const logsByDate: Record<string, { date: string; text: string; photos?: { url: string; uploadedAt: string }[]; attachments?: { name: string; url: string; type: string }[] }> = {};
                   utenteData.dailyLogs.forEach((log: any) => { logsByDate[log.date] = log; });
 
                   const numDaysU = new Date(year, month + 1, 0).getDate();
