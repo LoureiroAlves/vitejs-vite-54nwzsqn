@@ -1195,6 +1195,9 @@ interface Utente {
   otherNotes?: string;
   // Plano Individual de Cuidados (campos extra preenchidos manualmente)
   picData?: Record<string, string>;
+  // Anexos por aba
+  attachmentsMed?: { name: string; url: string; type: string }[];
+  attachmentsCuidados?: { name: string; url: string; type: string }[];
 }
 
 function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI: () => void }) {
@@ -2302,6 +2305,33 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                   <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>Notas adicionais</label>
                   <textarea rows={3} value={u.medicationNotes || ""} onChange={(e) => updateUtente(u.id, { medicationNotes: e.target.value })} placeholder="Notas sobre medicação..." style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }} />
                 </div>
+
+                {/* Documentos da aba Medicação */}
+                <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#6B6358", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>📎 Documentos</div>
+                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8, marginBottom: 10 }}>
+                    {(u.attachmentsMed || []).map((att, ai) => (
+                      <div key={ai} style={{ position: "relative" as const }}>
+                        {att.type.startsWith("image/")
+                          ? <a href={att.url} target="_blank" rel="noopener noreferrer"><img src={att.url} alt={att.name} style={{ width: 72, height: 72, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} /></a>
+                          : <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, background: "#F7F5F0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#3A5A70", textDecoration: "none" }}>📄 {att.name}</a>
+                        }
+                        <button onClick={() => updateUtente(u.id, { attachmentsMed: (u.attachmentsMed || []).filter((_, i) => i !== ai) })} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => {
+                    const input = document.createElement("input"); input.type = "file";
+                    input.onchange = async (ev: Event) => {
+                      const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
+                      const url = await uploadUtenteDoc(u.id + "_med", file);
+                      if (url) updateUtente(u.id, { attachmentsMed: [...(u.attachmentsMed || []), { name: file.name, url, type: file.type }] });
+                    };
+                    document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                  }} style={{ background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                    + Adicionar documento
+                  </button>
+                </div>
               </div>
             )}
 
@@ -2319,6 +2349,33 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }} />
                   </div>
                 ))}
+
+                {/* Documentos da aba Cuidados */}
+                <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#6B6358", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>📎 Documentos</div>
+                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8, marginBottom: 10 }}>
+                    {(u.attachmentsCuidados || []).map((att, ai) => (
+                      <div key={ai} style={{ position: "relative" as const }}>
+                        {att.type.startsWith("image/")
+                          ? <a href={att.url} target="_blank" rel="noopener noreferrer"><img src={att.url} alt={att.name} style={{ width: 72, height: 72, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} /></a>
+                          : <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, background: "#F7F5F0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#3A5A70", textDecoration: "none" }}>📄 {att.name}</a>
+                        }
+                        <button onClick={() => updateUtente(u.id, { attachmentsCuidados: (u.attachmentsCuidados || []).filter((_, i) => i !== ai) })} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => {
+                    const input = document.createElement("input"); input.type = "file";
+                    input.onchange = async (ev: Event) => {
+                      const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
+                      const url = await uploadUtenteDoc(u.id + "_cuidados", file);
+                      if (url) updateUtente(u.id, { attachmentsCuidados: [...(u.attachmentsCuidados || []), { name: file.name, url, type: file.type }] });
+                    };
+                    document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                  }} style={{ background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                    + Adicionar documento
+                  </button>
+                </div>
               </div>
             )}
 
