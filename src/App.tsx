@@ -1183,7 +1183,7 @@ interface Utente {
   notes?: string;
   photo?: string;
   familyCode?: string;
-  dailyLogs?: { date: string; text: string; author?: string; attachments?: { name: string; url: string; type: string }[] }[];
+  dailyLogs?: { date: string; text: string; author?: string; attachments?: { name: string; url: string; type: string }[]; photos?: { url: string; uploadedAt: string }[] }[];
   files?: { name: string; type: string; data: string; url?: string; uploadedAt: string }[];
   // Dados do Cartão de Cidadão
   ccNumber?: string;
@@ -1845,7 +1845,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
           {/* Header */}
           <div style={{ background: "#2A241C", padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, flexShrink: 0, position: "relative" as const }}>
             <div
-              style={{ width: 52, height: 52, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", flexShrink: 0, overflow: "hidden", cursor: "pointer" }}
+              style={{ width: 52, height: 52, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", flexShrink: 0, overflow: "hidden", cursor: "pointer", position: "relative" as const }}
               onClick={() => {
                 const input = document.createElement("input");
                 input.type = "file"; input.accept = "image/*";
@@ -1878,11 +1878,20 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               }}
               title="Clique para alterar a foto"
             >
-              {u.photo ? <img src={u.photo} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : u.name.slice(0, 2).toUpperCase()}
-            </div>
-            {u.photo && (
-              <button onClick={() => updateUtente(u.id, { photo: "" })} style={{ position: "absolute" as const, top: 10, left: 58, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }} title="Remover foto">✕</button>
-            )}
+              {u.photo
+                ? <>
+                    <img src={u.photo} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <div onClick={(e) => { e.stopPropagation(); updateUtente(u.id, { photo: "" }); }}
+                      style={{ position: "absolute" as const, inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, borderRadius: "50%" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = "0")}
+                      title="Remover foto"
+                    >
+                      <span style={{ color: "white", fontSize: 18 }}>🗑️</span>
+                    </div>
+                  </>
+                : u.name.slice(0, 2).toUpperCase()
+              }
             <div style={{ flex: 1 }}>
               <input
                 value={u.name}
@@ -2315,7 +2324,72 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                           ? <textarea rows={3} value={editingLogText} onChange={(e) => setEditingLogText(e.target.value)} autoFocus style={{ width: "100%", border: "1px solid #B8CCE0", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", resize: "vertical" as const, boxSizing: "border-box" as const }} />
                           : <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.6 }}>{log.text}</div>
                         }
-                        {/* Anexos do registo */}
+                        {/* Fotos do dia */}
+                        {(log.photos || []).length > 0 && (
+                          <div style={{ marginTop: 10 }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>📷 Fotos</div>
+                            <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+                              {log.photos!.map((photo, pi) => (
+                                <div key={pi} style={{ position: "relative" as const }}>
+                                  <a href={photo.url} target="_blank" rel="noopener noreferrer">
+                                    <img src={photo.url} alt="" style={{ width: 80, height: 80, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} />
+                                  </a>
+                                  <button onClick={() => {
+                                    setUtentes((prev) => prev.map((uu) => {
+                                      if (uu.id !== u.id) return uu;
+                                      const logs = [...(uu.dailyLogs || [])];
+                                      logs[idx] = { ...logs[idx], photos: (logs[idx].photos || []).filter((_, i) => i !== pi) };
+                                      const updated = { ...uu, dailyLogs: logs };
+                                      if (openUtente?.id === u.id) setOpenUtente(updated);
+                                      return updated;
+                                    }));
+                                  }} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                                </div>
+                              ))}
+                              {/* Botão adicionar foto */}
+                              <button onClick={async () => {
+                                const input = document.createElement("input"); input.type = "file"; input.accept = "image/*";
+                                input.onchange = async (ev: Event) => {
+                                  const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
+                                  const url = await uploadUtenteDoc(u.id + "_log_" + log.date.replace(/\//g, "-"), file);
+                                  if (!url) { alert("❌ Erro ao fazer upload da foto."); return; }
+                                  setUtentes((prev) => prev.map((uu) => {
+                                    if (uu.id !== u.id) return uu;
+                                    const logs = [...(uu.dailyLogs || [])];
+                                    logs[idx] = { ...logs[idx], photos: [...(logs[idx].photos || []), { url, uploadedAt: new Date().toISOString() }] };
+                                    const updated = { ...uu, dailyLogs: logs };
+                                    if (openUtente?.id === u.id) setOpenUtente(updated);
+                                    return updated;
+                                  }));
+                                };
+                                document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                              }} style={{ width: 80, height: 80, borderRadius: 8, border: "2px dashed #B8CCE0", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, color: "#3A5A70" }}>+</button>
+                            </div>
+                          </div>
+                        )}
+                        {/* Se não há fotos, mostrar só botão de adicionar */}
+                        {(log.photos || []).length === 0 && (
+                          <button onClick={async () => {
+                            const input = document.createElement("input"); input.type = "file"; input.accept = "image/*";
+                            input.onchange = async (ev: Event) => {
+                              const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
+                              const url = await uploadUtenteDoc(u.id + "_log_" + log.date.replace(/\//g, "-"), file);
+                              if (!url) { alert("❌ Erro ao fazer upload."); return; }
+                              setUtentes((prev) => prev.map((uu) => {
+                                if (uu.id !== u.id) return uu;
+                                const logs = [...(uu.dailyLogs || [])];
+                                logs[idx] = { ...logs[idx], photos: [{ url, uploadedAt: new Date().toISOString() }] };
+                                const updated = { ...uu, dailyLogs: logs };
+                                if (openUtente?.id === u.id) setOpenUtente(updated);
+                                return updated;
+                              }));
+                            };
+                            document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                          }} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", color: "#3A5A70", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>
+                            📷 Adicionar fotos do dia
+                          </button>
+                        )}
+                        {/* Documentos/anexos */}
                         {(log.attachments || []).length > 0 && (
                           <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
                             {log.attachments!.map((att, ai) => (
@@ -2803,9 +2877,26 @@ function FamilyPage({ code }: { code: string }) {
                       </button>
                     </div>
                     <div style={{ padding: 20 }}>
-                      <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.7, background: "#F7F5F0", borderRadius: 12, padding: 16 }}>
-                        {selectedLog.text}
-                      </div>
+                      {selectedLog.text && (
+                        <div style={{ marginBottom: 16 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 8 }}>📝 Registo</div>
+                          <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.7, background: "#F7F5F0", borderRadius: 12, padding: 16 }}>
+                            {selectedLog.text}
+                          </div>
+                        </div>
+                      )}
+                      {(selectedLog.photos || []).length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 8 }}>📷 Fotos</div>
+                          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                            {selectedLog.photos!.map((photo, pi) => (
+                              <a key={pi} href={photo.url} target="_blank" rel="noopener noreferrer">
+                                <img src={photo.url} alt="" style={{ width: 90, height: 90, objectFit: "cover" as const, borderRadius: 10, border: "1px solid #E4DED3" }} />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </>
@@ -3137,9 +3228,23 @@ function QuickSearchPanel({ target, schedule, onClose }: {
                               </button>
                             </div>
                             <div style={{ padding: 24 }}>
-                              <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.7, background: "#F7F5F0", borderRadius: 12, padding: 18, marginBottom: 20 }}>
-                                {selectedLog.text}
-                              </div>
+                              {selectedLog.text && (
+                                <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.7, background: "#F7F5F0", borderRadius: 12, padding: 18, marginBottom: 16 }}>
+                                  {selectedLog.text}
+                                </div>
+                              )}
+                              {(selectedLog.photos || []).length > 0 && (
+                                <div style={{ marginBottom: 16 }}>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 8 }}>📷 Fotos</div>
+                                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                                    {selectedLog.photos!.map((photo: any, pi: number) => (
+                                      <a key={pi} href={photo.url} target="_blank" rel="noopener noreferrer">
+                                        <img src={photo.url} alt="" style={{ width: 90, height: 90, objectFit: "cover" as const, borderRadius: 10, border: "1px solid #E4DED3" }} />
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                               <div style={{ display: "flex", gap: 10 }}>
                                 <button onClick={() => printLog(selectedLog)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
                                   🖨️ Imprimir
