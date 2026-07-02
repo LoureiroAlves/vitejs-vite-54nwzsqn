@@ -2325,50 +2325,31 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                           : <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.6 }}>{log.text}</div>
                         }
                         {/* Fotos do dia */}
-                        {(log.photos || []).length > 0 && (
-                          <div style={{ marginTop: 10 }}>
-                            <div style={{ fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>📷 Fotos</div>
-                            <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
-                              {log.photos!.map((photo, pi) => (
-                                <div key={pi} style={{ position: "relative" as const }}>
-                                  <a href={photo.url} target="_blank" rel="noopener noreferrer">
-                                    <img src={photo.url} alt="" style={{ width: 80, height: 80, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} />
-                                  </a>
-                                  <button onClick={() => {
-                                    setUtentes((prev) => prev.map((uu) => {
-                                      if (uu.id !== u.id) return uu;
-                                      const logs = [...(uu.dailyLogs || [])];
-                                      logs[idx] = { ...logs[idx], photos: (logs[idx].photos || []).filter((_, i) => i !== pi) };
-                                      const updated = { ...uu, dailyLogs: logs };
-                                      if (openUtente?.id === u.id) setOpenUtente(updated);
-                                      return updated;
-                                    }));
-                                  }} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-                                </div>
-                              ))}
-                              {/* Botão adicionar foto */}
-                              <button onClick={async () => {
-                                const input = document.createElement("input"); input.type = "file"; input.accept = "image/*";
-                                input.onchange = async (ev: Event) => {
-                                  const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
-                                  const url = await uploadUtenteDoc(u.id + "_log_" + log.date.replace(/\//g, "-"), file);
-                                  if (!url) { alert("❌ Erro ao fazer upload da foto."); return; }
-                                  setUtentes((prev) => prev.map((uu) => {
-                                    if (uu.id !== u.id) return uu;
-                                    const logs = [...(uu.dailyLogs || [])];
-                                    logs[idx] = { ...logs[idx], photos: [...(logs[idx].photos || []), { url, uploadedAt: new Date().toISOString() }] };
-                                    const updated = { ...uu, dailyLogs: logs };
-                                    if (openUtente?.id === u.id) setOpenUtente(updated);
-                                    return updated;
-                                  }));
-                                };
-                                document.body.appendChild(input); input.click(); document.body.removeChild(input);
-                              }} style={{ width: 80, height: 80, borderRadius: 8, border: "2px dashed #B8CCE0", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, color: "#3A5A70" }}>+</button>
-                            </div>
-                          </div>
-                        )}
-                        {/* Se não há fotos, mostrar só botão de adicionar */}
-                        {(log.photos || []).length === 0 && (
+                        <div style={{ marginTop: 8 }}>
+                          {(log.photos || []).length > 0 && (
+                            <>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>📷 Fotos</div>
+                              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+                                {log.photos!.map((photo, pi) => (
+                                  <div key={pi} style={{ position: "relative" as const }}>
+                                    <a href={photo.url} target="_blank" rel="noopener noreferrer">
+                                      <img src={photo.url} alt="" style={{ width: 80, height: 80, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} />
+                                    </a>
+                                    <button onClick={() => {
+                                      setUtentes((prev) => prev.map((uu) => {
+                                        if (uu.id !== u.id) return uu;
+                                        const logs = [...(uu.dailyLogs || [])];
+                                        logs[idx] = { ...logs[idx], photos: (logs[idx].photos || []).filter((_, i) => i !== pi) };
+                                        const updated = { ...uu, dailyLogs: logs };
+                                        if (openUtente?.id === u.id) setOpenUtente(updated);
+                                        return updated;
+                                      }));
+                                    }} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          )}
                           <button onClick={async () => {
                             const input = document.createElement("input"); input.type = "file"; input.accept = "image/*";
                             input.onchange = async (ev: Event) => {
@@ -2378,17 +2359,17 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                               setUtentes((prev) => prev.map((uu) => {
                                 if (uu.id !== u.id) return uu;
                                 const logs = [...(uu.dailyLogs || [])];
-                                logs[idx] = { ...logs[idx], photos: [{ url, uploadedAt: new Date().toISOString() }] };
+                                logs[idx] = { ...logs[idx], photos: [...(logs[idx].photos || []), { url, uploadedAt: new Date().toISOString() }] };
                                 const updated = { ...uu, dailyLogs: logs };
                                 if (openUtente?.id === u.id) setOpenUtente(updated);
                                 return updated;
                               }));
                             };
                             document.body.appendChild(input); input.click(); document.body.removeChild(input);
-                          }} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", color: "#3A5A70", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>
-                            📷 Adicionar fotos do dia
+                          }} style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", color: "#3A5A70", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>
+                            📷 {(log.photos || []).length > 0 ? "+ Adicionar foto" : "Adicionar fotos do dia"}
                           </button>
-                        )}
+                        </div>
                         {/* Documentos/anexos */}
                         {(log.attachments || []).length > 0 && (
                           <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
@@ -6994,3 +6975,4 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
+                    
