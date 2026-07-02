@@ -1334,36 +1334,9 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
     const dataRevisao = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-PT");
     const meds = (u.medications || []).map((m) => `${m.name}${m.dose ? " — " + m.dose : ""}${m.schedule ? " (" + m.schedule + ")" : ""}`).join("\n") || u.medicationNotes || "";
 
-    // Loading
-    const loadingAlert = document.createElement("div");
-    loadingAlert.id = "pic-loading";
-    loadingAlert.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#2A241C;color:#F5B944;padding:20px 32px;border-radius:16px;font-family:\'Inter\',sans-serif;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.4);text-align:center";
-    loadingAlert.innerHTML = "✨ A gerar PIC com IA...<br><span style=\'font-size:11px;color:#C9C2B5;font-weight:400\'>A preparar o documento</span>";
-    document.body.appendChild(loadingAlert);
-
-    // Chamar Claude para gerar resumos
-    let aiTexts: Record<string, string> = {};
-    try {
-      const response = await fetch("/api/claude", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: `És um assistente de saúde para um lar de idosos português (ERPI). Com base nos dados do utente, gera textos profissionais em português europeu para o Plano Individual de Cuidados.\n\nDADOS:\n${JSON.stringify({ nome: u.name, dataNasc: u.birthDate, quarto: u.room, dataAdmissao: u.entryDate, medicacao: meds, higiene: u.hygieneNotes, alimentacao: u.feedingNotes, outros: u.otherNotes, registoRecente: u.dailyLogs?.[0]?.text })}\n\nResponde APENAS em JSON válido sem markdown:\n{"motivo":"2-3 frases sobre motivo de admissão","habitos":"2-3 frases sobre hábitos de vida","obj_higiene":"objetivo higiene","act_higiene":"atividade higiene","obj_saude":"objetivo saúde","act_saude":"atividade saúde","obj_alimentacao":"objetivo alimentação","act_alimentacao":"atividade alimentação"}` }]
-        })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const text = data.content?.map((c: any) => c.text || "").join("") || "";
-        try { aiTexts = JSON.parse(text.replace(/\`\`\`json|\`\`\`/g, "").trim()); } catch {}
-      }
-    } catch (e) { console.warn("IA não disponível:", e); }
-
-    document.getElementById("pic-loading")?.remove();
-
     // Carregar dados guardados anteriormente do PIC
     const picData = u.picData || {};
+    const aiTexts: Record<string, string> = {}; // IA desactivada temporariamente
 
     const campo = (label: string, valor: string, linhas = 1, key = "") => {
       const minH = linhas === 1 ? "20px" : `${linhas * 20}px`;
@@ -1913,7 +1886,8 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
             {utenteTab === "geral" && (
               <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", flexDirection: "column" as const, gap: 12 }}>
 
-                {/* Leitura do CC com IA */}
+                {/* Leitura do CC com IA — desactivado temporariamente */}
+                {false && (
                 <div style={{ background: "#2A241C", borderRadius: 14, padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#F5B944", marginBottom: 2 }}>✨ Ler Cartão de Cidadão com IA</div>
@@ -2083,6 +2057,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                 <div id="cc-loading" style={{ display: "none", background: "#FFF8E1", borderRadius: 10, padding: "10px 16px", fontSize: 13, color: "#8A6A2E", textAlign: "center" as const }}>
                   ✨ A ler o Cartão de Cidadão com IA...
                 </div>
+                )}
 
                 {/* Dados básicos */}
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
@@ -2353,10 +2328,10 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                 <div style={{ fontSize: 56 }}>📋</div>
                 <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, color: "#2A241C" }}>Plano Individual de Cuidados</div>
                 <div style={{ fontSize: 14, color: "#6B6358", lineHeight: 1.6, maxWidth: 360 }}>
-                  Gera o PIC com os dados já preenchidos automaticamente. A IA completa os campos com base na informação disponível na ficha do utente.
+                  Gera o PIC com todos os dados já preenchidos automaticamente a partir da informação disponível na ficha do utente.
                 </div>
                 <button onClick={() => handleGeneratePIC(u)} style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", marginTop: 8 }}>
-                  ✨ Gerar PIC com IA
+                  📋 Gerar PIC
                 </button>
                 {u.picData && Object.keys(u.picData).length > 0 && (
                   <div style={{ fontSize: 12, color: "#3B6D11", background: "#E8F0E8", borderRadius: 8, padding: "8px 16px" }}>
