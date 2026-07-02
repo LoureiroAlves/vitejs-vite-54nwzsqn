@@ -2207,7 +2207,19 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     input.onchange = async (ev: Event) => {
                       const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
                       const url = await uploadUtenteDoc(u.id + "_family", file);
-                      if (url) updateUtente(u.id, { filesFamily: [...(u.filesFamily || []), { name: file.name, type: file.type, url, uploadedAt: new Date().toISOString() }] });
+                      if (url) {
+                        updateUtente(u.id, { filesFamily: [...(u.filesFamily || []), { name: file.name, type: file.type, url, uploadedAt: new Date().toISOString() }] });
+                        alert("✅ Documento adicionado para a família!");
+                      } else {
+                        // Fallback: guardar como base64 se o Storage falhar
+                        const reader = new FileReader();
+                        reader.onload = (r) => {
+                          const dataUrl = r.target?.result as string;
+                          updateUtente(u.id, { filesFamily: [...(u.filesFamily || []), { name: file.name, type: file.type, url: dataUrl, uploadedAt: new Date().toISOString() }] });
+                          alert("✅ Documento adicionado para a família! (guardado localmente)");
+                        };
+                        reader.readAsDataURL(file);
+                      }
                     };
                     document.body.appendChild(input); input.click(); document.body.removeChild(input);
                   }} style={{ background: "#E8F0E8", color: "#3B6D11", border: "1px solid #A8C8A0", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
