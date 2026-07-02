@@ -238,19 +238,25 @@ async function saveToSupabase(table: string, data: any): Promise<void> {
 async function uploadUtenteDoc(utenteId: string, file: File): Promise<string | null> {
   try {
     const path = `${utenteId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    const contentType = file.type || (file.name.endsWith(".pdf") ? "application/pdf" : file.name.match(/\.(jpg|jpeg)$/i) ? "image/jpeg" : file.name.endsWith(".png") ? "image/png" : "application/octet-stream");
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/utentes-docs/${path}`, {
       method: "POST",
       headers: {
         "apikey": SUPABASE_KEY,
         "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": file.type || "application/octet-stream",
+        "Content-Type": contentType,
         "x-upsert": "true",
       },
       body: file,
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("Upload falhou:", res.status, err);
+      return null;
+    }
     return `${SUPABASE_URL}/storage/v1/object/public/utentes-docs/${path}`;
   } catch (e) {
+    console.error("uploadUtenteDoc erro:", e);
     return null;
   }
 }
@@ -1843,12 +1849,30 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               onClick={() => {
                 const input = document.createElement("input");
                 input.type = "file"; input.accept = "image/*";
-                input.onchange = (ev: Event) => {
+                input.onchange = async (ev: Event) => {
                   const file = (ev.target as HTMLInputElement).files?.[0];
                   if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = (r) => updateUtente(u.id, { photo: r.target?.result as string });
-                  reader.readAsDataURL(file);
+                  // Tentar upload para Storage primeiro
+                  const url = await uploadUtenteDoc(u.id + "_photo", file);
+                  if (url) {
+                    updateUtente(u.id, { photo: url });
+                  } else {
+                    // Fallback base64 comprimido
+                    const img = new Image();
+                    const objUrl = URL.createObjectURL(file);
+                    img.onload = () => {
+                      const canvas = document.createElement("canvas");
+                      const MAX = 400;
+                      let { width, height } = img;
+                      if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+                      else { width = Math.round(width * MAX / height); height = MAX; }
+                      canvas.width = width; canvas.height = height;
+                      canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+                      URL.revokeObjectURL(objUrl);
+                      updateUtente(u.id, { photo: canvas.toDataURL("image/jpeg", 0.7) });
+                    };
+                    img.src = objUrl;
+                  }
                 };
                 document.body.appendChild(input); input.click(); document.body.removeChild(input);
               }}
