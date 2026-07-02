@@ -4813,8 +4813,6 @@ export default function App() {
       : "#9A9388";
     const outline = isSelected
       ? "2px solid #B5483D"
-      : isToday
-      ? "2px solid #2A241C"
       : undefined;
 
     if (shift === "EX") {
@@ -5842,8 +5840,6 @@ export default function App() {
                   ...styles.coverageCell,
                   background: anyAlert ? "#FFF0EE" : isToday ? "#F0EDE6" : "#FBF9F5",
                   borderBottom: anyAlert ? "2px solid #C2554A" : undefined,
-                  outline: isToday ? "2px solid #2A241C" : undefined,
-                  outlineOffset: isToday ? "-2px" : undefined,
                 }}>
                   <span style={{ color: mAlert ? "#C2554A" : SHIFT_TYPES.M.color, fontWeight: mAlert ? 800 : 700 }}>{c.M}</span>
                   <span style={styles.coverageSep}>/</span>
