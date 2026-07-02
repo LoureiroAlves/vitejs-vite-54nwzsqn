@@ -1198,6 +1198,9 @@ interface Utente {
   // Anexos por aba
   attachmentsMed?: { name: string; url: string; type: string }[];
   attachmentsCuidados?: { name: string; url: string; type: string }[];
+  attachmentsRegisto?: { name: string; url: string; type: string }[];
+  // Documentos para a família (visíveis no portal familiar)
+  filesFamily?: { name: string; type: string; url: string; uploadedAt: string }[];
 }
 
 function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI: () => void }) {
@@ -2125,7 +2128,8 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
                 {/* Documentos */}
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>📎 Documentos</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>📎 Documentos — Instituição</div>
+                  <div style={{ fontSize: 11, color: "#A39B8E", marginBottom: 8 }}>Apenas visíveis internamente</div>
                   {(u.files || []).map((f, fi) => (
                     <div key={fi} style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F5F0", borderRadius: 8, padding: "8px 12px", marginBottom: 6 }}>
                       <span style={{ flex: 1, fontSize: 13, color: "#2A241C" }}>📎 {f.name}</span>
@@ -2180,6 +2184,34 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     document.body.appendChild(input); input.click(); document.body.removeChild(input);
                   }} style={{ background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
                     + Adicionar documento
+                  </button>
+                </div>
+
+                {/* Documentos para a Família */}
+                <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 4 }}>👨‍👩‍👧 Documentos — Família</div>
+                  <div style={{ fontSize: 11, color: "#A39B8E", marginBottom: 8 }}>Visíveis no portal da família</div>
+                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8, marginBottom: 10 }}>
+                    {(u.filesFamily || []).map((f, fi) => (
+                      <div key={fi} style={{ position: "relative" as const }}>
+                        {f.type.startsWith("image/")
+                          ? <a href={f.url} target="_blank" rel="noopener noreferrer"><img src={f.url} alt={f.name} style={{ width: 72, height: 72, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} /></a>
+                          : <a href={f.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, background: "#F7F5F0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#3A5A70", textDecoration: "none" }}>📄 {f.name}</a>
+                        }
+                        <button onClick={() => updateUtente(u.id, { filesFamily: (u.filesFamily || []).filter((_, i) => i !== fi) })} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => {
+                    const input = document.createElement("input"); input.type = "file";
+                    input.onchange = async (ev: Event) => {
+                      const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
+                      const url = await uploadUtenteDoc(u.id + "_family", file);
+                      if (url) updateUtente(u.id, { filesFamily: [...(u.filesFamily || []), { name: file.name, type: file.type, url, uploadedAt: new Date().toISOString() }] });
+                    };
+                    document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                  }} style={{ background: "#E8F0E8", color: "#3B6D11", border: "1px solid #A8C8A0", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                    + Adicionar documento para família
                   </button>
                 </div>
               </div>
@@ -2275,10 +2307,35 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     );
                   })}
                 </div>
+
+                {/* Documentos da aba Registo */}
+                <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#6B6358", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>📎 Documentos do Registo</div>
+                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8, marginBottom: 10 }}>
+                    {(u.attachmentsRegisto || []).map((att, ai) => (
+                      <div key={ai} style={{ position: "relative" as const }}>
+                        {att.type.startsWith("image/")
+                          ? <a href={att.url} target="_blank" rel="noopener noreferrer"><img src={att.url} alt={att.name} style={{ width: 72, height: 72, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} /></a>
+                          : <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, background: "#F7F5F0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#3A5A70", textDecoration: "none" }}>📄 {att.name}</a>
+                        }
+                        <button onClick={() => updateUtente(u.id, { attachmentsRegisto: (u.attachmentsRegisto || []).filter((_, i) => i !== ai) })} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => {
+                    const input = document.createElement("input"); input.type = "file";
+                    input.onchange = async (ev: Event) => {
+                      const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
+                      const url = await uploadUtenteDoc(u.id + "_registo", file);
+                      if (url) updateUtente(u.id, { attachmentsRegisto: [...(u.attachmentsRegisto || []), { name: file.name, url, type: file.type }] });
+                    };
+                    document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                  }} style={{ background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                    + Adicionar documento
+                  </button>
+                </div>
               </div>
             )}
-
-            {/* ── MEDICAÇÃO ── */}
             {utenteTab === "medicacao" && (
               <div style={{ maxWidth: 600, margin: "0 auto", display: "flex", flexDirection: "column" as const, gap: 12 }}>
                 {(u.medications || []).map((med) => (
@@ -2719,14 +2776,14 @@ function FamilyPage({ code }: { code: string }) {
         })()}
 
         {/* Documentos */}
-        {(utente.files?.length ?? 0) > 0 && (
+        {(utente.filesFamily?.length ?? 0) > 0 && (
           <div style={{ background: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 10 }}>Documentos</div>
-            <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
-              {utente.files!.map((f, i) => (
-                <a key={i} href={f.url || f.data} download={f.name} target={f.url ? "_blank" : undefined} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#3A5A70", textDecoration: "none", background: "#F7F5F0", borderRadius: 8, padding: "8px 12px" }}>
-                  📎 {f.name}
-                </a>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 10 }}>📎 Documentos</div>
+            <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+              {utente.filesFamily!.map((f, i) => (
+                f.type.startsWith("image/")
+                  ? <a key={i} href={f.url} target="_blank" rel="noopener noreferrer"><img src={f.url} alt={f.name} style={{ width: 80, height: 80, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} /></a>
+                  : <a key={i} href={f.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#3A5A70", textDecoration: "none", background: "#F7F5F0", borderRadius: 8, padding: "8px 12px" }}>📄 {f.name}</a>
               ))}
             </div>
           </div>
