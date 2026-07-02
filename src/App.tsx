@@ -4862,7 +4862,7 @@ export default function App() {
           color: fg,
           outline,
           outlineOffset: outline ? "-2px" : undefined,
-          borderRight: isToday && !isSelected ? "1px solid #8A8378" : "1px solid #EFEAE2",
+          borderRight: isToday && !isSelected ? "1px solid #C2BAAC" : "1px solid #EFEAE2",
         }}
         title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : def ? def.label : "Sem turno — clique para atribuir"}
       >
