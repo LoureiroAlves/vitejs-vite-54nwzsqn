@@ -1892,6 +1892,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                   </>
                 : u.name.slice(0, 2).toUpperCase()
               }
+            </div>
             <div style={{ flex: 1 }}>
               <input
                 value={u.name}
@@ -6975,4 +6976,3 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
-                    
