@@ -3513,6 +3513,7 @@ export default function App() {
   const [quickSearch, setQuickSearch] = useState("");
   const [quickSearchOpen, setQuickSearchOpen] = useState(false);
   const [quickSearchTarget, setQuickSearchTarget] = useState<{ type: "utente" | "colaborador"; name: string; photo?: string } | null>(null);
+  const [quickSearchHighlight, setQuickSearchHighlight] = useState(-1);
 
   const [employees, setEmployees] = useState<string[]>(() => {
     const stored = loadStoredData();
@@ -5685,8 +5686,30 @@ export default function App() {
               <div style={{ position: "relative" as const, maxWidth: 380, margin: "0 auto" }}>
                 <input
                   value={quickSearch}
-                  onChange={(e) => { setQuickSearch(e.target.value); setQuickSearchOpen(true); }}
+                  onChange={(e) => { setQuickSearch(e.target.value); setQuickSearchOpen(true); setQuickSearchHighlight(-1); }}
                   onFocus={() => setQuickSearchOpen(true)}
+                  onKeyDown={(e) => {
+                    if (!quickSearchOpen || quickSearchResults.length === 0) return;
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setQuickSearchHighlight((prev) => (prev + 1) % quickSearchResults.length);
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setQuickSearchHighlight((prev) => (prev <= 0 ? quickSearchResults.length - 1 : prev - 1));
+                    } else if (e.key === "Enter") {
+                      e.preventDefault();
+                      const chosen = quickSearchResults[quickSearchHighlight] ?? quickSearchResults[0];
+                      if (chosen) {
+                        setQuickSearchTarget(chosen);
+                        setQuickSearchOpen(false);
+                        setQuickSearch("");
+                        setQuickSearchHighlight(-1);
+                      }
+                    } else if (e.key === "Escape") {
+                      setQuickSearchOpen(false);
+                      setQuickSearchHighlight(-1);
+                    }
+                  }}
                   placeholder="🔍 Pesquisar colaborador ou utente..."
                   style={{
                     width: "100%", boxSizing: "border-box" as const,
@@ -5703,17 +5726,17 @@ export default function App() {
                   }}>
                     {quickSearchResults.length === 0 ? (
                       <div style={{ padding: "16px", fontSize: 13, color: "#A39B8E", textAlign: "center" as const }}>Nenhum resultado encontrado</div>
-                    ) : quickSearchResults.map((r) => (
+                    ) : quickSearchResults.map((r, idx) => (
                       <button
                         key={r.type + r.name}
-                        onClick={() => { setQuickSearchTarget(r); setQuickSearchOpen(false); setQuickSearch(""); }}
+                        onClick={() => { setQuickSearchTarget(r); setQuickSearchOpen(false); setQuickSearch(""); setQuickSearchHighlight(-1); }}
                         style={{
                           width: "100%", display: "flex", alignItems: "center", gap: 10,
-                          padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer",
+                          padding: "10px 14px", border: "none", background: idx === quickSearchHighlight ? "#F7F5F0" : "transparent", cursor: "pointer",
                           borderBottom: "1px solid #F0EDE6", textAlign: "left" as const,
                         }}
-                        onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "#F7F5F0"}
-                        onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#F7F5F0"; setQuickSearchHighlight(idx); }}
+                        onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = idx === quickSearchHighlight ? "#F7F5F0" : "transparent"}
                       >
                         <div style={{
                           width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
