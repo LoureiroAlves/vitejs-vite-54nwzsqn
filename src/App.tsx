@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
 const IconPlus = ({ size = 16, ...props }) => (
@@ -3455,6 +3455,8 @@ export default function App() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+  const [clipboardShift, setClipboardShift] = useState<{ shift: string | null; hours?: number } | null>(null);
+  const typeBufferRef = useRef<{ key: string; text: string; timer: any }>({ key: "", text: "", timer: null });
 
   const showTip = (e: React.MouseEvent, text: string) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -3577,14 +3579,90 @@ export default function App() {
     }
   };
 
-  const cycleShift = (employee: string, day: number) => {
-    const current = getShift(employee, day);
-    const idx = current ? SHIFT_ORDER.indexOf(current) : -1;
-    const nextIdx = idx + 1;
-    if (nextIdx >= SHIFT_ORDER.length) {
+  // ---------- Copiar / colar turno individual (Ctrl+C / Ctrl+V numa célula) ----------
+  const copyShiftAt = (employee: string, day: number) => {
+    const shift = getShift(employee, day);
+    const hours = shift === "EX" ? getExtraHours(employee, day) : undefined;
+    setClipboardShift({ shift, hours });
+  };
+
+  const pasteShiftAt = (employee: string, day: number) => {
+    if (!clipboardShift) return;
+    setShift(employee, day, clipboardShift.shift);
+    if (clipboardShift.shift === "EX" && clipboardShift.hours !== undefined) {
+      setExtraHoursValue(employee, day, String(clipboardShift.hours));
+    }
+  };
+
+  // ---------- Escrever a sigla do turno diretamente pelo teclado ----------
+  const resetTypeBuffer = () => {
+    if (typeBufferRef.current.timer) clearTimeout(typeBufferRef.current.timer);
+    typeBufferRef.current = { key: "", text: "", timer: null };
+  };
+
+  const handleCellKeyDown = (e: React.KeyboardEvent, employee: string, day: number) => {
+    if (selectMode) return;
+
+    // Copiar / colar
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        copyShiftAt(employee, day);
+      } else if (e.key.toLowerCase() === "v") {
+        e.preventDefault();
+        pasteShiftAt(employee, day);
+      }
+      return;
+    }
+
+    // Apagar turno
+    if (e.key === "Backspace" || e.key === "Delete") {
+      e.preventDefault();
       setShift(employee, day, null);
-    } else {
-      setShift(employee, day, SHIFT_ORDER[nextIdx]);
+      resetTypeBuffer();
+      return;
+    }
+
+    if (e.key === "Escape") {
+      resetTypeBuffer();
+      return;
+    }
+
+    // Escrever a sigla (ex: M, T, N, EX, FO, FC, FE, FR, BM, MT, FA)
+    if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+      e.preventDefault();
+      const letter = e.key.toUpperCase();
+      const cellKey = `${employee}-${day}`;
+      const prevText = typeBufferRef.current.key === cellKey ? typeBufferRef.current.text : "";
+
+      let newText = prevText + letter;
+      let matches = SHIFT_ORDER.filter((c) => c.startsWith(newText));
+      if (matches.length === 0) {
+        newText = letter;
+        matches = SHIFT_ORDER.filter((c) => c.startsWith(newText));
+      }
+      if (matches.length === 0) return; // letra inválida, ignora
+
+      if (matches.length === 1 && matches[0] === newText) {
+        // correspondência única e exata — atribui já
+        setShift(employee, day, newText);
+        resetTypeBuffer();
+        return;
+      }
+
+      // ambíguo (ex: "M" pode ser M ou MT) — espera um pouco por mais teclas
+      if (typeBufferRef.current.timer) clearTimeout(typeBufferRef.current.timer);
+      typeBufferRef.current.key = cellKey;
+      typeBufferRef.current.text = newText;
+      typeBufferRef.current.timer = setTimeout(() => {
+        const finalMatches = SHIFT_ORDER.filter((c) => c.startsWith(newText));
+        if (finalMatches.includes(newText)) {
+          setShift(employee, day, newText);
+        } else if (finalMatches.length === 1) {
+          setShift(employee, day, finalMatches[0]);
+        }
+        resetTypeBuffer();
+      }, 650);
     }
   };
 
@@ -4817,18 +4895,22 @@ export default function App() {
 
     if (shift === "EX") {
       return (
-        <div key={d} style={{
-          ...styles.dayCell,
-          ...styles.exCell,
-          background: isSelected ? "#FDDDD9" : def!.color,
-          outline,
-          outlineOffset: outline ? "-2px" : undefined,
-        }}>
+        <div
+          key={d}
+          onKeyDown={(e) => handleCellKeyDown(e, emp, d)}
+          style={{
+            ...styles.dayCell,
+            ...styles.exCell,
+            background: isSelected ? "#FDDDD9" : def!.color,
+            outline,
+            outlineOffset: outline ? "-2px" : undefined,
+          }}
+        >
           <button
             className="cell-btn"
-            onClick={() => selectMode ? toggleDay(d) : cycleShift(emp, d)}
+            onClick={(e) => selectMode ? toggleDay(d) : (e.currentTarget as HTMLElement).focus()}
             style={{ ...styles.exLabel, color: isSelected ? "#7A2E24" : fg }}
-            title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : "Extra — clique para alterar turno"}
+            title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : "Extra — clique e escreva a sigla para mudar (Ctrl+C/V para copiar/colar)"}
           >
             {isSelected ? "✕" : "EX"}
           </button>
@@ -4855,7 +4937,8 @@ export default function App() {
       <button
         key={d}
         className="cell-btn"
-        onClick={() => selectMode ? toggleDay(d) : cycleShift(emp, d)}
+        onClick={(e) => selectMode ? toggleDay(d) : (e.currentTarget as HTMLElement).focus()}
+        onKeyDown={(e) => handleCellKeyDown(e, emp, d)}
         style={{
           ...styles.dayCell,
           background: bg,
@@ -4864,7 +4947,7 @@ export default function App() {
           outlineOffset: outline ? "-2px" : undefined,
           borderRight: "1px solid #EFEAE2",
         }}
-        title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : def ? def.label : "Sem turno — clique para atribuir"}
+        title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : def ? `${def.label} — escreva a sigla para mudar (Ctrl+C/V para copiar/colar)` : "Sem turno — clique e escreva a sigla (ex: M, T, N, EX...)"}
       >
         {isSelected ? "✕" : shift || "—"}
       </button>
@@ -5098,6 +5181,7 @@ export default function App() {
         .cell-btn { transition: transform 0.08s ease; }
         .cell-btn:hover { transform: scale(1.05); }
         .cell-btn:active { transform: scale(0.97); }
+        .cell-btn:focus { outline: 2px solid #5B8DBE; outline-offset: -2px; z-index: 2; position: relative; }
         .scroll-x::-webkit-scrollbar { height: 6px; }
         .scroll-x::-webkit-scrollbar-thumb { background: #D9D4CC; border-radius: 3px; }
         .icon-btn:hover { background: #EFEAE2; }
@@ -5700,7 +5784,7 @@ export default function App() {
             </span>
           </div>
         ))}
-        <div style={styles.legendHint}>Clique numa célula para alternar o turno</div>
+        <div style={styles.legendHint}>Clique numa célula e escreva a sigla (M, T, N, EX...) · Ctrl+C / Ctrl+V para copiar e colar</div>
       </div>
 
       {/* Barra de seleção de dias */}
@@ -6972,4 +7056,3 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
-                                         
