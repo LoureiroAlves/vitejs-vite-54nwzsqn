@@ -1565,18 +1565,20 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       setUploadingEmenta(true);
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const dataUrl = ev.target?.result as string;
+      uploadUtenteDoc("ementa-semana", file).then((url) => {
+        if (!url) {
+          alert("❌ Erro ao guardar a ementa. Tente novamente.");
+          setUploadingEmenta(false);
+          return;
+        }
         saveToSupabase("ementa_data", {
-          ementa: { data: dataUrl, type: file.type, uploadedAt: new Date().toISOString() },
+          ementa: { url, type: file.type, uploadedAt: new Date().toISOString() },
         }).then(() => {
           alert("✅ Ementa da semana atualizada! Já está visível para todas as famílias.");
         }).catch(() => {
           alert("❌ Erro ao guardar a ementa. Tente novamente.");
         }).finally(() => setUploadingEmenta(false));
-      };
-      reader.readAsDataURL(file);
+      });
     };
     document.body.appendChild(input); input.click(); document.body.removeChild(input);
   };
@@ -2697,7 +2699,7 @@ const TURNO_LABELS: Record<string, string> = {
 // ============================================================
 function FamilyPage({ code }: { code: string }) {
   const [utente, setUtente] = useState<Utente | null | "not_found">(null);
-  const [ementa, setEmenta] = useState<{ data: string; type: string; uploadedAt: string } | null>(null);
+  const [ementa, setEmenta] = useState<{ url: string; type: string; uploadedAt: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -2730,7 +2732,7 @@ function FamilyPage({ code }: { code: string }) {
       const utentes = utentesRow?.utentes ?? [];
       const found = utentes.find((u: any) => u.familyCode === code);
       setUtente(found || "not_found");
-      if (ementaRow?.ementa?.data) setEmenta(ementaRow.ementa);
+      if (ementaRow?.ementa?.url) setEmenta(ementaRow.ementa);
       // Definir mês inicial como o mês do registo mais recente, se existir
       if (found?.dailyLogs?.length) {
         const parseDate = (d: string) => {
@@ -2928,9 +2930,9 @@ function FamilyPage({ code }: { code: string }) {
           <div style={{ fontSize: 12, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 10 }}>🍽️ Ementa da Semana</div>
           {ementa ? (
             ementa.type.startsWith("image/") ? (
-              <img src={ementa.data} alt="Ementa da semana" style={{ width: "100%", borderRadius: 10, border: "1px solid #E4DED3" }} />
+              <img src={ementa.url} alt="Ementa da semana" style={{ width: "100%", borderRadius: 10, border: "1px solid #E4DED3" }} />
             ) : (
-              <a href={ementa.data} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#3A5A70", textDecoration: "none", background: "#F7F5F0", borderRadius: 8, padding: "10px 14px" }}>
+              <a href={ementa.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#3A5A70", textDecoration: "none", background: "#F7F5F0", borderRadius: 8, padding: "10px 14px" }}>
                 📄 Ver ementa da semana (PDF)
               </a>
             )
