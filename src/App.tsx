@@ -3643,7 +3643,7 @@ export default function App() {
     }
 
     // Apagar turno
-    if (e.key === "Backspace" || e.key === "Delete") {
+    if (e.key === "Backspace" || e.key === "Delete" || e.key === " ") {
       e.preventDefault();
       setShift(employee, day, null);
       resetTypeBuffer();
@@ -7088,4 +7088,3 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
-                                   
