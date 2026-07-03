@@ -5977,59 +5977,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Recibo Verde */}
-      <h2 style={styles.sectionTitle}>Colaboradores — Recibo Verde</h2>
-      <div className="scroll-x" style={styles.gridWrap}>
-        <div key={`rv-${monthKey}`} className="month-fade" style={{ minWidth: gridMinWidth }}>
-          <div style={styles.row}>
-            <div style={{ ...styles.nameCell, ...styles.headerCell, position: "sticky", left: 0, zIndex: 3, background: "#FBF9F5" }}>
-              <IconUsers size={14} style={{ marginRight: 6, opacity: 0.5 }} />
-              Funcionário
-            </div>
-            {renderDayHeaderCells()}
-            {renderStatHeaderCells()}
-          </div>
-          {rvEmployees.map((emp) => renderEmployeeRow(emp, "rv"))}
-        </div>
-      </div>
-      <div style={styles.footer} className="no-print">
-        {showAdd === "rv" ? (
-          <div style={styles.addForm}>
-            <input
-              autoFocus
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") addEmployee();
-                if (e.key === "Escape") {
-                  setShowAdd(null);
-                  setNewName("");
-                }
-              }}
-              placeholder="Nome do colaborador (Recibo Verde)"
-              style={styles.input}
-            />
-            <button style={styles.addBtnPrimary} className="add-btn" onClick={addEmployee}>
-              Adicionar
-            </button>
-            <button
-              style={styles.cancelBtn}
-              onClick={() => {
-                setShowAdd(null);
-                setNewName("");
-              }}
-            >
-              Cancelar
-            </button>
-          </div>
-        ) : (
-          <button style={styles.addBtnSmall} className="add-btn" onClick={() => setShowAdd("rv")}>
-            <IconPlus size={14} />
-            Adicionar colaborador (Recibo Verde)
-          </button>
-        )}
-      </div>
-
       {/* Equipa principal */}
       <h2 style={styles.sectionTitle}>Equipa</h2>
       <div className="scroll-x" style={styles.gridWrap}>
@@ -6117,6 +6064,59 @@ export default function App() {
           </button>
         )}
       </div>
+      {/* Recibo Verde */}
+      <h2 style={styles.sectionTitle}>Colaboradores — Recibo Verde</h2>
+      <div className="scroll-x" style={styles.gridWrap}>
+        <div key={`rv-${monthKey}`} className="month-fade" style={{ minWidth: gridMinWidth }}>
+          <div style={styles.row}>
+            <div style={{ ...styles.nameCell, ...styles.headerCell, position: "sticky", left: 0, zIndex: 3, background: "#FBF9F5" }}>
+              <IconUsers size={14} style={{ marginRight: 6, opacity: 0.5 }} />
+              Funcionário
+            </div>
+            {renderDayHeaderCells()}
+            {renderStatHeaderCells()}
+          </div>
+          {rvEmployees.map((emp) => renderEmployeeRow(emp, "rv"))}
+        </div>
+      </div>
+      <div style={styles.footer} className="no-print">
+        {showAdd === "rv" ? (
+          <div style={styles.addForm}>
+            <input
+              autoFocus
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") addEmployee();
+                if (e.key === "Escape") {
+                  setShowAdd(null);
+                  setNewName("");
+                }
+              }}
+              placeholder="Nome do colaborador (Recibo Verde)"
+              style={styles.input}
+            />
+            <button style={styles.addBtnPrimary} className="add-btn" onClick={addEmployee}>
+              Adicionar
+            </button>
+            <button
+              style={styles.cancelBtn}
+              onClick={() => {
+                setShowAdd(null);
+                setNewName("");
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        ) : (
+          <button style={styles.addBtnSmall} className="add-btn" onClick={() => setShowAdd("rv")}>
+            <IconPlus size={14} />
+            Adicionar colaborador (Recibo Verde)
+          </button>
+        )}
+      </div>
+
 
       {/* Confirm delete modal */}
       {confirmDelete && (
