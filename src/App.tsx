@@ -3410,11 +3410,99 @@ function QuickSearchPanel({ target, schedule, onClose }: {
   );
 }
 
+// ============================================================
+// UTILIZADORES DA APP (login interno)
+// ============================================================
+// "admin" tem acesso a tudo. No futuro podemos adicionar perfis
+// restritos com role: "stock" | "utentes" | "colaboradores",
+// cada um só com acesso à respetiva página.
+type AppRole = "admin" | "stock" | "utentes" | "colaboradores";
+interface AppUser { username: string; password: string; role: AppRole; }
+
+const APP_USERS: AppUser[] = [
+  { username: "Sónia Loureiro", password: "sonialoureiro", role: "admin" },
+  { username: "Admin", password: "admin", role: "admin" },
+];
+
+function canAccessPage(user: AppUser | null, page: "utentes" | "schedule" | "stock"): boolean {
+  if (!user) return false;
+  if (user.role === "admin") return true;
+  if (user.role === "colaboradores") return page === "schedule";
+  return user.role === page;
+}
+
+function LoginScreen({ onLogin }: { onLogin: (user: AppUser) => void }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = username.trim().toLowerCase();
+    const found = APP_USERS.find(
+      (u) => u.username.trim().toLowerCase() === trimmed && u.password === password
+    );
+    if (found) {
+      setError("");
+      onLogin(found);
+    } else {
+      setError("Nome de utilizador ou password incorretos.");
+    }
+  };
+
+  return (
+    <div style={{ position: "fixed" as const, inset: 0, background: "#1E3A1E", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", padding: 24 }}>
+      <div style={{ background: "#FFFFFF", borderRadius: 20, padding: "32px 28px", width: "100%", maxWidth: 360, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+        <div style={{ width: 52, height: 52, borderRadius: 16, background: "#1A1612", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F5B944" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 21V7l9-4 9 4v14" />
+            <path d="M9 21V13h6v8" />
+            <path d="M9 9h.01M12 9h.01M15 9h.01M9 13h.01M15 13h.01" />
+          </svg>
+        </div>
+        <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, textAlign: "center" as const, margin: "0 0 4px", color: "#2A241C" }}>
+          Associação Oliveirense de Socorros Mútuos
+        </h1>
+        <p style={{ fontSize: 13, color: "#A39B8E", textAlign: "center" as const, margin: "0 0 24px" }}>
+          Inicia sessão para continuar
+        </p>
+        <form onSubmit={handleSubmit}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 5 }}>Nome de utilizador</label>
+          <input
+            autoFocus
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="O teu nome"
+            style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, marginBottom: 14, colorScheme: "light" as const }}
+          />
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 5 }}>Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, marginBottom: error ? 10 : 20, colorScheme: "light" as const }}
+          />
+          {error && <div style={{ color: "#C2554A", fontSize: 12, marginBottom: 14 }}>{error}</div>}
+          <button
+            type="submit"
+            style={{ width: "100%", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+          >
+            Entrar
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   // Detectar acesso público de família via URL (?familia=CODIGO)
   const familyCode = typeof window !== "undefined"
     ? new URLSearchParams(window.location.search).get("familia")
     : null;
+
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
 
   const today = new Date();
   const [activePage, setActivePage] = useState<"home" | "schedule" | "stock" | "utentes">("home");
@@ -5300,6 +5388,11 @@ export default function App() {
     return <FamilyPage code={familyCode} />;
   }
 
+  // Acesso interno da equipa requer login
+  if (!currentUser) {
+    return <LoginScreen onLogin={setCurrentUser} />;
+  }
+
   return (
     <div style={{ ...styles.page, background: isHomePage ? "#1E3A1E" : "#1E3A1E" }}>
       <style>{`
@@ -5539,6 +5632,18 @@ export default function App() {
             <span style={{ fontSize: 15, fontWeight: 900, color: "#FFFFFF", fontFamily: "'Space Grotesk', sans-serif", letterSpacing: 1 }}>4Trevo</span>
           </div>
 
+          {/* Sessão / logout */}
+          <div style={{ position: "absolute" as const, top: 16, right: 20, display: "flex", alignItems: "center", gap: 10, zIndex: 2 }}>
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", fontFamily: "'Inter', sans-serif" }}>{currentUser.username}</span>
+            <button
+              onClick={() => setCurrentUser(null)}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#FFFFFF", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
+              title="Terminar sessão"
+            >
+              Sair
+            </button>
+          </div>
+
           {/* Conteúdo centrado */}
           <div style={{ position: "relative" as const, zIndex: 1, width: "100%", maxWidth: 680, padding: "0 24px" }}>
 
@@ -5657,6 +5762,7 @@ export default function App() {
 
             {/* 3 botões */}
             <div className="home-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+              {canAccessPage(currentUser, "utentes") && (
               <button onClick={() => setActivePage("utentes")} className="home-btn"
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 16, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(91,141,190,0.5)"; }}
@@ -5669,7 +5775,9 @@ export default function App() {
                 </div>
                 <div style={{ width: 40, height: 4, borderRadius: 2, background: "#5B8DBE" }} />
               </button>
+              )}
 
+              {canAccessPage(currentUser, "schedule") && (
               <button onClick={() => setActivePage("schedule")} className="home-btn"
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 16, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(232,177,74,0.5)"; }}
@@ -5682,7 +5790,9 @@ export default function App() {
                 </div>
                 <div style={{ width: 40, height: 4, borderRadius: 2, background: "#E8B14A" }} />
               </button>
+              )}
 
+              {canAccessPage(currentUser, "stock") && (
               <button onClick={() => setActivePage("stock")} className="home-btn"
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 16, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(111,168,111,0.5)"; }}
@@ -5695,6 +5805,7 @@ export default function App() {
                 </div>
                 <div style={{ width: 40, height: 4, borderRadius: 2, background: "#6FA86F" }} />
               </button>
+              )}
             </div>
           </div>
         </div>
