@@ -669,25 +669,6 @@ function StockPage({ onBack }: { onBack: () => void }) {
         </div>
       </header>
 
-      {/* Pesquisa por nome de produto ou serviço/categoria */}
-      <div style={{ maxWidth: 1300, margin: "0 auto 16px", position: "relative" as const }}>
-        <input
-          value={stockSearch}
-          onChange={(e) => setStockSearch(e.target.value)}
-          placeholder="🔍 Pesquisar por nome do produto ou serviço..."
-          style={{ width: "100%", boxSizing: "border-box" as const, border: "1px solid #E4DED3", borderRadius: 12, padding: "11px 16px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", colorScheme: "light" as const }}
-        />
-        {stockSearch && (
-          <button
-            onClick={() => setStockSearch("")}
-            style={{ position: "absolute" as const, right: 12, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", cursor: "pointer", color: "#A39B8E", fontSize: 16, padding: 4 }}
-            title="Limpar pesquisa"
-          >
-            ✕
-          </button>
-        )}
-      </div>
-
       {/* Resultado da importação por foto */}
       {photoImportResult && (
         <div style={{ maxWidth: 1300, margin: "0 auto 16px", background: photoImportResult.startsWith("✅") ? "#E8F5E9" : "#FFF5F4", border: `1px solid ${photoImportResult.startsWith("✅") ? "#A5D6A7" : "#F2C4BC"}`, borderRadius: 10, padding: "12px 16px", fontSize: 14, fontWeight: 500, color: photoImportResult.startsWith("✅") ? "#2E7D32" : "#9B3A2F", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -771,20 +752,39 @@ function StockPage({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={stockStyles.tabs}>
-        {[
-          { key: "inventory", label: "Inventário", icon: <IconBox size={14} /> },
-          { key: "history", label: "Histórico", icon: <IconHistory size={14} /> },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            style={{ ...stockStyles.tab, ...(activeTab === tab.key ? stockStyles.tabActive : {}) }}
-            onClick={() => setActiveTab(tab.key as any)}
-          >
-            {tab.icon} {tab.label}
-          </button>
-        ))}
+      {/* Tabs + pesquisa */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" as const, gap: 10, maxWidth: 1300, margin: "0 auto 20px" }}>
+        <div style={{ ...stockStyles.tabs, margin: 0 }}>
+          {[
+            { key: "inventory", label: "Inventário", icon: <IconBox size={14} /> },
+            { key: "history", label: "Histórico", icon: <IconHistory size={14} /> },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              style={{ ...stockStyles.tab, ...(activeTab === tab.key ? stockStyles.tabActive : {}) }}
+              onClick={() => setActiveTab(tab.key as any)}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ position: "relative" as const, width: 220 }}>
+          <input
+            value={stockSearch}
+            onChange={(e) => setStockSearch(e.target.value)}
+            placeholder="🔍 Pesquisar..."
+            style={{ width: "100%", boxSizing: "border-box" as const, border: "1px solid #E4DED3", borderRadius: 999, padding: "7px 30px 7px 14px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", colorScheme: "light" as const }}
+          />
+          {stockSearch && (
+            <button
+              onClick={() => setStockSearch("")}
+              style={{ position: "absolute" as const, right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", cursor: "pointer", color: "#A39B8E", fontSize: 13, padding: 4 }}
+              title="Limpar pesquisa"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Inventário */}
