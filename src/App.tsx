@@ -344,6 +344,15 @@ const STOCK_CATEGORY_COLORS: Record<string, string> = {
   "Outros": "#A39B8E",
 };
 
+const STOCK_CATEGORY_ICONS: Record<string, string> = {
+  "Alimentos": "🍎",
+  "Limpeza": "🧴",
+  "Higiene": "🧼",
+  "Escritório": "🖇️",
+  "Outros": "📦",
+};
+const getCategoryIcon = (cat: string) => STOCK_CATEGORY_ICONS[cat] || "🏷️";
+
 interface StockProduct {
   id: string;
   name: string;
@@ -764,6 +773,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
               return (
               <div key={cat} style={{ position: "relative" as const, display: "inline-flex", alignItems: "center" }}>
                 <button
+                  className="stock-filter-btn"
                   style={{
                     ...stockStyles.filterBtn,
                     background: isActive ? "#2A241C" : catColor ? catColor + "22" : undefined,
@@ -774,6 +784,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
                   }}
                   onClick={() => setFilterCategory(cat)}
                 >
+                  {cat !== "Todos" && <span style={{ marginRight: 5 }}>{getCategoryIcon(cat)}</span>}
                   {cat}
                   {catColor && cat !== "Todos" && !isActive && (
                     <span style={{ marginLeft: 5, fontSize: 9, background: catColor, color: "#fff", borderRadius: 4, padding: "1px 4px", fontWeight: 700 }}>
@@ -876,7 +887,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
                 const isEmpty = prod.quantity <= 0;
                 const catColor = STOCK_CATEGORY_COLORS[prod.category] || "#A39B8E";
                 return (
-                  <div key={prod.id} style={{ ...stockStyles.productCard, ...(isEmpty ? stockStyles.productCardEmpty : isLow ? stockStyles.productCardLow : {}) }}>
+                  <div key={prod.id} className="stock-card" style={{ ...stockStyles.productCard, ...(isEmpty ? stockStyles.productCardEmpty : isLow ? stockStyles.productCardLow : {}) }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                       {editingProduct === prod.id ? (
                         <select
@@ -888,7 +899,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
                           {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
                         </select>
                       ) : (
-                        <span style={{ ...stockStyles.categoryBadge, background: catColor + "22", color: catColor }}>{prod.category}</span>
+                        <span style={{ ...stockStyles.categoryBadge, background: catColor + "22", color: catColor }}>{getCategoryIcon(prod.category)} {prod.category}</span>
                       )}
                       <div style={{ display: "flex", gap: 4 }}>
                         <button
@@ -932,6 +943,17 @@ function StockPage({ onBack }: { onBack: () => void }) {
                       ) : (
                         <span style={{ fontSize: 13, color: "#A39B8E", marginLeft: 4 }}>{prod.unit}</span>
                       )}
+                    </div>
+
+                    {/* Barra de progresso: quantidade vs. mínimo */}
+                    <div style={{ height: 6, borderRadius: 999, background: "#EFEAE2", overflow: "hidden", margin: "8px 0 10px" }}>
+                      <div style={{
+                        height: "100%",
+                        width: `${prod.minQuantity > 0 ? Math.min((prod.quantity / (prod.minQuantity * 2)) * 100, 100) : (prod.quantity > 0 ? 100 : 0)}%`,
+                        background: isEmpty ? "#C2554A" : isLow ? "#E8B14A" : "#6FA86F",
+                        borderRadius: 999,
+                        transition: "width 0.3s ease",
+                      }} />
                     </div>
 
                     {/* Mínimo editável */}
@@ -1119,7 +1141,7 @@ const stockStyles: { [key: string]: React.CSSProperties } = {
   tabs: { display: "flex", gap: 4, maxWidth: 1300, margin: "0 auto 20px", background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 10, padding: 4, width: "fit-content" },
   tab: { display: "flex", alignItems: "center", gap: 6, border: "none", background: "transparent", borderRadius: 7, padding: "7px 14px", fontSize: 13, fontWeight: 500, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" },
   tabActive: { background: "#2A241C", color: "#FBF9F5" },
-  filterBtn: { border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "6px 12px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter', sans-serif", color: "#6B6358", fontWeight: 500 },
+  filterBtn: { border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 999, padding: "7px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter', sans-serif", color: "#6B6358", fontWeight: 500, transition: "transform 0.1s ease, box-shadow 0.15s ease" },
   addBtn: { display: "inline-flex", alignItems: "center", gap: 6, background: "#2A241C", color: "#FBF9F5", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" },
   cancelBtn: { background: "transparent", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" },
   formCard: { maxWidth: 1300, margin: "0 auto 20px", background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 14, padding: "20px" },
@@ -5355,6 +5377,9 @@ export default function App() {
         }
         .utente-avatar { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; }
         .utente-avatar:hover { transform: scale(2); box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 10; position: relative; }
+        .stock-card { box-shadow: 0 1px 3px rgba(42,36,28,0.08); transition: transform 0.15s ease, box-shadow 0.15s ease; }
+        .stock-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(42,36,28,0.14); }
+        .stock-filter-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(42,36,28,0.1); }
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
