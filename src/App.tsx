@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -224,13 +225,15 @@ async function loadFromSupabase(table: string): Promise<any> {
 }
 
 async function saveToSupabase(table: string, data: any): Promise<void> {
-  try {
-    await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: "POST",
-      headers: { ...sbHeaders, "Prefer": "resolution=merge-duplicates" },
-      body: JSON.stringify({ id: "main", ...data, updated_at: new Date().toISOString() }),
-    });
-  } catch (e) {}
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: "POST",
+    headers: { ...sbHeaders, "Prefer": "resolution=merge-duplicates" },
+    body: JSON.stringify({ id: "main", ...data, updated_at: new Date().toISOString() }),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`Supabase save failed (${res.status}): ${errText}`);
+  }
 }
 
 // ---------- Supabase Storage para documentos de utentes ----------
@@ -1566,16 +1569,16 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
       setUploadingEmenta(true);
       uploadUtenteDoc("ementa-semana", file).then((url) => {
         if (!url) {
-          alert("❌ Erro ao guardar a ementa. Tente novamente.");
+          alert("❌ Erro ao carregar o ficheiro para o armazenamento. Verifique a ligação e tente novamente.");
           setUploadingEmenta(false);
           return;
         }
         saveToSupabase("ementa_data", {
           ementa: { url, type: file.type, uploadedAt: new Date().toISOString() },
         }).then(() => {
-          alert("✅ Ementa da semana atualizada! Já está visível para todas as famílias.");
-        }).catch(() => {
-          alert("❌ Erro ao guardar a ementa. Tente novamente.");
+          alert(`✅ Ementa da semana atualizada! Já está visível para todas as famílias.\n\nLink: ${url}`);
+        }).catch((err) => {
+          alert(`❌ Erro ao guardar a ementa na base de dados: ${err?.message || err}`);
         }).finally(() => setUploadingEmenta(false));
       });
     };
