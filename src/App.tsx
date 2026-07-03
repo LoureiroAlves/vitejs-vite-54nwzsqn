@@ -3627,6 +3627,31 @@ export default function App() {
     typeBufferRef.current = { key: "", text: "", timer: null };
   };
 
+  // Foca a célula de um colaborador/dia específico (usado na navegação por setas)
+  const focusCell = (employee: string, day: number) => {
+    const candidates = document.querySelectorAll(`[data-day="${day}"]`);
+    for (const el of Array.from(candidates)) {
+      if ((el as HTMLElement).dataset.emp === employee) {
+        (el as HTMLElement).focus();
+        break;
+      }
+    }
+  };
+
+  // Confirma imediatamente a sigla em espera (usado pelo Enter e pelo temporizador de ambiguidade)
+  const commitTypeBuffer = (employee: string, day: number) => {
+    const cellKey = `${employee}-${day}`;
+    if (typeBufferRef.current.key !== cellKey || !typeBufferRef.current.text) return;
+    const text = typeBufferRef.current.text;
+    const finalMatches = SHIFT_ORDER.filter((c) => c.startsWith(text));
+    if (finalMatches.includes(text)) {
+      setShift(employee, day, text);
+    } else if (finalMatches.length >= 1) {
+      setShift(employee, day, finalMatches[0]);
+    }
+    resetTypeBuffer();
+  };
+
   const handleCellKeyDown = (e: React.KeyboardEvent, employee: string, day: number) => {
     if (selectMode) return;
 
@@ -3639,6 +3664,29 @@ export default function App() {
         e.preventDefault();
         pasteShiftAt(employee, day);
       }
+      return;
+    }
+
+    // Navegar com as setas do teclado
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      resetTypeBuffer();
+      if (e.key === "ArrowLeft") focusCell(employee, Math.max(1, day - 1));
+      else if (e.key === "ArrowRight") focusCell(employee, Math.min(numDays, day + 1));
+      else {
+        const idx = allEmployees.indexOf(employee);
+        if (idx === -1) return;
+        const nextIdx = e.key === "ArrowUp" ? idx - 1 : idx + 1;
+        if (nextIdx < 0 || nextIdx >= allEmployees.length) return;
+        focusCell(allEmployees[nextIdx], day);
+      }
+      return;
+    }
+
+    // Enter — confirma já a sigla em espera (ex: escreveu "F" e ainda não decidiu FO/FC/FE/FR/FA)
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitTypeBuffer(employee, day);
       return;
     }
 
@@ -3689,6 +3737,7 @@ export default function App() {
           setShift(employee, day, finalMatches[0]);
         }
         resetTypeBuffer();
+
       }, 650);
     }
   };
@@ -4937,6 +4986,8 @@ export default function App() {
         >
           <button
             className="cell-btn"
+            data-emp={emp}
+            data-day={d}
             onClick={(e) => selectMode ? toggleDay(d) : (e.currentTarget as HTMLElement).focus()}
             style={{ ...styles.exLabel, color: isSelected ? "#7A2E24" : fg }}
             title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : "Extra — clique e escreva a sigla para mudar (Ctrl+C/V para copiar/colar)"}
@@ -4966,6 +5017,8 @@ export default function App() {
       <button
         key={d}
         className="cell-btn"
+        data-emp={emp}
+        data-day={d}
         onClick={(e) => selectMode ? toggleDay(d) : (e.currentTarget as HTMLElement).focus()}
         onKeyDown={(e) => handleCellKeyDown(e, emp, d)}
         onMouseDown={() => startPaint(emp, d)}
