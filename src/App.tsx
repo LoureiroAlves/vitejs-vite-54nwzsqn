@@ -4862,7 +4862,7 @@ export default function App() {
           color: fg,
           outline,
           outlineOffset: outline ? "-2px" : undefined,
-          borderRight: isToday && !isSelected ? "1px solid #C2BAAC" : "1px solid #EFEAE2",
+          borderRight: "1px solid #EFEAE2",
         }}
         title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : def ? def.label : "Sem turno — clique para atribuir"}
       >
@@ -5054,7 +5054,7 @@ export default function App() {
       const bg = isSelected
         ? "#B5483D"
         : isToday
-        ? "#6B6358"
+        ? "#5A5348"
         : isWeekend
         ? "#F4EFE6"
         : "#FBF9F5";
@@ -6972,3 +6972,4 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
+                                         
