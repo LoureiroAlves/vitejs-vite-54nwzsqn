@@ -5265,7 +5265,7 @@ export default function App() {
         .cell-btn { transition: transform 0.08s ease; }
         .cell-btn:hover { transform: scale(1.05); }
         .cell-btn:active { transform: scale(0.97); }
-        .cell-btn:focus { outline: none; box-shadow: inset 0 0 0 2px #5B8DBE; }
+        .cell-btn:focus { outline: none; box-shadow: inset 0 0 0 2px #2A241C; }
         .scroll-x { -webkit-user-select: none; user-select: none; }
         .scroll-x::-webkit-scrollbar { height: 6px; }
         .scroll-x::-webkit-scrollbar-thumb { background: #D9D4CC; border-radius: 3px; }
