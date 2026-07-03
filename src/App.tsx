@@ -3456,6 +3456,7 @@ export default function App() {
   const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const [clipboardShift, setClipboardShift] = useState<{ shift: string | null; hours?: number } | null>(null);
+  const [focusedCell, setFocusedCell] = useState<{ emp: string; day: number } | null>(null);
   const typeBufferRef = useRef<{ key: string; text: string; timer: any }>({ key: "", text: "", timer: null });
   const paintRef = useRef<{ active: boolean; shift: string | null; hours?: number }>({ active: false, shift: null });
 
@@ -4958,6 +4959,7 @@ export default function App() {
     const def = shift ? SHIFT_TYPES[shift] : null;
     const isToday = d === todayDay;
     const isSelected = selectedDays.has(d);
+    const isFocused = focusedCell?.emp === emp && focusedCell?.day === d;
     const emptyBg = isSelected ? "#FDDDD9" : isToday ? "#F0EDE6" : "#F7F5F0";
     const bg = isSelected ? "#FDDDD9" : def ? def.color : emptyBg;
     const fg = isSelected
@@ -4968,6 +4970,14 @@ export default function App() {
     const outline = isSelected
       ? "2px solid #B5483D"
       : undefined;
+    const cellBoxShadow = isFocused
+      ? "inset 0 0 0 2px #2A241C"
+      : def
+      ? "0 1px 3px rgba(42,36,28,0.18)"
+      : undefined;
+    const cellRadius = def ? 7 : 0;
+    const handleFocus = () => setFocusedCell({ emp, day: d });
+    const handleBlur = () => setFocusedCell((prev) => (prev && prev.emp === emp && prev.day === d ? null : prev));
 
     if (shift === "EX") {
       return (
@@ -4982,6 +4992,9 @@ export default function App() {
             background: isSelected ? "#FDDDD9" : def!.color,
             outline,
             outlineOffset: outline ? "-2px" : undefined,
+            boxShadow: cellBoxShadow,
+            borderRadius: cellRadius,
+            overflow: "hidden",
           }}
         >
           <button
@@ -4989,6 +5002,8 @@ export default function App() {
             data-emp={emp}
             data-day={d}
             onClick={(e) => selectMode ? toggleDay(d) : (e.currentTarget as HTMLElement).focus()}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             style={{ ...styles.exLabel, color: isSelected ? "#7A2E24" : fg }}
             title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : "Extra — clique e escreva a sigla para mudar (Ctrl+C/V para copiar/colar)"}
           >
@@ -5023,6 +5038,8 @@ export default function App() {
         onKeyDown={(e) => handleCellKeyDown(e, emp, d)}
         onMouseDown={() => startPaint(emp, d)}
         onMouseEnter={(e) => paintOver(emp, d, e.buttons)}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         style={{
           ...styles.dayCell,
           background: bg,
@@ -5030,6 +5047,8 @@ export default function App() {
           outline,
           outlineOffset: outline ? "-2px" : undefined,
           borderRight: "1px solid #EFEAE2",
+          boxShadow: cellBoxShadow,
+          borderRadius: cellRadius,
         }}
         title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : def ? `${def.label} — escreva a sigla para mudar (Ctrl+C/V para copiar/colar)` : "Sem turno — clique e escreva a sigla (ex: M, T, N, EX...)"}
       >
@@ -5262,10 +5281,10 @@ export default function App() {
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
         * { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; background: #1E3A1E; }
-        .cell-btn { transition: transform 0.08s ease; }
+        .cell-btn { transition: transform 0.08s ease, box-shadow 0.12s ease; }
         .cell-btn:hover { transform: scale(1.05); }
         .cell-btn:active { transform: scale(0.97); }
-        .cell-btn:focus { outline: none; box-shadow: inset 0 0 0 2px #2A241C; }
+        .cell-btn:focus { outline: none; }
         .scroll-x { -webkit-user-select: none; user-select: none; }
         .scroll-x::-webkit-scrollbar { height: 6px; }
         .scroll-x::-webkit-scrollbar-thumb { background: #D9D4CC; border-radius: 3px; }
@@ -5276,6 +5295,11 @@ export default function App() {
         .tool-btn-active { background: #F5B944 !important; color: #2A241C !important; }
         .tool-btn-active:hover { background: #F0AF30 !important; }
         .print-menu-item:hover { background: #F7F5F0; }
+        @keyframes monthFade {
+          0%   { opacity: 0; transform: translateY(6px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .month-fade { animation: monthFade 0.28s cubic-bezier(0.32, 0.72, 0, 1) both; }
         @keyframes bounce {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-6px); }
@@ -5928,7 +5952,7 @@ export default function App() {
       {/* Recibo Verde */}
       <h2 style={styles.sectionTitle}>Colaboradores — Recibo Verde</h2>
       <div className="scroll-x" style={styles.gridWrap}>
-        <div style={{ minWidth: gridMinWidth }}>
+        <div key={`rv-${monthKey}`} className="month-fade" style={{ minWidth: gridMinWidth }}>
           <div style={styles.row}>
             <div style={{ ...styles.nameCell, ...styles.headerCell, position: "sticky", left: 0, zIndex: 3, background: "#FBF9F5" }}>
               <IconUsers size={14} style={{ marginRight: 6, opacity: 0.5 }} />
@@ -5981,7 +6005,7 @@ export default function App() {
       {/* Equipa principal */}
       <h2 style={styles.sectionTitle}>Equipa</h2>
       <div className="scroll-x" style={styles.gridWrap}>
-        <div style={{ minWidth: gridMinWidth }}>
+        <div key={`main-${monthKey}`} className="month-fade" style={{ minWidth: gridMinWidth }}>
           <div style={styles.row}>
             <div style={{ ...styles.nameCell, ...styles.headerCell, position: "sticky", left: 0, zIndex: 3, background: "#FBF9F5" }}>
               <IconUsers size={14} style={{ marginRight: 6, opacity: 0.5 }} />
