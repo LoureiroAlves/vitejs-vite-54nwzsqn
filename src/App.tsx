@@ -3449,7 +3449,7 @@ export default function App() {
 
   const [newName, setNewName] = useState("");
   const [showAdd, setShowAdd] = useState<"rv" | "main" | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<{ name: string; group: "rv" | "main" } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ name: string; group: "rv" | "main"; x: number; y: number } | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedDays, setSelectedDays] = useState<Set<number>>(new Set());
   const [confirmClear, setConfirmClear] = useState(false);
@@ -5141,7 +5141,10 @@ export default function App() {
             <button
               className="icon-btn no-print"
               style={styles.iconBtn}
-              onClick={() => setConfirmDelete({ name: emp, group })}
+              onClick={(e) => {
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                setConfirmDelete({ name: emp, group, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+              }}
               aria-label={`Remover ${emp}`}
               title="Remover colaborador"
             >
@@ -6093,7 +6096,16 @@ export default function App() {
       {/* Confirm delete modal */}
       {confirmDelete && (
         <div style={styles.overlay} onClick={() => setConfirmDelete(null)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+          <div
+            style={{
+              ...styles.modal,
+              position: "fixed",
+              margin: 0,
+              left: Math.min(Math.max(confirmDelete.x - 180, 12), window.innerWidth - 372),
+              top: Math.min(confirmDelete.y, window.innerHeight - 260),
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <button style={styles.closeBtn} onClick={() => setConfirmDelete(null)} aria-label="Fechar">
               <IconX size={18} />
             </button>
