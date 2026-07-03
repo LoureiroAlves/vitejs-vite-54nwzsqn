@@ -386,6 +386,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [activeTab, setActiveTab] = useState<"inventory" | "movement" | "history">("inventory");
   const [filterCategory, setFilterCategory] = useState<string>("Todos");
+  const [stockSearch, setStockSearch] = useState("");
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<string | null>(null);
   const [inlineMove, setInlineMove] = useState<{ id: string; type: "entrada" | "saida"; qty: string } | null>(null);
@@ -601,9 +602,12 @@ function StockPage({ onBack }: { onBack: () => void }) {
     w.focus(); setTimeout(() => w.print(), 300);
   };
 
-  const filteredProducts = filterCategory === "Todos"
-    ? products
-    : products.filter((p) => p.category === filterCategory);
+  const filteredProducts = products.filter((p) => {
+    const matchesCategory = filterCategory === "Todos" || p.category === filterCategory;
+    const term = stockSearch.trim().toLowerCase();
+    const matchesSearch = !term || p.name.toLowerCase().includes(term) || p.category.toLowerCase().includes(term);
+    return matchesCategory && matchesSearch;
+  });
 
   const alerts = products.filter((p) => p.quantity <= p.minQuantity);
   const totalProducts = products.length;
@@ -664,6 +668,25 @@ function StockPage({ onBack }: { onBack: () => void }) {
           </button>
         </div>
       </header>
+
+      {/* Pesquisa por nome de produto ou serviço/categoria */}
+      <div style={{ maxWidth: 1300, margin: "0 auto 16px", position: "relative" as const }}>
+        <input
+          value={stockSearch}
+          onChange={(e) => setStockSearch(e.target.value)}
+          placeholder="🔍 Pesquisar por nome do produto ou serviço..."
+          style={{ width: "100%", boxSizing: "border-box" as const, border: "1px solid #E4DED3", borderRadius: 12, padding: "11px 16px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", colorScheme: "light" as const }}
+        />
+        {stockSearch && (
+          <button
+            onClick={() => setStockSearch("")}
+            style={{ position: "absolute" as const, right: 12, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", cursor: "pointer", color: "#A39B8E", fontSize: 16, padding: 4 }}
+            title="Limpar pesquisa"
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       {/* Resultado da importação por foto */}
       {photoImportResult && (
@@ -881,7 +904,12 @@ function StockPage({ onBack }: { onBack: () => void }) {
 
           {/* Lista de produtos */}
           {filteredProducts.length === 0 ? (
-            <div style={stockStyles.empty}>Nenhum produto {filterCategory !== "Todos" ? `na categoria "${filterCategory}"` : "em inventário"}.<br />Clique em "Adicionar produto" para começar.</div>
+            <div style={stockStyles.empty}>
+              {stockSearch.trim()
+                ? <>Nenhum produto encontrado para "{stockSearch}".</>
+                : <>Nenhum produto {filterCategory !== "Todos" ? `na categoria "${filterCategory}"` : "em inventário"}.<br />Clique em "Adicionar produto" para começar.</>
+              }
+            </div>
           ) : (
             <div className="stock-grid" style={stockStyles.productGrid}>
               {filteredProducts.map((prod) => {
