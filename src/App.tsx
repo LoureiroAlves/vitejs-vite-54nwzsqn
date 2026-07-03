@@ -3457,6 +3457,7 @@ export default function App() {
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const [clipboardShift, setClipboardShift] = useState<{ shift: string | null; hours?: number } | null>(null);
   const typeBufferRef = useRef<{ key: string; text: string; timer: any }>({ key: "", text: "", timer: null });
+  const paintRef = useRef<{ active: boolean; shift: string | null; hours?: number }>({ active: false, shift: null });
 
   const showTip = (e: React.MouseEvent, text: string) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -3518,6 +3519,13 @@ export default function App() {
   useEffect(() => {
     syncFromSupabase();
     // Marcar sincronização inicial como completa após terminar (sucesso ou erro)
+  }, []);
+
+  // Terminar o "arrastar para copiar" quando o botão do rato é solto em qualquer sítio da página
+  useEffect(() => {
+    const handleGlobalMouseUp = () => { paintRef.current.active = false; };
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
   }, []);
 
   // Detectar quando o syncStatus sai de "syncing" pela primeira vez para liberar gravações
@@ -3591,6 +3599,25 @@ export default function App() {
     setShift(employee, day, clipboardShift.shift);
     if (clipboardShift.shift === "EX" && clipboardShift.hours !== undefined) {
       setExtraHoursValue(employee, day, String(clipboardShift.hours));
+    }
+  };
+
+  // ---------- Arrastar para copiar (pintar o turno de uma célula sobre outras, ao arrastar o rato) ----------
+  const startPaint = (employee: string, day: number) => {
+    if (selectMode) return;
+    const shift = getShift(employee, day);
+    paintRef.current = {
+      active: true,
+      shift,
+      hours: shift === "EX" ? getExtraHours(employee, day) : undefined,
+    };
+  };
+
+  const paintOver = (employee: string, day: number, buttonsPressed: number) => {
+    if (selectMode || !paintRef.current.active || buttonsPressed !== 1) return;
+    setShift(employee, day, paintRef.current.shift);
+    if (paintRef.current.shift === "EX" && paintRef.current.hours !== undefined) {
+      setExtraHoursValue(employee, day, String(paintRef.current.hours));
     }
   };
 
@@ -4898,6 +4925,8 @@ export default function App() {
         <div
           key={d}
           onKeyDown={(e) => handleCellKeyDown(e, emp, d)}
+          onMouseDown={() => startPaint(emp, d)}
+          onMouseEnter={(e) => paintOver(emp, d, e.buttons)}
           style={{
             ...styles.dayCell,
             ...styles.exCell,
@@ -4939,6 +4968,8 @@ export default function App() {
         className="cell-btn"
         onClick={(e) => selectMode ? toggleDay(d) : (e.currentTarget as HTMLElement).focus()}
         onKeyDown={(e) => handleCellKeyDown(e, emp, d)}
+        onMouseDown={() => startPaint(emp, d)}
+        onMouseEnter={(e) => paintOver(emp, d, e.buttons)}
         style={{
           ...styles.dayCell,
           background: bg,
@@ -5181,7 +5212,8 @@ export default function App() {
         .cell-btn { transition: transform 0.08s ease; }
         .cell-btn:hover { transform: scale(1.05); }
         .cell-btn:active { transform: scale(0.97); }
-        .cell-btn:focus { outline: 2px solid #5B8DBE; outline-offset: -2px; z-index: 2; position: relative; }
+        .cell-btn:focus { outline: none; box-shadow: inset 0 0 0 2px #5B8DBE; }
+        .scroll-x { -webkit-user-select: none; user-select: none; }
         .scroll-x::-webkit-scrollbar { height: 6px; }
         .scroll-x::-webkit-scrollbar-thumb { background: #D9D4CC; border-radius: 3px; }
         .icon-btn:hover { background: #EFEAE2; }
@@ -5784,7 +5816,7 @@ export default function App() {
             </span>
           </div>
         ))}
-        <div style={styles.legendHint}>Clique numa célula e escreva a sigla (M, T, N, EX...) · Ctrl+C / Ctrl+V para copiar e colar</div>
+        <div style={styles.legendHint}>Escreva a sigla (M, T, N, EX...) · Ctrl+C/V copia · arraste para pintar várias células</div>
       </div>
 
       {/* Barra de seleção de dias */}
@@ -7056,3 +7088,4 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
+                                   
