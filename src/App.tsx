@@ -4658,6 +4658,15 @@ export default function App() {
     const utentesData: Utente[] = row?.utentes ?? [];
     const totalUtentes = utentesData.length;
 
+    // Contar entradas no ano de referência, com base na data de entrada (DD/MM/AAAA) de cada utente
+    const entradasNoAno = utentesData.filter((u) => {
+      if (!u.entryDate) return false;
+      const parts = u.entryDate.split("/");
+      if (parts.length !== 3) return false;
+      const anoEntrada = parseInt(parts[2], 10);
+      return anoEntrada === anoRef;
+    }).length;
+
     const campo = (label: string, valor: string, linhas = 1) => {
       const minH = linhas === 1 ? "20px" : `${linhas * 20}px`;
       return `<div style="margin-bottom:6px">
@@ -4711,7 +4720,7 @@ export default function App() {
       ${campo("Utentes no final do ano", String(totalUtentes))}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      ${campo("Entradas no ano", "")}
+      ${campo("Entradas no ano", String(entradasNoAno))}
       ${campo("Saídas no ano (altas/óbitos)", "")}
     </div>
     ${campo("Taxa de ocupação média (%)", "")}
