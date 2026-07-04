@@ -3581,6 +3581,7 @@ export default function App() {
     return stored?.employeeProfiles ?? {};
   });
   const [openProfile, setOpenProfile] = useState<string | null>(null);
+  const [highlightedRow, setHighlightedRow] = useState<string | null>(null);
   const [scheduleLink, setScheduleLink] = useState<string>(() => {
     const stored = loadStoredData();
     return stored?.scheduleLink ?? "";
@@ -5243,9 +5244,10 @@ export default function App() {
 
   const renderEmployeeRow = (emp: string, group: "rv" | "main") => {
     const av = getAvatar(emp);
+    const isHighlighted = highlightedRow === emp;
     return (
-      <div key={emp} style={styles.row}>
-        <div style={{ ...styles.nameCell, position: "sticky", left: 0, zIndex: 2, background: "#FFFFFF" }}>
+      <div key={emp} style={{ ...styles.row, ...(isHighlighted ? { borderTop: "2px solid #2A241C", borderBottom: "2px solid #2A241C" } : {}) }}>
+        <div style={{ ...styles.nameCell, position: "sticky", left: 0, zIndex: 2, background: isHighlighted ? "#F5EFD8" : "#FFFFFF" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
             <div style={{
               width: 22,
@@ -5265,8 +5267,9 @@ export default function App() {
             </div>
             <button
               style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "'Inter', sans-serif", fontSize: 12, fontWeight: 500, color: "#2A241C", textAlign: "left" as const, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}
-              onClick={() => setOpenProfile(emp)}
-              title="Ver ficha do colaborador"
+              onClick={() => setHighlightedRow((prev) => (prev === emp ? null : emp))}
+              onDoubleClick={() => setOpenProfile(emp)}
+              title="1 clique para destacar a linha · 2 cliques para ver a ficha"
             >
               {emp}
             </button>
@@ -5301,7 +5304,7 @@ export default function App() {
     );
   };
 
-  const gridMinWidth = 150 + numDays * 32 + 200;
+  const gridMinWidth = 150 + numDays * 32 + 150;
   const isHomePage = (activePage as string) === "home";
   const isStockPage = (activePage as string) === "stock";
 
@@ -7183,9 +7186,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     colorScheme: "light",
   },
   statCell: {
-    width: 40,
-    minWidth: 40,
-    padding: "6px 2px",
+    width: 30,
+    minWidth: 30,
+    padding: "6px 1px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -7194,32 +7197,32 @@ const styles: { [key: string]: React.CSSProperties } = {
   statValue: {
     fontFamily: "'Space Grotesk', sans-serif",
     fontWeight: 700,
-    fontSize: 12,
+    fontSize: 10,
   },
   statValueMuted: {
     fontFamily: "'Space Grotesk', sans-serif",
     fontWeight: 600,
-    fontSize: 11,
+    fontSize: 9,
     color: "#C2BAAC",
   },
   totalValue: {
     fontFamily: "'Space Grotesk', sans-serif",
     fontWeight: 700,
-    fontSize: 12,
+    fontSize: 10,
     color: "#B08A4E",
   },
   absenceBadge: {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 18,
-    height: 18,
+    minWidth: 16,
+    height: 16,
     borderRadius: 5,
     background: "#C2554A",
     color: "#FFFFFF",
     fontFamily: "'Space Grotesk', sans-serif",
     fontWeight: 700,
-    fontSize: 11,
+    fontSize: 9,
   },
   coverageCell: {
     width: 32,
