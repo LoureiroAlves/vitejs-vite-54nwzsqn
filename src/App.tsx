@@ -4658,6 +4658,11 @@ export default function App() {
     const utentesData: Utente[] = row?.utentes ?? [];
     const totalUtentes = utentesData.length;
 
+    // Carregar dados já gravados anteriormente para este relatório (por ano)
+    const erpiRow = await loadFromSupabase("erpi_data").catch(() => null);
+    const erpiSavedByYear: Record<string, Record<string, string>> = erpiRow?.years || {};
+    const savedYearData: Record<string, string> = erpiSavedByYear[String(anoRef)] || {};
+
     // Contar entradas no ano de referência, com base na data de entrada (DD/MM/AAAA) de cada utente
     const entradasNoAno = utentesData.filter((u) => {
       if (!u.entryDate) return false;
@@ -4667,11 +4672,12 @@ export default function App() {
       return anoEntrada === anoRef;
     }).length;
 
-    const campo = (label: string, valor: string, linhas = 1) => {
+    const campo = (label: string, valor: string, linhas = 1, key = "") => {
       const minH = linhas === 1 ? "20px" : `${linhas * 20}px`;
+      const savedValue = key && savedYearData[key] ? savedYearData[key] : valor;
       return `<div style="margin-bottom:6px">
         <div style="font-size:6.5pt;font-weight:bold;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:1px">${label}</div>
-        <div contenteditable="true" style="border:.5px solid #BBB;background:#FAFAFA;min-height:${minH};padding:3px 5px;font-size:8.5pt;color:#2A241C;line-height:1.4;outline:none" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background='#FAFAFA'">${valor}</div>
+        <div contenteditable="true" data-key="${key || label}" style="border:.5px solid #BBB;background:#FAFAFA;min-height:${minH};padding:3px 5px;font-size:8.5pt;color:#2A241C;line-height:1.4;outline:none" onfocus="this.style.background='#EEF4FF'" onblur="this.style.background='#FAFAFA'">${savedValue}</div>
       </div>`;
     };
     const secao = (t: string) => `<div style="background:#3A5A70;color:white;padding:3px 7px;font-size:8.5pt;font-weight:bold;margin:8px 0 5px">${t}</div>`;
@@ -4694,8 +4700,31 @@ export default function App() {
     </style></head><body>
     <div class="no-print" style="background:#2A241C;color:#F5B944;padding:8px 14px;margin-bottom:10px;border-radius:8px;display:flex;justify-content:space-between;align-items:center">
       <span>🏠 Relatório ERPI ${anoRef} — AOSM</span>
-      <button onclick="window.print()" style="background:#F5B944;color:#2A241C;border:none;padding:5px 14px;border-radius:6px;font-weight:700;cursor:pointer">🖨️ Imprimir / PDF</button>
+      <div style="display:flex;gap:8px">
+        <button onclick="guardarNaApp()" style="background:#3A5A70;color:white;border:none;padding:6px 14px;border-radius:6px;font-weight:700;cursor:pointer;font-size:10pt">💾 Guardar na app</button>
+        <button onclick="window.print()" style="background:#F5B944;color:#2A241C;border:none;padding:6px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:10pt">🖨️ Imprimir / PDF</button>
+      </div>
     </div>
+
+    <script>
+    function guardarNaApp() {
+      const campos = {};
+      document.querySelectorAll('[data-key]').forEach(el => {
+        const k = el.getAttribute('data-key');
+        if (k) campos[k] = el.innerText.trim();
+      });
+      if (window.opener && window.opener.__saveERPI) {
+        window.opener.__saveERPI(campos);
+        const btn = event.target;
+        btn.textContent = '✅ Guardado!';
+        btn.style.background = '#3B6D11';
+        setTimeout(() => { btn.textContent = '💾 Guardar na app'; btn.style.background = '#3A5A70'; }, 2000);
+      } else {
+        alert('⚠️ Não foi possível comunicar com a app. Feche e abra o relatório novamente.');
+      }
+    }
+    </script>
+
     <div style="text-align:center;margin-bottom:8px">
       <div style="font-size:13pt;font-weight:bold">ASSOCIAÇÃO OLIVEIRENSE DE SOCORROS MÚTUOS</div>
       <div style="font-size:9pt;color:#3A5A70">Estrutura Residencial para Pessoas Idosas (ERPI)</div>
@@ -4704,26 +4733,26 @@ export default function App() {
     </div>
 
     ${secao("I. IDENTIFICAÇÃO DO ESTABELECIMENTO")}
-    ${campo("Designação", "Associação Oliveirense de Socorros Mútuos")}
+    ${campo("Designação", "Associação Oliveirense de Socorros Mútuos", 1, "designacao")}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      ${campo("NIF", "")}${campo("Nº de acordo com o ISS", "")}
+      ${campo("NIF", "", 1, "nif")}${campo("Nº de acordo com o ISS", "", 1, "issAcordo")}
     </div>
-    ${campo("Morada", "")}
+    ${campo("Morada", "", 1, "morada")}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      ${campo("Director(a) técnico(a)", "")}${campo("Contacto", "")}
+      ${campo("Director(a) técnico(a)", "", 1, "diretorTecnico")}${campo("Contacto", "", 1, "contacto")}
     </div>
 
     ${secao("II. CAPACIDADE E OCUPAÇÃO")}
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-      ${campo("Capacidade total (camas)", "")}
-      ${campo("Utentes no início do ano", "")}
+      ${campo("Capacidade total (camas)", "", 1, "capacidadeTotal")}
+      ${campo("Utentes no início do ano", "", 1, "utentesInicioAno")}
       ${campo("Utentes no final do ano", String(totalUtentes))}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       ${campo("Entradas no ano", String(entradasNoAno))}
-      ${campo("Saídas no ano (altas/óbitos)", "")}
+      ${campo("Saídas no ano (altas/óbitos)", "", 1, "saidasNoAno")}
     </div>
-    ${campo("Taxa de ocupação média (%)", "")}
+    ${campo("Taxa de ocupação média (%)", "", 1, "taxaOcupacao")}
 
     ${secao("III. LISTA DE UTENTES")}
     <table>
@@ -4736,21 +4765,21 @@ export default function App() {
     ${secao("IV. RECURSOS HUMANOS")}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       ${campo("Total de colaboradores", String([...employees, ...rvEmployees].length))}
-      ${campo("Rácio utente/colaborador", "")}
+      ${campo("Rácio utente/colaborador", "", 1, "racioUtenteColaborador")}
     </div>
     ${campo("Categorias profissionais presentes", [...new Set(Object.values(employeeProfiles).map(p => p.category).filter(Boolean))].join(", "), 2)}
 
     ${secao("V. CUIDADOS PRESTADOS")}
-    ${campo("Cuidados de higiene e conforto", "", 2)}
-    ${campo("Apoio à alimentação", "", 2)}
-    ${campo("Administração de medicação", "", 2)}
-    ${campo("Actividades de animação sociocultural", "", 2)}
-    ${campo("Outros cuidados prestados", "", 2)}
+    ${campo("Cuidados de higiene e conforto", "", 2, "cuidadosHigiene")}
+    ${campo("Apoio à alimentação", "", 2, "apoioAlimentacao")}
+    ${campo("Administração de medicação", "", 2, "administracaoMedicacao")}
+    ${campo("Actividades de animação sociocultural", "", 2, "atividadesAnimacao")}
+    ${campo("Outros cuidados prestados", "", 2, "outrosCuidados")}
 
     ${secao("VI. AVALIAÇÃO DA QUALIDADE")}
-    ${campo("Reclamações recebidas", "")}
-    ${campo("Acções de melhoria implementadas", "", 3)}
-    ${campo("Objectivos para o próximo ano", "", 3)}
+    ${campo("Reclamações recebidas", "", 1, "reclamacoes")}
+    ${campo("Acções de melhoria implementadas", "", 3, "acoesMelhoria")}
+    ${campo("Objectivos para o próximo ano", "", 3, "objetivosProximoAno")}
 
     <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
       ${["Director(a) Técnico(a)","Responsável pela entidade","Técnico(a) ISS"].map(t => `
@@ -4767,6 +4796,18 @@ export default function App() {
 
     const w = window.open("", "_blank");
     if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+
+    // Expor função de callback para guardar os dados deste relatório de volta na app/Supabase
+    (window as any).__saveERPI = (campos: Record<string, string>) => {
+      const merged = {
+        ...erpiSavedByYear,
+        [String(anoRef)]: { ...(erpiSavedByYear[String(anoRef)] || {}), ...campos },
+      };
+      saveToSupabase("erpi_data", { years: merged }).catch(() => {
+        alert("⚠️ Não foi possível gravar na nuvem. Verifique a ligação e tente novamente.");
+      });
+    };
+
     w.document.open(); w.document.write(html); w.document.close(); w.focus();
   };
 
