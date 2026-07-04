@@ -5246,17 +5246,17 @@ export default function App() {
     return (
       <div key={emp} style={styles.row}>
         <div style={{ ...styles.nameCell, position: "sticky", left: 0, zIndex: 2, background: "#FFFFFF" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
             <div style={{
-              width: 28,
-              height: 28,
+              width: 22,
+              height: 22,
               borderRadius: "50%",
               background: av.bg,
               color: av.color,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 10,
+              fontSize: 9,
               fontWeight: 700,
               fontFamily: "'Space Grotesk', sans-serif",
               flexShrink: 0,
@@ -5264,7 +5264,7 @@ export default function App() {
               {av.initials}
             </div>
             <button
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 500, color: "#2A241C", textAlign: "left" as const, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "'Inter', sans-serif", fontSize: 12, fontWeight: 500, color: "#2A241C", textAlign: "left" as const, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}
               onClick={() => setOpenProfile(emp)}
               title="Ver ficha do colaborador"
             >
@@ -5274,16 +5274,16 @@ export default function App() {
           <div style={styles.nameActions}>
             <button
               className="icon-btn no-print"
-              style={{ ...styles.iconBtn, color: employeeEmails[emp] ? "#B08A4E" : "#C2BAAC" }}
+              style={{ ...styles.iconBtn, padding: 3, color: employeeEmails[emp] ? "#B08A4E" : "#C2BAAC" }}
               onClick={() => handleEditEmail(emp)}
               aria-label={`Email de ${emp}`}
               title={employeeEmails[emp] ? `Email: ${employeeEmails[emp]}` : "Definir email"}
             >
-              <IconMail size={14} />
+              <IconMail size={12} />
             </button>
             <button
               className="icon-btn no-print"
-              style={styles.iconBtn}
+              style={{ ...styles.iconBtn, padding: 3 }}
               onClick={(e) => {
                 const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                 setConfirmDelete({ name: emp, group, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
@@ -5301,7 +5301,7 @@ export default function App() {
     );
   };
 
-  const gridMinWidth = 190 + numDays * 44 + 260;
+  const gridMinWidth = 150 + numDays * 32 + 200;
   const isHomePage = (activePage as string) === "home";
   const isStockPage = (activePage as string) === "stock";
 
@@ -7081,14 +7081,14 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: "center",
   },
   nameCell: {
-    width: 190,
-    minWidth: 190,
-    padding: "10px 12px",
+    width: 150,
+    minWidth: 150,
+    padding: "6px 10px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     borderRight: "1px solid #EFEAE2",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 500,
   },
   nameText: {
@@ -7113,9 +7113,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexShrink: 0,
   },
   dayHeaderCell: {
-    width: 44,
-    minWidth: 44,
-    padding: "8px 0",
+    width: 32,
+    minWidth: 32,
+    padding: "5px 0",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -7125,21 +7125,21 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   dayNum: {
     fontWeight: 600,
-    fontSize: 13,
+    fontSize: 11,
     color: "#2A241C",
   },
   dayLetter: {
-    fontSize: 10,
+    fontSize: 8,
     color: "#A39B8E",
-    marginTop: 2,
+    marginTop: 1,
   },
   dayCell: {
-    width: 44,
-    minWidth: 44,
-    height: 44,
+    width: 32,
+    minWidth: 32,
+    height: 32,
     border: "none",
     borderRight: "1px solid #EFEAE2",
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: 700,
     cursor: "pointer",
     fontFamily: "'Space Grotesk', sans-serif",
@@ -7153,13 +7153,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: "default",
   },
   exLabel: {
-    flex: "0 0 20px",
+    flex: "0 0 15px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     border: "none",
     background: "transparent",
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: 700,
     fontFamily: "'Space Grotesk', sans-serif",
     cursor: "pointer",
@@ -7168,13 +7168,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: 1,
   },
   exInput: {
-    flex: "0 0 22px",
+    flex: "0 0 17px",
     width: "100%",
     border: "none",
     borderTop: "1px solid rgba(255,255,255,0.4)",
     background: "rgba(255,255,255,0.18)",
     color: "#FFFFFF",
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: 700,
     textAlign: "center",
     fontFamily: "'Space Grotesk', sans-serif",
@@ -7183,9 +7183,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     colorScheme: "light",
   },
   statCell: {
-    width: 52,
-    minWidth: 52,
-    padding: "10px 4px",
+    width: 40,
+    minWidth: 40,
+    padding: "6px 2px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -7194,42 +7194,42 @@ const styles: { [key: string]: React.CSSProperties } = {
   statValue: {
     fontFamily: "'Space Grotesk', sans-serif",
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 12,
   },
   statValueMuted: {
     fontFamily: "'Space Grotesk', sans-serif",
     fontWeight: 600,
-    fontSize: 13,
+    fontSize: 11,
     color: "#C2BAAC",
   },
   totalValue: {
     fontFamily: "'Space Grotesk', sans-serif",
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 12,
     color: "#B08A4E",
   },
   absenceBadge: {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 22,
-    height: 22,
-    borderRadius: 6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 5,
     background: "#C2554A",
     color: "#FFFFFF",
     fontFamily: "'Space Grotesk', sans-serif",
     fontWeight: 700,
-    fontSize: 13,
+    fontSize: 11,
   },
   coverageCell: {
-    width: 44,
-    minWidth: 44,
-    height: 38,
+    width: 32,
+    minWidth: 32,
+    height: 28,
     borderRight: "1px solid #EFEAE2",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: 700,
     fontFamily: "'Space Grotesk', sans-serif",
     background: "#FBF9F5",
