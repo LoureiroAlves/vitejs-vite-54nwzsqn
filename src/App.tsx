@@ -5103,6 +5103,7 @@ export default function App() {
     const def = shift ? SHIFT_TYPES[shift] : null;
     const isToday = d === todayDay;
     const isSelected = selectedDays.has(d);
+    const isRowHighlighted = highlightedRow === emp;
     const isFocused = focusedCell?.emp === emp && focusedCell?.day === d;
     const emptyBg = isSelected ? "#FDDDD9" : isToday ? "#F0EDE6" : "#F7F5F0";
     const bg = isSelected ? "#FDDDD9" : def ? def.color : emptyBg;
@@ -5113,13 +5114,15 @@ export default function App() {
       : "#9A9388";
     const outline = isSelected
       ? "2px solid #B5483D"
+      : isRowHighlighted
+      ? "2px solid #2A241C"
       : undefined;
     const cellBoxShadow = isFocused
       ? "inset 0 0 0 2px #2A241C"
       : def
       ? "0 1px 3px rgba(42,36,28,0.18)"
       : undefined;
-    const cellRadius = def ? 4 : 0;
+    const cellRadius = def ? 5 : 0;
     const handleFocus = () => setFocusedCell({ emp, day: d });
     const handleBlur = () => setFocusedCell((prev) => (prev && prev.emp === emp && prev.day === d ? null : prev));
 
@@ -5213,29 +5216,30 @@ export default function App() {
 
   const renderStatCells = (emp: string) => {
     const t = employeeTotals[emp] || { hours: 0, daysWorked: 0, absences: 0, extra: 0, total: 0 };
+    const highlightStyle = highlightedRow === emp ? { outline: "2px solid #2A241C", outlineOffset: "-2px" } : {};
     return (
       <>
-        <div style={styles.statCell}>
+        <div style={{ ...styles.statCell, ...highlightStyle }}>
           <span style={styles.statValue}>{t.daysWorked ?? 0}</span>
         </div>
-        <div style={styles.statCell}>
+        <div style={{ ...styles.statCell, ...highlightStyle }}>
           <span style={styles.statValue}>{t.hours ?? 0}h</span>
         </div>
-        <div style={styles.statCell}>
+        <div style={{ ...styles.statCell, ...highlightStyle }}>
           {t.absences > 0 ? (
             <span style={styles.absenceBadge}>{t.absences}</span>
           ) : (
             <span style={styles.statValueMuted}>0</span>
           )}
         </div>
-        <div style={styles.statCell}>
+        <div style={{ ...styles.statCell, ...highlightStyle }}>
           {t.extra > 0 ? (
             <span style={{ ...styles.statValue, color: SHIFT_TYPES.EX.color }}>{t.extra}h</span>
           ) : (
             <span style={styles.statValueMuted}>0h</span>
           )}
         </div>
-        <div style={styles.statCell}>
+        <div style={{ ...styles.statCell, ...highlightStyle }}>
           <span style={styles.totalValue}>{t.total ?? 0}h</span>
         </div>
       </>
@@ -5246,8 +5250,8 @@ export default function App() {
     const av = getAvatar(emp);
     const isHighlighted = highlightedRow === emp;
     return (
-      <div key={emp} style={{ ...styles.row, position: "relative" as const }}>
-        <div style={{ ...styles.nameCell, position: "sticky", left: 0, zIndex: 2, background: "#FFFFFF" }}>
+      <div key={emp} style={styles.row}>
+        <div style={{ ...styles.nameCell, position: "sticky", left: 0, zIndex: 2, background: "#FFFFFF", ...(isHighlighted ? { outline: "2px solid #2A241C", outlineOffset: "-2px" } : {}) }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
             <div style={{
               width: 22,
@@ -5300,17 +5304,11 @@ export default function App() {
         </div>
         {days.map((d) => renderDayCell(emp, d))}
         {renderStatCells(emp)}
-        {isHighlighted && (
-          <div
-            className="no-print"
-            style={{ position: "absolute" as const, inset: 0, background: "rgba(0,0,0,0.55)", pointerEvents: "none" as const, zIndex: 3 }}
-          />
-        )}
       </div>
     );
   };
 
-  const gridMinWidth = 150 + numDays * 28 + 180;
+  const gridMinWidth = 150 + numDays * 36 + 190;
   const isHomePage = (activePage as string) === "home";
   const isStockPage = (activePage as string) === "stock";
 
@@ -7122,9 +7120,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexShrink: 0,
   },
   dayHeaderCell: {
-    width: 28,
-    minWidth: 28,
-    padding: "5px 0",
+    width: 36,
+    minWidth: 36,
+    padding: "6px 0",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -7134,21 +7132,21 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   dayNum: {
     fontWeight: 600,
-    fontSize: 10,
+    fontSize: 12,
     color: "#2A241C",
   },
   dayLetter: {
-    fontSize: 7,
+    fontSize: 9,
     color: "#A39B8E",
     marginTop: 1,
   },
   dayCell: {
-    width: 28,
-    minWidth: 28,
-    height: 28,
+    width: 36,
+    minWidth: 36,
+    height: 36,
     border: "none",
     borderRight: "1px solid #EFEAE2",
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 700,
     cursor: "pointer",
     fontFamily: "'Space Grotesk', sans-serif",
@@ -7162,13 +7160,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: "default",
   },
   exLabel: {
-    flex: "0 0 13px",
+    flex: "0 0 16px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     border: "none",
     background: "transparent",
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: 700,
     fontFamily: "'Space Grotesk', sans-serif",
     cursor: "pointer",
@@ -7177,13 +7175,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: 1,
   },
   exInput: {
-    flex: "0 0 15px",
+    flex: "0 0 20px",
     width: "100%",
     border: "none",
     borderTop: "1px solid rgba(255,255,255,0.4)",
     background: "rgba(255,255,255,0.18)",
     color: "#FFFFFF",
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: 700,
     textAlign: "center",
     fontFamily: "'Space Grotesk', sans-serif",
@@ -7192,8 +7190,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     colorScheme: "light",
   },
   statCell: {
-    width: 36,
-    minWidth: 36,
+    width: 38,
+    minWidth: 38,
     padding: "6px 1px",
     display: "flex",
     alignItems: "center",
@@ -7239,14 +7237,14 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 9,
   },
   coverageCell: {
-    width: 28,
-    minWidth: 28,
-    height: 28,
+    width: 36,
+    minWidth: 36,
+    height: 32,
     borderRight: "1px solid #EFEAE2",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: 700,
     fontFamily: "'Space Grotesk', sans-serif",
     background: "#FBF9F5",
