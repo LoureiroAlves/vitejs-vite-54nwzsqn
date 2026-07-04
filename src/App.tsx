@@ -3451,7 +3451,7 @@ function QuickSearchPanel({ target, schedule, onClose }: {
 type AppRole = "admin" | "stock" | "utentes" | "colaboradores";
 interface AppUser { username: string; password: string; role: AppRole; }
 
-const APP_USERS: AppUser[] = [
+const DEFAULT_APP_USERS: AppUser[] = [
   { username: "Sónia Loureiro", password: "sonialoureiro", role: "admin" },
   { username: "Admin", password: "admin", role: "admin" },
 ];
@@ -3463,7 +3463,7 @@ function canAccessPage(user: AppUser | null, page: "utentes" | "schedule" | "sto
   return user.role === page;
 }
 
-function LoginScreen({ onLogin }: { onLogin: (user: AppUser) => void }) {
+function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: AppUser) => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -3471,7 +3471,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: AppUser) => void }) {
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const trimmed = username.trim().toLowerCase();
-    const found = APP_USERS.find(
+    const found = users.find(
       (u) => u.username.trim().toLowerCase() === trimmed && u.password === password
     );
     if (found) {
@@ -3535,6 +3535,11 @@ export default function App() {
     : null;
 
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  const [appUsersList, setAppUsersList] = useState<AppUser[]>(DEFAULT_APP_USERS);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [changePassCurrent, setChangePassCurrent] = useState("");
+  const [changePassNew, setChangePassNew] = useState("");
+  const [changePassConfirm, setChangePassConfirm] = useState("");
 
   const today = new Date();
   const [activePage, setActivePage] = useState<"home" | "schedule" | "stock" | "utentes">("home");
@@ -3619,7 +3624,9 @@ export default function App() {
       loadFromSupabase("escala_data"),
       loadFromSupabase("stock_data"),
       loadFromSupabase("utentes_data"),
-    ]).then(([escala, stock, utentesRow]) => {
+      loadFromSupabase("app_users"),
+    ]).then(([escala, stock, utentesRow, appUsersRow]) => {
+      if (appUsersRow?.users?.length) setAppUsersList(appUsersRow.users);
       if (escala) {
         if (escala.employees?.length) setEmployees(escala.employees);
         if (escala.rv_employees?.length) setRvEmployees(escala.rv_employees);
@@ -3968,6 +3975,38 @@ export default function App() {
       }
       return next;
     });
+  };
+
+  // ---------- Alterar password do utilizador atual ----------
+  const [changePasswordError, setChangePasswordError] = useState("");
+  const handleChangePassword = (currentPass: string, newPass: string, confirmPass: string) => {
+    if (!currentUser) return;
+    if (currentPass !== currentUser.password) {
+      setChangePasswordError("A password atual está incorreta.");
+      return;
+    }
+    if (!newPass || newPass.length < 4) {
+      setChangePasswordError("A nova password deve ter pelo menos 4 caracteres.");
+      return;
+    }
+    if (newPass !== confirmPass) {
+      setChangePasswordError("As duas passwords novas não coincidem.");
+      return;
+    }
+    const updatedList = appUsersList.map((u) =>
+      u.username === currentUser.username ? { ...u, password: newPass } : u
+    );
+    setAppUsersList(updatedList);
+    setCurrentUser({ ...currentUser, password: newPass });
+    saveToSupabase("app_users", { users: updatedList }).catch(() => {
+      alert("⚠️ A password foi alterada nesta sessão, mas não foi possível gravar na nuvem. Tenta novamente mais tarde.");
+    });
+    setChangePasswordError("");
+    setShowChangePassword(false);
+    setChangePassCurrent("");
+    setChangePassNew("");
+    setChangePassConfirm("");
+    alert("✅ Password alterada com sucesso!");
   };
 
   // ---------- Navegação de mês ----------
@@ -5484,7 +5523,7 @@ export default function App() {
 
   // Acesso interno da equipa requer login
   if (!currentUser) {
-    return <LoginScreen onLogin={setCurrentUser} />;
+    return <LoginScreen users={appUsersList} onLogin={setCurrentUser} />;
   }
 
   return (
@@ -5730,6 +5769,13 @@ export default function App() {
           <div style={{ position: "absolute" as const, top: 16, right: 20, display: "flex", alignItems: "center", gap: 10, zIndex: 2 }}>
             <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", fontFamily: "'Inter', sans-serif" }}>{currentUser.username}</span>
             <button
+              onClick={() => setShowChangePassword(true)}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#FFFFFF", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
+              title="Alterar a tua password"
+            >
+              Alterar password
+            </button>
+            <button
               onClick={() => setCurrentUser(null)}
               style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#FFFFFF", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
               title="Terminar sessão"
@@ -5737,6 +5783,61 @@ export default function App() {
               Sair
             </button>
           </div>
+
+          {/* Modal de alterar password */}
+          {showChangePassword && (
+            <div
+              style={{ position: "fixed" as const, inset: 0, background: "rgba(20,18,14,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+              onClick={() => { setShowChangePassword(false); setChangePasswordError(""); setChangePassCurrent(""); setChangePassNew(""); setChangePassConfirm(""); }}
+            >
+              <div
+                style={{ background: "#FFFFFF", borderRadius: 20, padding: 28, width: "100%", maxWidth: 360, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, margin: "0 0 16px", color: "#2A241C" }}>
+                  Alterar password
+                </h3>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 5 }}>Password atual</label>
+                <input
+                  type="password"
+                  autoFocus
+                  value={changePassCurrent}
+                  onChange={(e) => setChangePassCurrent(e.target.value)}
+                  style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, marginBottom: 14, colorScheme: "light" as const }}
+                />
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 5 }}>Nova password</label>
+                <input
+                  type="password"
+                  value={changePassNew}
+                  onChange={(e) => setChangePassNew(e.target.value)}
+                  style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, marginBottom: 14, colorScheme: "light" as const }}
+                />
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 5 }}>Confirmar nova password</label>
+                <input
+                  type="password"
+                  value={changePassConfirm}
+                  onChange={(e) => setChangePassConfirm(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleChangePassword(changePassCurrent, changePassNew, changePassConfirm); }}
+                  style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, marginBottom: changePasswordError ? 10 : 20, colorScheme: "light" as const }}
+                />
+                {changePasswordError && <div style={{ color: "#C2554A", fontSize: 12, marginBottom: 14 }}>{changePasswordError}</div>}
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button
+                    onClick={() => { setShowChangePassword(false); setChangePasswordError(""); setChangePassCurrent(""); setChangePassNew(""); setChangePassConfirm(""); }}
+                    style={{ flex: 1, background: "transparent", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => handleChangePassword(changePassCurrent, changePassNew, changePassConfirm)}
+                    style={{ flex: 1, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Conteúdo centrado */}
           <div style={{ position: "relative" as const, zIndex: 1, width: "100%", maxWidth: 680, padding: "0 24px" }}>
