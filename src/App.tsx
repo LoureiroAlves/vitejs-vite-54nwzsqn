@@ -5121,10 +5121,11 @@ export default function App() {
       : def
       ? "0 1px 3px rgba(42,36,28,0.18)"
       : undefined;
-    const cellRadius = def || isSelected ? 5 : 0;
+    const cellRadius = 5;
     const rowHighlightFilter = isRowHighlighted ? "brightness(0.8) saturate(1.15)" : undefined;
     const handleFocus = () => setFocusedCell({ emp, day: d });
     const handleBlur = () => setFocusedCell((prev) => (prev && prev.emp === emp && prev.day === d ? null : prev));
+    const CHIP_INSET = 3;
 
     if (shift === "EX") {
       return (
@@ -5135,43 +5136,52 @@ export default function App() {
           onMouseEnter={(e) => paintOver(emp, d, e.buttons)}
           style={{
             ...styles.dayCell,
-            ...styles.exCell,
-            background: isSelected ? "#FDDDD9" : def!.color,
+            position: "relative" as const,
+            background: "transparent",
             outline,
             outlineOffset: outline ? "-2px" : undefined,
-            boxShadow: cellBoxShadow,
-            borderRadius: cellRadius,
-            filter: rowHighlightFilter,
-            overflow: "hidden",
           }}
         >
-          <button
-            className="cell-btn"
-            data-emp={emp}
-            data-day={d}
-            onClick={(e) => selectMode ? toggleDay(d) : (e.currentTarget as HTMLElement).focus()}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            style={{ ...styles.exLabel, color: isSelected ? "#7A2E24" : fg }}
-            title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : "Extra — clique e escreva a sigla para mudar (Ctrl+C/V para copiar/colar)"}
+          <div
+            style={{
+              ...styles.exCell,
+              position: "absolute" as const,
+              inset: CHIP_INSET,
+              background: isSelected ? "#FDDDD9" : def!.color,
+              boxShadow: cellBoxShadow,
+              borderRadius: cellRadius,
+              filter: rowHighlightFilter,
+              overflow: "hidden",
+            }}
           >
-            {isSelected ? "✕" : "EX"}
-          </button>
-          {!isSelected && (
-            <input
-              type="number"
-              min="0"
-              max="24"
-              step="0.5"
-              className="no-print"
-              value={getExtraHours(emp, d)}
-              onChange={(e) => setExtraHoursValue(emp, d, e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              style={styles.exInput}
-              aria-label={`Horas extra de ${emp} no dia ${d}`}
-              title="Quantas horas extra"
-            />
-          )}
+            <button
+              className="cell-btn"
+              data-emp={emp}
+              data-day={d}
+              onClick={(e) => selectMode ? toggleDay(d) : (e.currentTarget as HTMLElement).focus()}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              style={{ ...styles.exLabel, color: isSelected ? "#7A2E24" : fg }}
+              title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : "Extra — clique e escreva a sigla para mudar (Ctrl+C/V para copiar/colar)"}
+            >
+              {isSelected ? "✕" : "EX"}
+            </button>
+            {!isSelected && (
+              <input
+                type="number"
+                min="0"
+                max="24"
+                step="0.5"
+                className="no-print"
+                value={getExtraHours(emp, d)}
+                onChange={(e) => setExtraHoursValue(emp, d, e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                style={styles.exInput}
+                aria-label={`Horas extra de ${emp} no dia ${d}`}
+                title="Quantas horas extra"
+              />
+            )}
+          </div>
         </div>
       );
     }
@@ -5190,18 +5200,33 @@ export default function App() {
         onBlur={handleBlur}
         style={{
           ...styles.dayCell,
-          background: bg,
-          color: fg,
+          position: "relative" as const,
+          background: "transparent",
           outline,
           outlineOffset: outline ? "-2px" : undefined,
           borderRight: "1px solid #EFEAE2",
-          boxShadow: cellBoxShadow,
-          borderRadius: cellRadius,
-          filter: rowHighlightFilter,
         }}
         title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : def ? `${def.label} — escreva a sigla para mudar (Ctrl+C/V para copiar/colar)` : "Sem turno — clique e escreva a sigla (ex: M, T, N, EX...)"}
       >
-        {isSelected ? "✕" : shift || "—"}
+        <span
+          style={{
+            position: "absolute" as const,
+            inset: CHIP_INSET,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: bg,
+            color: fg,
+            fontSize: "inherit",
+            fontWeight: "inherit",
+            fontFamily: "inherit",
+            borderRadius: cellRadius,
+            boxShadow: cellBoxShadow,
+            filter: rowHighlightFilter,
+          }}
+        >
+          {isSelected ? "✕" : shift || "—"}
+        </span>
       </button>
     );
   };
