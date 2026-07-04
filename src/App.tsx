@@ -5248,7 +5248,7 @@ export default function App() {
     );
   };
 
-  const renderEmployeeRow = (emp: string, group: "rv" | "main") => {
+  const renderEmployeeRow = (emp: string, _group: "rv" | "main") => {
     const av = getAvatar(emp);
     const isHighlighted = highlightedRow === emp;
     return (
