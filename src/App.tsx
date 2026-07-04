@@ -5312,7 +5312,7 @@ export default function App() {
     );
   };
 
-  const gridMinWidth = 150 + numDays * 36 + 190;
+  const gridMinWidth = 150 + numDays * 40 + 210;
   const isHomePage = (activePage as string) === "home";
   const isStockPage = (activePage as string) === "stock";
 
@@ -6158,7 +6158,7 @@ export default function App() {
       <h2 style={styles.sectionTitle}>Equipa</h2>
       <div className="scroll-x" style={styles.gridWrap}>
         <div key={`main-${monthKey}`} className="month-fade" style={{ minWidth: gridMinWidth }}>
-          <div style={{ ...styles.row, height: 44 }}>
+          <div style={{ ...styles.row, height: 48 }}>
             <div style={{ ...styles.nameCell, ...styles.headerCell, position: "sticky", left: 0, zIndex: 3, background: "#FBF9F5" }}>
               <IconUsers size={14} style={{ marginRight: 6, opacity: 0.5 }} />
               Funcionário
@@ -6245,7 +6245,7 @@ export default function App() {
       <h2 style={styles.sectionTitle}>Colaboradores — Recibo Verde</h2>
       <div className="scroll-x" style={styles.gridWrap}>
         <div key={`rv-${monthKey}`} className="month-fade" style={{ minWidth: gridMinWidth }}>
-          <div style={{ ...styles.row, height: 44 }}>
+          <div style={{ ...styles.row, height: 48 }}>
             <div style={{ ...styles.nameCell, ...styles.headerCell, position: "sticky", left: 0, zIndex: 3, background: "#FBF9F5" }}>
               <IconUsers size={14} style={{ marginRight: 6, opacity: 0.5 }} />
               Funcionário
@@ -7114,7 +7114,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   row: {
     display: "flex",
-    height: 36,
+    height: 40,
     borderBottom: "1px solid #EFEAE2",
   },
   headerCell: {
@@ -7161,8 +7161,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexShrink: 0,
   },
   dayHeaderCell: {
-    width: 36,
-    minWidth: 36,
+    width: 40,
+    minWidth: 40,
     height: "100%",
     boxSizing: "border-box" as const,
     padding: "6px 0",
@@ -7183,12 +7183,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 9,
     color: "#A39B8E",
     lineHeight: 1,
-    marginTop: 2,
+    marginTop: 4,
   },
   dayCell: {
-    width: 36,
-    minWidth: 36,
-    height: 36,
+    width: 40,
+    minWidth: 40,
+    height: 40,
     border: "none",
     borderRight: "1px solid #EFEAE2",
     fontSize: 12,
@@ -7205,7 +7205,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: "default",
   },
   exLabel: {
-    flex: "0 0 16px",
+    flex: "0 0 14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -7235,8 +7235,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     colorScheme: "light",
   },
   statCell: {
-    width: 38,
-    minWidth: 38,
+    width: 42,
+    minWidth: 42,
     height: "100%",
     boxSizing: "border-box" as const,
     padding: "6px 1px",
@@ -7284,9 +7284,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 9,
   },
   coverageCell: {
-    width: 36,
-    minWidth: 36,
-    height: 36,
+    width: 40,
+    minWidth: 40,
+    height: 40,
     borderRight: "1px solid #EFEAE2",
     display: "flex",
     alignItems: "center",
