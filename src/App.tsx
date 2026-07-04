@@ -7177,11 +7177,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 600,
     fontSize: 12,
     color: "#2A241C",
+    lineHeight: 1,
   },
   dayLetter: {
     fontSize: 9,
     color: "#A39B8E",
-    marginTop: 1,
+    lineHeight: 1,
+    marginTop: 2,
   },
   dayCell: {
     width: 36,
