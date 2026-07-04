@@ -3950,6 +3950,7 @@ export default function App() {
       delete next[name];
       return next;
     });
+    setOpenProfile((prev) => (prev === name ? null : prev));
     setConfirmDelete(null);
   };
 
@@ -5114,15 +5115,14 @@ export default function App() {
       : "#9A9388";
     const outline = isSelected
       ? "2px solid #B5483D"
-      : isRowHighlighted
-      ? "2px solid #2A241C"
       : undefined;
     const cellBoxShadow = isFocused
       ? "inset 0 0 0 2px #2A241C"
       : def
       ? "0 1px 3px rgba(42,36,28,0.18)"
       : undefined;
-    const cellRadius = def || isRowHighlighted || isSelected ? 5 : 0;
+    const cellRadius = def || isSelected ? 5 : 0;
+    const rowHighlightFilter = isRowHighlighted ? "brightness(0.8) saturate(1.15)" : undefined;
     const handleFocus = () => setFocusedCell({ emp, day: d });
     const handleBlur = () => setFocusedCell((prev) => (prev && prev.emp === emp && prev.day === d ? null : prev));
 
@@ -5141,6 +5141,7 @@ export default function App() {
             outlineOffset: outline ? "-2px" : undefined,
             boxShadow: cellBoxShadow,
             borderRadius: cellRadius,
+            filter: rowHighlightFilter,
             overflow: "hidden",
           }}
         >
@@ -5196,6 +5197,7 @@ export default function App() {
           borderRight: "1px solid #EFEAE2",
           boxShadow: cellBoxShadow,
           borderRadius: cellRadius,
+          filter: rowHighlightFilter,
         }}
         title={selectMode ? (isSelected ? "Desselecionar" : "Selecionar") : def ? `${def.label} — escreva a sigla para mudar (Ctrl+C/V para copiar/colar)` : "Sem turno — clique e escreva a sigla (ex: M, T, N, EX...)"}
       >
@@ -5216,7 +5218,7 @@ export default function App() {
 
   const renderStatCells = (emp: string) => {
     const t = employeeTotals[emp] || { hours: 0, daysWorked: 0, absences: 0, extra: 0, total: 0 };
-    const highlightStyle = highlightedRow === emp ? { outline: "2px solid #2A241C", outlineOffset: "-2px", borderRadius: 5 } : {};
+    const highlightStyle = highlightedRow === emp ? { background: "#E3D9BE" } : {};
     return (
       <>
         <div style={{ ...styles.statCell, ...highlightStyle }}>
@@ -5251,7 +5253,7 @@ export default function App() {
     const isHighlighted = highlightedRow === emp;
     return (
       <div key={emp} style={styles.row}>
-        <div style={{ ...styles.nameCell, position: "sticky", left: 0, zIndex: 2, background: "#FFFFFF", ...(isHighlighted ? { outline: "2px solid #2A241C", outlineOffset: "-2px", borderRadius: 6 } : {}) }}>
+        <div style={{ ...styles.nameCell, position: "sticky", left: 0, zIndex: 2, background: isHighlighted ? "#E3D9BE" : "#FFFFFF" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
             <div style={{
               width: 22,
@@ -5276,29 +5278,6 @@ export default function App() {
               title="1 clique para destacar a linha · 2 cliques para ver a ficha"
             >
               {emp}
-            </button>
-          </div>
-          <div style={styles.nameActions}>
-            <button
-              className="icon-btn no-print"
-              style={{ ...styles.iconBtn, padding: 3, color: employeeEmails[emp] ? "#B08A4E" : "#C2BAAC" }}
-              onClick={() => handleEditEmail(emp)}
-              aria-label={`Email de ${emp}`}
-              title={employeeEmails[emp] ? `Email: ${employeeEmails[emp]}` : "Definir email"}
-            >
-              <IconMail size={12} />
-            </button>
-            <button
-              className="icon-btn no-print"
-              style={{ ...styles.iconBtn, padding: 3 }}
-              onClick={(e) => {
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                setConfirmDelete({ name: emp, group, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
-              }}
-              aria-label={`Remover ${emp}`}
-              title="Remover colaborador"
-            >
-              <IconTrash2 size={14} />
             </button>
           </div>
         </div>
@@ -6542,6 +6521,40 @@ export default function App() {
                   );
                 })()}
               </div>
+
+              {/* Email de notificação */}
+              <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #EFEAE2" }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
+                  Email para notificações
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F5F0", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 12px" }}>
+                  <IconMail size={16} color={employeeEmails[openProfile] ? "#B08A4E" : "#C2BAAC"} />
+                  <span style={{ flex: 1, fontSize: 13, color: employeeEmails[openProfile] ? "#2A241C" : "#A39B8E", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                    {employeeEmails[openProfile] || "Sem email definido"}
+                  </span>
+                  <button
+                    onClick={() => handleEditEmail(openProfile)}
+                    style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 6, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#2A241C", fontFamily: "'Inter', sans-serif" }}
+                  >
+                    Editar
+                  </button>
+                </div>
+                <div style={{ fontSize: 11, color: "#A39B8E", marginTop: 5 }}>Usado para enviar notificações de alterações ao horário.</div>
+              </div>
+
+              {/* Remover colaborador */}
+              <div style={{ marginTop: 20 }}>
+                <button
+                  onClick={(e) => {
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    const group: "rv" | "main" = rvEmployees.includes(openProfile) ? "rv" : "main";
+                    setConfirmDelete({ name: openProfile, group, x: rect.left + rect.width / 2, y: rect.top });
+                  }}
+                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#FFF5F4", color: "#C2554A", border: "1px solid #F2C4BC", borderRadius: 8, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+                >
+                  <IconTrash2 size={14} /> Remover colaborador
+                </button>
+              </div>
             </div>
 
             {/* Footer com indicador de auto-save */}
@@ -7343,7 +7356,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 10,
+    zIndex: 60,
     padding: 16,
   },
   modal: {
