@@ -5122,7 +5122,7 @@ export default function App() {
       : def
       ? "0 1px 3px rgba(42,36,28,0.18)"
       : undefined;
-    const cellRadius = def ? 5 : 0;
+    const cellRadius = def || isRowHighlighted || isSelected ? 5 : 0;
     const handleFocus = () => setFocusedCell({ emp, day: d });
     const handleBlur = () => setFocusedCell((prev) => (prev && prev.emp === emp && prev.day === d ? null : prev));
 
@@ -5216,7 +5216,7 @@ export default function App() {
 
   const renderStatCells = (emp: string) => {
     const t = employeeTotals[emp] || { hours: 0, daysWorked: 0, absences: 0, extra: 0, total: 0 };
-    const highlightStyle = highlightedRow === emp ? { outline: "2px solid #2A241C", outlineOffset: "-2px" } : {};
+    const highlightStyle = highlightedRow === emp ? { outline: "2px solid #2A241C", outlineOffset: "-2px", borderRadius: 5 } : {};
     return (
       <>
         <div style={{ ...styles.statCell, ...highlightStyle }}>
@@ -5251,7 +5251,7 @@ export default function App() {
     const isHighlighted = highlightedRow === emp;
     return (
       <div key={emp} style={styles.row}>
-        <div style={{ ...styles.nameCell, position: "sticky", left: 0, zIndex: 2, background: "#FFFFFF", ...(isHighlighted ? { outline: "2px solid #2A241C", outlineOffset: "-2px" } : {}) }}>
+        <div style={{ ...styles.nameCell, position: "sticky", left: 0, zIndex: 2, background: "#FFFFFF", ...(isHighlighted ? { outline: "2px solid #2A241C", outlineOffset: "-2px", borderRadius: 6 } : {}) }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
             <div style={{
               width: 22,
