@@ -5137,7 +5137,7 @@ export default function App() {
           style={{
             ...styles.dayCell,
             position: "relative" as const,
-            background: "transparent",
+            background: isRowHighlighted ? "#E3D9BE" : "transparent",
             outline,
             outlineOffset: outline ? "-2px" : undefined,
           }}
@@ -5201,7 +5201,7 @@ export default function App() {
         style={{
           ...styles.dayCell,
           position: "relative" as const,
-          background: "transparent",
+          background: isRowHighlighted ? "#E3D9BE" : "transparent",
           outline,
           outlineOffset: outline ? "-2px" : undefined,
           borderRight: "1px solid #EFEAE2",
