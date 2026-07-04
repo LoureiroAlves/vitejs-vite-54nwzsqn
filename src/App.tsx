@@ -5137,7 +5137,7 @@ export default function App() {
           style={{
             ...styles.dayCell,
             position: "relative" as const,
-            background: "transparent",
+            background: isRowHighlighted ? "#E3D9BE" : "transparent",
             outline,
             outlineOffset: outline ? "-2px" : undefined,
           }}
@@ -5201,7 +5201,7 @@ export default function App() {
         style={{
           ...styles.dayCell,
           position: "relative" as const,
-          background: "transparent",
+          background: isRowHighlighted ? "#E3D9BE" : "transparent",
           outline,
           outlineOffset: outline ? "-2px" : undefined,
           borderRight: "1px solid #EFEAE2",
@@ -7129,6 +7129,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   nameCell: {
     width: 150,
     minWidth: 150,
+    height: "100%",
+    boxSizing: "border-box" as const,
     padding: "6px 10px",
     display: "flex",
     alignItems: "center",
@@ -7161,6 +7163,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   dayHeaderCell: {
     width: 36,
     minWidth: 36,
+    height: "100%",
+    boxSizing: "border-box" as const,
     padding: "6px 0",
     display: "flex",
     flexDirection: "column",
@@ -7231,6 +7235,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   statCell: {
     width: 38,
     minWidth: 38,
+    height: "100%",
+    boxSizing: "border-box" as const,
     padding: "6px 1px",
     display: "flex",
     alignItems: "center",
