@@ -6158,7 +6158,7 @@ export default function App() {
       <h2 style={styles.sectionTitle}>Equipa</h2>
       <div className="scroll-x" style={styles.gridWrap}>
         <div key={`main-${monthKey}`} className="month-fade" style={{ minWidth: gridMinWidth }}>
-          <div style={styles.row}>
+          <div style={{ ...styles.row, height: 44 }}>
             <div style={{ ...styles.nameCell, ...styles.headerCell, position: "sticky", left: 0, zIndex: 3, background: "#FBF9F5" }}>
               <IconUsers size={14} style={{ marginRight: 6, opacity: 0.5 }} />
               Funcionário
@@ -6245,7 +6245,7 @@ export default function App() {
       <h2 style={styles.sectionTitle}>Colaboradores — Recibo Verde</h2>
       <div className="scroll-x" style={styles.gridWrap}>
         <div key={`rv-${monthKey}`} className="month-fade" style={{ minWidth: gridMinWidth }}>
-          <div style={styles.row}>
+          <div style={{ ...styles.row, height: 44 }}>
             <div style={{ ...styles.nameCell, ...styles.headerCell, position: "sticky", left: 0, zIndex: 3, background: "#FBF9F5" }}>
               <IconUsers size={14} style={{ marginRight: 6, opacity: 0.5 }} />
               Funcionário
@@ -7114,6 +7114,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   row: {
     display: "flex",
+    height: 36,
     borderBottom: "1px solid #EFEAE2",
   },
   headerCell: {
@@ -7277,7 +7278,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   coverageCell: {
     width: 36,
     minWidth: 36,
-    height: 32,
+    height: 36,
     borderRight: "1px solid #EFEAE2",
     display: "flex",
     alignItems: "center",
