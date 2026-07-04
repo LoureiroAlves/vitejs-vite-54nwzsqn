@@ -7047,7 +7047,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 12,
   },
   alertIcon: {
-    fontSize: 20,
+    fontSize: 14,
     flexShrink: 0,
     marginTop: 2,
   },
