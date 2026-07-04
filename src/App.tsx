@@ -753,7 +753,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
       )}
 
       {/* Tabs + pesquisa */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" as const, gap: 10, maxWidth: 1300, margin: "0 auto 20px" }}>
+      <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", flexWrap: "wrap" as const, gap: 12, maxWidth: 1300, margin: "0 auto 20px" }}>
         <div style={{ ...stockStyles.tabs, margin: 0 }}>
           {[
             { key: "inventory", label: "Inventário", icon: <IconBox size={14} /> },
@@ -791,7 +791,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
       {activeTab === "inventory" && (
         <div>
           {/* Filtro por categoria + botão adicionar */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" as const, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" as const, alignItems: "center", maxWidth: 1300, margin: "0 auto 16px" }}>
             {["Todos", ...allCategories].map((cat) => {
               const catColor = cat !== "Todos" ? getCategoryColor(cat) : undefined;
               const isActive = filterCategory === cat;
