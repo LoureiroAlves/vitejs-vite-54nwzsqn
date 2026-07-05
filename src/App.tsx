@@ -3848,7 +3848,6 @@ export default function App() {
   });
   const [openProfile, setOpenProfile] = useState<string | null>(null);
   const [colaboradorLinkModal, setColaboradorLinkModal] = useState<{ name: string; link: string } | null>(null);
-  const [showMapaGeralModal, setShowMapaGeralModal] = useState(false);
   const [highlightedRow, setHighlightedRow] = useState<string | null>(null);
   const [scheduleLink, setScheduleLink] = useState<string>(() => {
     const stored = loadStoredData();
@@ -4237,6 +4236,59 @@ export default function App() {
     }
     const link = `${window.location.origin}${window.location.pathname}?colaborador=${code}`;
     setColaboradorLinkModal({ name, link });
+  };
+
+  // ---------- Folha de impressão do QR code geral do mapa ----------
+  const handleGerarFolhaQRGeral = () => {
+    const mapaLink = `${window.location.origin}${window.location.pathname}?mapageral=1`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(mapaLink)}`;
+
+    const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>QR Code — Mapa de Turnos</title>
+    <style>
+      @page { size: A4; margin: 20mm; }
+      * { box-sizing: border-box; }
+      body {
+        font-family: Arial, sans-serif; color: #2A241C; margin: 0;
+        display: flex; align-items: center; justify-content: center;
+        min-height: 100vh; background: #FAFAF8;
+      }
+      .no-print { position: fixed; top: 16px; right: 16px; }
+      @media print { .no-print { display: none !important; } body { background: #FFFFFF; } }
+      .sheet {
+        width: 100%; max-width: 480px; text-align: center;
+        border: 2px solid #2A241C; border-radius: 20px; padding: 48px 36px;
+      }
+      .logo-circle {
+        width: 64px; height: 64px; border-radius: 18px; background: #1A1612;
+        display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;
+      }
+      h1 { font-size: 20px; font-weight: 700; margin: 0 0 4px; letter-spacing: .3px; }
+      .sub { font-size: 13px; color: #6B6358; margin: 0 0 28px; }
+      .qr-box { padding: 16px; border: 1px solid #E4DED3; border-radius: 16px; display: inline-block; margin-bottom: 24px; }
+      .qr-box img { display: block; width: 260px; height: 260px; }
+      .instructions { font-size: 14px; color: #6B6358; line-height: 1.7; margin: 0 0 8px; }
+      .month { font-size: 13px; font-weight: 700; color: #B08A4E; text-transform: uppercase; letter-spacing: .5px; margin-top: 20px; }
+      .footer { font-size: 10px; color: #A39B8E; margin-top: 24px; border-top: 1px solid #EFEAE2; padding-top: 12px; }
+    </style></head><body>
+    <button class="no-print" onclick="window.print()" style="background:#2A241C;color:#F5B944;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
+    <div class="sheet">
+      <div class="logo-circle">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F5B944" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 21V7l9-4 9 4v14"/><path d="M9 21V13h6v8"/><path d="M9 9h.01M12 9h.01M15 9h.01M9 13h.01M15 13h.01"/>
+        </svg>
+      </div>
+      <h1>ASSOCIAÇÃO OLIVEIRENSE DE SOCORROS MÚTUOS</h1>
+      <p class="sub">Mapa de Turnos da Equipa</p>
+      <div class="qr-box"><img src="${qrUrl}" alt="QR code do mapa de turnos" /></div>
+      <p class="instructions">Aponte a câmara do telemóvel para ver o horário completo da equipa a qualquer momento.</p>
+      <div class="month">${MONTH_NAMES[month]} ${year}</div>
+      <div class="footer">Este código é permanente — mostra sempre o mês atual, com navegação para meses anteriores/seguintes.</div>
+    </div>
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+    w.document.open(); w.document.write(html); w.document.close(); w.focus();
   };
 
   const handleEditEmail = (name: string) => {
@@ -6453,7 +6505,7 @@ export default function App() {
               onMouseEnter={(e) => showTip(e, "Gerar Relatório Único (obrigação anual)")} onMouseLeave={hideTip}>
               📊&nbsp;Rel. Único
             </button>
-            <button className="tool-btn" style={{ ...styles.toolBtn, color: "#3A5A70", fontWeight: 700, fontSize: 12 }} onClick={() => setShowMapaGeralModal(true)}
+            <button className="tool-btn" style={{ ...styles.toolBtn, color: "#3A5A70", fontWeight: 700, fontSize: 12 }} onClick={handleGerarFolhaQRGeral}
               onMouseEnter={(e) => showTip(e, "Gerar QR code do mapa geral para colaboradores")} onMouseLeave={hideTip}>
               📱&nbsp;QR Mapa
             </button>
@@ -7280,48 +7332,6 @@ export default function App() {
           </div>
         </>
       )}
-
-      {/* Modal de QR code do mapa geral (PDF para colaboradores) */}
-      {showMapaGeralModal && (() => {
-        const mapaLink = `${window.location.origin}${window.location.pathname}?mapageral=1`;
-        return (
-          <>
-            <div style={{ position: "fixed" as const, inset: 0, background: "rgba(42,36,28,0.4)", zIndex: 200 }} onClick={() => setShowMapaGeralModal(false)} />
-            <div style={{ position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "min(400px, 92vw)", background: "#FFFFFF", borderRadius: 20, zIndex: 201, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
-              <div style={{ padding: "20px 24px", background: "#F0E8D5", display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 26 }}>🗓️</span>
-                <div>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#2A241C" }}>QR Code do Mapa Geral</div>
-                  <div style={{ fontSize: 12, color: "#8A6A2E" }}>{MONTH_NAMES[month]} {year} — versão para colaboradores</div>
-                </div>
-              </div>
-              <div style={{ padding: 24, textAlign: "center" as const }}>
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(mapaLink)}`}
-                  alt="QR code do mapa geral"
-                  style={{ width: 180, height: 180, margin: "0 auto 16px", border: "1px solid #E4DED3", borderRadius: 12, padding: 8 }}
-                />
-                <p style={{ fontSize: 13, color: "#6B6358", lineHeight: 1.6, margin: "0 0 14px", textAlign: "left" as const }}>
-                  Este código mostra o horário completo da equipa (sem dados pessoais/de gestão) — ideal para afixar num placar. Qualquer colaborador pode ver ou imprimir a partir daí.
-                </p>
-                <input
-                  readOnly
-                  value={mapaLink}
-                  onFocus={(e) => e.target.select()}
-                  onClick={(e) => (e.target as HTMLInputElement).select()}
-                  style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 12px", fontSize: 12, fontFamily: "monospace", outline: "none", background: "#F7F9FB", color: "#2A241C", boxSizing: "border-box" as const, marginBottom: 14, colorScheme: "light" as const }}
-                />
-                <button
-                  onClick={() => setShowMapaGeralModal(false)}
-                  style={{ width: "100%", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </>
-        );
-      })()}
 
       </>
       </div>
