@@ -3963,7 +3963,7 @@ export default function App() {
       scheduleLink,
       lastPublished,
     });
-  }, [employees, rvEmployees, schedule, extraHours, employeeEmails, scheduleLink, lastPublished, initialSyncComplete]);
+  }, [employees, rvEmployees, schedule, extraHours, employeeEmails, employeeProfiles, scheduleLink, lastPublished, initialSyncComplete]);
 
   const numDays = daysInMonth(year, month);
   const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
