@@ -202,7 +202,7 @@ function daysInMonth(year: number, month: number) {
 
 // ---------- Supabase ----------
 const SUPABASE_URL = "https://kfbuvbtdsfrkzrcrwifs.supabase.co";
-const SUPABASE_KEY = "sb_publishable_Ncz4BiLlU7EWKVuL_aAYgw_ql4rtxqJ";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmYnV2YnRkc2Zya3pyY3J3aWZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NjIyMDQsImV4cCI6MjA5ODEzODIwNH0.lzaWuW_-aS7OQ9kzxOVw1msqFKkip85QeVRknE1tDMw";
 
 const sbHeaders = {
   "Content-Type": "application/json",
@@ -3886,9 +3886,8 @@ export default function App() {
       loadFromSupabase("escala_data"),
       loadFromSupabase("stock_data"),
       loadFromSupabase("utentes_data"),
-      loadFromSupabase("app_users"),
-    ]).then(([escala, stock, utentesRow, appUsersRow]) => {
-      if (appUsersRow?.users?.length) setAppUsersList(appUsersRow.users);
+    ]).then(([escala, stock, utentesRow]) => {
+      if (escala?.app_users?.length) setAppUsersList(escala.app_users);
       if (escala) {
         if (escala.employees?.length) setEmployees(escala.employees);
         if (escala.rv_employees?.length) setRvEmployees(escala.rv_employees);
@@ -4328,7 +4327,7 @@ export default function App() {
     );
     setAppUsersList(updatedList);
     setCurrentUser({ ...currentUser, password: newPass });
-    saveToSupabase("app_users", { users: updatedList }).catch(() => {
+    saveToSupabase("escala_data", { app_users: updatedList }).catch(() => {
       alert("⚠️ A password foi alterada nesta sessão, mas não foi possível gravar na nuvem. Tenta novamente mais tarde.");
     });
     setChangePasswordError("");
@@ -5028,8 +5027,8 @@ export default function App() {
     const totalUtentes = utentesData.length;
 
     // Carregar dados já gravados anteriormente para este relatório (por ano)
-    const erpiRow = await loadFromSupabase("erpi_data").catch(() => null);
-    const erpiSavedByYear: Record<string, Record<string, string>> = erpiRow?.years || {};
+    const erpiRow = await loadFromSupabase("escala_data").catch(() => null);
+    const erpiSavedByYear: Record<string, Record<string, string>> = erpiRow?.erpi_years || {};
     const savedYearData: Record<string, string> = erpiSavedByYear[String(anoRef)] || {};
 
     // Contar entradas no ano de referência, com base na data de entrada (DD/MM/AAAA) de cada utente
@@ -5172,7 +5171,7 @@ export default function App() {
         ...erpiSavedByYear,
         [String(anoRef)]: { ...(erpiSavedByYear[String(anoRef)] || {}), ...campos },
       };
-      saveToSupabase("erpi_data", { years: merged }).catch(() => {
+      saveToSupabase("escala_data", { erpi_years: merged }).catch(() => {
         alert("⚠️ Não foi possível gravar na nuvem. Verifique a ligação e tente novamente.");
       });
     };
