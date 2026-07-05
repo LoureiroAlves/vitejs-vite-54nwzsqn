@@ -202,7 +202,7 @@ function daysInMonth(year: number, month: number) {
 
 // ---------- Supabase ----------
 const SUPABASE_URL = "https://kfbuvbtdsfrkzrcrwifs.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmYnV2YnRkc2Zya3pyY3J3aWZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NjIyMDQsImV4cCI6MjA5ODEzODIwNH0.lzaWuW_-aS7OQ9kzxOVw1msqFKkip85QeVRknE1tDMw";
+const SUPABASE_KEY = "sb_publishable_Ncz4BiLlU7EWKVuL_aAYgw_ql4rtxqJ";
 
 const sbHeaders = {
   "Content-Type": "application/json",
