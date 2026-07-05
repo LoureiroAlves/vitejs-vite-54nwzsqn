@@ -3528,10 +3528,270 @@ function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: App
   );
 }
 
+// ============================================================
+// PÁGINA PÚBLICA — HORÁRIO INDIVIDUAL DO COLABORADOR (via QR code)
+// ============================================================
+function ColaboradorSchedulePage({ code }: { code: string }) {
+  const today = new Date();
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [employeeName, setEmployeeName] = useState<string>("");
+  const [schedule, setSchedule] = useState<Record<string, Record<string, Record<number, string>>>>({});
+  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
+
+  useEffect(() => {
+    loadFromSupabase("escala_data").then((escala) => {
+      const profiles = escala?.employee_profiles || {};
+      const found = Object.keys(profiles).find((name) => profiles[name]?.colaboradorCode === code);
+      if (!found) {
+        setNotFound(true);
+      } else {
+        setEmployeeName(found);
+        setSchedule(escala?.schedule || {});
+      }
+      setLoading(false);
+    }).catch(() => {
+      setNotFound(true);
+      setLoading(false);
+    });
+  }, [code]);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#F5EDD8", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ textAlign: "center" as const, color: "#8A6A2E" }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
+          <div>A carregar horário...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#F5EDD8", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", padding: 24 }}>
+        <div style={{ textAlign: "center" as const, color: "#8A6A2E", maxWidth: 360 }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Link inválido ou expirado</div>
+          <div style={{ fontSize: 13, color: "#6B6358" }}>Peça ao responsável para gerar um novo QR code.</div>
+        </div>
+      </div>
+    );
+  }
+
+  const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const monthData = schedule[monthKey] || {};
+  const matchedKey = Object.keys(monthData).find((k) => k.trim().toLowerCase() === employeeName.trim().toLowerCase());
+  const monthSchedule = matchedKey ? monthData[matchedKey] : (monthData[employeeName] || {});
+  const numDays = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
+  const av = getAvatar(employeeName);
+
+  const summary: Record<string, number> = {};
+  Object.values(monthSchedule).forEach((t: any) => { if (t) summary[t as string] = (summary[t as string] || 0) + 1; });
+
+  const goPrev = () => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); };
+  const goNext = () => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#F5EDD8", fontFamily: "'Inter', sans-serif", paddingBottom: 60 }}>
+      <div style={{ background: "#2A241C", padding: "28px 20px", display: "flex", alignItems: "center", gap: 16, color: "#FFFFFF" }}>
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: av.bg, color: av.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", flexShrink: 0 }}>
+          {av.initials}
+        </div>
+        <div>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 19, fontWeight: 700 }}>{employeeName}</div>
+          <div style={{ fontSize: 12, color: "#C9C2B5" }}>O teu horário — Associação Oliveirense de Socorros Mútuos</div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "20px 16px" }}>
+        <div style={{ background: "#FFFFFF", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <button onClick={goPrev} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: "#8A6A2E" }}>
+              <IconChevronLeft size={18} />
+            </button>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16 }}>{MONTH_NAMES[month]} {year}</div>
+            <button onClick={goNext} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: "#8A6A2E" }}>
+              <IconChevronRight size={18} />
+            </button>
+          </div>
+
+          {Object.keys(monthSchedule).length === 0 ? (
+            <div style={{ textAlign: "center" as const, color: "#A39B8E", fontSize: 13, padding: "20px 0" }}>Sem turnos registados para este mês.</div>
+          ) : (
+            <>
+              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8, marginBottom: 16 }}>
+                {Object.entries(summary).map(([turno, count]) => (
+                  <div key={turno} style={{ background: "#F0E8D5", borderRadius: 10, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: "#8A6A2E" }}>
+                    {SHIFT_TYPES[turno]?.label || turno}: <strong>{count}</strong>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 8 }}>
+                {WEEKDAY_LETTERS.map((d, i) => (
+                  <div key={i} style={{ textAlign: "center" as const, fontSize: 11, fontWeight: 700, color: "#A39B8E" }}>{d}</div>
+                ))}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+                {Array.from({ length: firstDayOfWeek }, (_, i) => <div key={`e-${i}`} />)}
+                {Array.from({ length: numDays }, (_, i) => i + 1).map((day) => {
+                  const turno = monthSchedule[day];
+                  const def = turno ? SHIFT_TYPES[turno] : null;
+                  const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+                  return (
+                    <div key={day} style={{
+                      aspectRatio: "1", borderRadius: 8, display: "flex", flexDirection: "column" as const,
+                      alignItems: "center", justifyContent: "center", fontSize: 10,
+                      background: def ? def.color : "#F7F5F0",
+                      color: def && !LIGHT_SHIFTS.includes(turno) ? "#FFFFFF" : "#9A9388",
+                      border: isToday ? "2px solid #2A241C" : "1px solid #EFEAE2",
+                    }}>
+                      <div style={{ fontSize: 9, opacity: 0.8 }}>{day}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700 }}>{turno || "—"}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={{ textAlign: "center" as const, fontSize: 11, color: "#A39B8E", marginTop: 20 }}>
+          Link pessoal e só de leitura — não partilhes com outros colaboradores.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// PÁGINA PÚBLICA — MAPA GERAL DA EQUIPA (via QR code, versão colaboradores)
+// ============================================================
+function MapaGeralPage() {
+  const today = new Date();
+  const [loading, setLoading] = useState(true);
+  const [employees, setEmployees] = useState<string[]>([]);
+  const [rvEmployees, setRvEmployees] = useState<string[]>([]);
+  const [schedule, setSchedule] = useState<Record<string, Record<string, Record<number, string>>>>({});
+  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
+
+  useEffect(() => {
+    loadFromSupabase("escala_data").then((escala) => {
+      setEmployees(escala?.employees || []);
+      setRvEmployees(escala?.rv_employees || []);
+      setSchedule(escala?.schedule || {});
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#F5EDD8", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ textAlign: "center" as const, color: "#8A6A2E" }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
+          <div>A carregar mapa...</div>
+        </div>
+      </div>
+    );
+  }
+
+  const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const monthData = schedule[monthKey] || {};
+  const numDays = new Date(year, month + 1, 0).getDate();
+  const days = Array.from({ length: numDays }, (_, i) => i + 1);
+  const allNames = [...rvEmployees, ...employees];
+
+  const goPrev = () => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); };
+  const goNext = () => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#F5EDD8", fontFamily: "'Inter', sans-serif", padding: "20px 16px 60px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap" as const, gap: 10 }}>
+          <div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 20, color: "#2A241C" }}>Mapa de Turnos — Equipa</div>
+            <div style={{ fontSize: 12, color: "#A39B8E" }}>Associação Oliveirense de Socorros Mútuos · só de leitura</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={goPrev} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: "#8A6A2E" }}>
+              <IconChevronLeft size={18} />
+            </button>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15, minWidth: 120, textAlign: "center" as const }}>{MONTH_NAMES[month]} {year}</div>
+            <button onClick={goNext} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: "#8A6A2E" }}>
+              <IconChevronRight size={18} />
+            </button>
+            <button onClick={() => window.print()} style={{ border: "1px solid #E4DED3", background: "#2A241C", color: "#F5B944", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>
+              🖨️ Imprimir
+            </button>
+          </div>
+        </div>
+
+        <div style={{ overflowX: "auto" as const, background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 14 }}>
+          <table style={{ borderCollapse: "collapse" as const, width: "100%", fontSize: 12 }}>
+            <thead>
+              <tr>
+                <th style={{ position: "sticky" as const, left: 0, background: "#FBF9F5", textAlign: "left" as const, padding: "8px 12px", borderBottom: "2px solid #E4DED3", borderRight: "1px solid #EFEAE2", minWidth: 150 }}>Funcionário</th>
+                {days.map((d) => {
+                  const date = new Date(year, month, d);
+                  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                  return (
+                    <th key={d} style={{ background: isWeekend ? "#F4EFE6" : "#FBF9F5", padding: "6px 4px", borderBottom: "2px solid #E4DED3", borderRight: "1px solid #EFEAE2", minWidth: 32, fontSize: 11 }}>
+                      <div>{d}</div>
+                      <div style={{ fontSize: 9, color: "#A39B8E", fontWeight: 400 }}>{WEEKDAY_LETTERS[date.getDay()]}</div>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {allNames.map((name) => {
+                const matchedKey = Object.keys(monthData).find((k) => k.trim().toLowerCase() === name.trim().toLowerCase());
+                const personSchedule = matchedKey ? monthData[matchedKey] : (monthData[name] || {});
+                return (
+                  <tr key={name}>
+                    <td style={{ position: "sticky" as const, left: 0, background: "#FFFFFF", padding: "6px 12px", borderBottom: "1px solid #EFEAE2", borderRight: "1px solid #EFEAE2", fontWeight: 500 }}>{name}</td>
+                    {days.map((d) => {
+                      const turno = personSchedule[d];
+                      const def = turno ? SHIFT_TYPES[turno] : null;
+                      return (
+                        <td key={d} style={{ textAlign: "center" as const, padding: "6px 2px", borderBottom: "1px solid #EFEAE2", borderRight: "1px solid #EFEAE2", background: def ? def.color : "#FBF9F5", color: def && !LIGHT_SHIFTS.includes(turno) ? "#FFFFFF" : "#9A9388", fontWeight: 700, fontSize: 11 }}>
+                          {turno || "—"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 14, marginTop: 16, fontSize: 12, color: "#6B6358" }}>
+          {SHIFT_ORDER.map((key) => (
+            <div key={key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 12, height: 12, borderRadius: 3, display: "inline-block", background: SHIFT_TYPES[key].color, border: "1px solid rgba(0,0,0,0.06)" }} />
+              {key} · {SHIFT_TYPES[key].label}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   // Detectar acesso público de família via URL (?familia=CODIGO)
   const familyCode = typeof window !== "undefined"
     ? new URLSearchParams(window.location.search).get("familia")
+    : null;
+  const colaboradorCodeParam = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("colaborador")
+    : null;
+  const isMapaGeralParam = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("mapageral")
     : null;
 
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
@@ -3581,11 +3841,14 @@ export default function App() {
     notes?: string;
     preferredShift?: "M" | "T" | "N" | "";
     files?: { name: string; type: string; data: string; url?: string; uploadedAt: string }[];
+    colaboradorCode?: string;
   }>>(() => {
     const stored = loadStoredData();
     return stored?.employeeProfiles ?? {};
   });
   const [openProfile, setOpenProfile] = useState<string | null>(null);
+  const [colaboradorLinkModal, setColaboradorLinkModal] = useState<{ name: string; link: string } | null>(null);
+  const [showMapaGeralModal, setShowMapaGeralModal] = useState(false);
   const [highlightedRow, setHighlightedRow] = useState<string | null>(null);
   const [scheduleLink, setScheduleLink] = useState<string>(() => {
     const stored = loadStoredData();
@@ -3959,6 +4222,21 @@ export default function App() {
     });
     setOpenProfile((prev) => (prev === name ? null : prev));
     setConfirmDelete(null);
+  };
+
+  // ---------- Link/QR code individual do colaborador (acesso só de leitura ao próprio horário) ----------
+  const generateColaboradorCode = () => {
+    return Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+  };
+
+  const handleGetColaboradorLink = (name: string) => {
+    let code = employeeProfiles[name]?.colaboradorCode;
+    if (!code) {
+      code = generateColaboradorCode();
+      setEmployeeProfiles((prev) => ({ ...prev, [name]: { ...(prev[name] || {}), colaboradorCode: code } }));
+    }
+    const link = `${window.location.origin}${window.location.pathname}?colaborador=${code}`;
+    setColaboradorLinkModal({ name, link });
   };
 
   const handleEditEmail = (name: string) => {
@@ -5521,6 +5799,16 @@ export default function App() {
     return <FamilyPage code={familyCode} />;
   }
 
+  // Acesso público ao horário individual do colaborador, via QR code
+  if (colaboradorCodeParam) {
+    return <ColaboradorSchedulePage code={colaboradorCodeParam} />;
+  }
+
+  // Acesso público ao mapa geral da equipa, via QR code
+  if (isMapaGeralParam) {
+    return <MapaGeralPage />;
+  }
+
   // Acesso interno da equipa requer login
   if (!currentUser) {
     return <LoginScreen users={appUsersList} onLogin={setCurrentUser} />;
@@ -6165,6 +6453,10 @@ export default function App() {
               onMouseEnter={(e) => showTip(e, "Gerar Relatório Único (obrigação anual)")} onMouseLeave={hideTip}>
               📊&nbsp;Rel. Único
             </button>
+            <button className="tool-btn" style={{ ...styles.toolBtn, color: "#3A5A70", fontWeight: 700, fontSize: 12 }} onClick={() => setShowMapaGeralModal(true)}
+              onMouseEnter={(e) => showTip(e, "Gerar QR code do mapa geral para colaboradores")} onMouseLeave={hideTip}>
+              📱&nbsp;QR Mapa
+            </button>
 
             {/* Menu impressão/PDF (dropdown) */}
             <div style={{ position: "relative" as const }}>
@@ -6718,6 +7010,17 @@ export default function App() {
                 <div style={{ fontSize: 11, color: "#A39B8E", marginTop: 5 }}>Usado para enviar notificações de alterações ao horário.</div>
               </div>
 
+              {/* QR code / link individual do horário */}
+              <div style={{ marginTop: 20 }}>
+                <button
+                  onClick={() => handleGetColaboradorLink(openProfile)}
+                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 8, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+                >
+                  📱 Gerar QR code do horário
+                </button>
+                <div style={{ fontSize: 11, color: "#A39B8E", marginTop: 5 }}>Link só de leitura — mostra apenas o horário deste colaborador, sem precisar de login.</div>
+              </div>
+
               {/* Remover colaborador */}
               <div style={{ marginTop: 20 }}>
                 <button
@@ -6938,6 +7241,87 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Modal de link/QR code do colaborador */}
+      {colaboradorLinkModal && (
+        <>
+          <div style={{ position: "fixed" as const, inset: 0, background: "rgba(42,36,28,0.4)", zIndex: 200 }} onClick={() => setColaboradorLinkModal(null)} />
+          <div style={{ position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "min(400px, 92vw)", background: "#FFFFFF", borderRadius: 20, zIndex: 201, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+            <div style={{ padding: "20px 24px", background: "#E8EEF5", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 26 }}>📱</span>
+              <div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#2A241C" }}>QR Code do Horário</div>
+                <div style={{ fontSize: 12, color: "#3A5A70" }}>{colaboradorLinkModal.name}</div>
+              </div>
+            </div>
+            <div style={{ padding: 24, textAlign: "center" as const }}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(colaboradorLinkModal.link)}`}
+                alt="QR code do horário"
+                style={{ width: 180, height: 180, margin: "0 auto 16px", border: "1px solid #E4DED3", borderRadius: 12, padding: 8 }}
+              />
+              <p style={{ fontSize: 13, color: "#6B6358", lineHeight: 1.6, margin: "0 0 14px", textAlign: "left" as const }}>
+                O colaborador aponta a câmara do telemóvel para este código e vê logo o seu próprio horário — sem precisar de login.
+              </p>
+              <input
+                readOnly
+                value={colaboradorLinkModal.link}
+                onFocus={(e) => e.target.select()}
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+                style={{ width: "100%", border: "1px solid #B8CCE0", borderRadius: 10, padding: "10px 12px", fontSize: 12, fontFamily: "monospace", outline: "none", background: "#F7F9FB", color: "#2A241C", boxSizing: "border-box" as const, marginBottom: 14, colorScheme: "light" as const }}
+              />
+              <button
+                onClick={() => setColaboradorLinkModal(null)}
+                style={{ width: "100%", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Modal de QR code do mapa geral (PDF para colaboradores) */}
+      {showMapaGeralModal && (() => {
+        const mapaLink = `${window.location.origin}${window.location.pathname}?mapageral=1`;
+        return (
+          <>
+            <div style={{ position: "fixed" as const, inset: 0, background: "rgba(42,36,28,0.4)", zIndex: 200 }} onClick={() => setShowMapaGeralModal(false)} />
+            <div style={{ position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "min(400px, 92vw)", background: "#FFFFFF", borderRadius: 20, zIndex: 201, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+              <div style={{ padding: "20px 24px", background: "#F0E8D5", display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 26 }}>🗓️</span>
+                <div>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#2A241C" }}>QR Code do Mapa Geral</div>
+                  <div style={{ fontSize: 12, color: "#8A6A2E" }}>{MONTH_NAMES[month]} {year} — versão para colaboradores</div>
+                </div>
+              </div>
+              <div style={{ padding: 24, textAlign: "center" as const }}>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(mapaLink)}`}
+                  alt="QR code do mapa geral"
+                  style={{ width: 180, height: 180, margin: "0 auto 16px", border: "1px solid #E4DED3", borderRadius: 12, padding: 8 }}
+                />
+                <p style={{ fontSize: 13, color: "#6B6358", lineHeight: 1.6, margin: "0 0 14px", textAlign: "left" as const }}>
+                  Este código mostra o horário completo da equipa (sem dados pessoais/de gestão) — ideal para afixar num placar. Qualquer colaborador pode ver ou imprimir a partir daí.
+                </p>
+                <input
+                  readOnly
+                  value={mapaLink}
+                  onFocus={(e) => e.target.select()}
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                  style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 12px", fontSize: 12, fontFamily: "monospace", outline: "none", background: "#F7F9FB", color: "#2A241C", boxSizing: "border-box" as const, marginBottom: 14, colorScheme: "light" as const }}
+                />
+                <button
+                  onClick={() => setShowMapaGeralModal(false)}
+                  style={{ width: "100%", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       </>
       </div>
