@@ -1260,8 +1260,8 @@ interface Utente {
   // Documentos para a família (visíveis no portal familiar)
   filesFamily?: { name: string; type: string; url: string; uploadedAt: string }[];
   // Saídas (consultas, família, etc.)
-  currentOuting?: { reason: "consulta" | "familia" | "outro"; expectedReturn?: string; departedAt: string } | null;
-  outingsHistory?: { id: string; reason: "consulta" | "familia" | "outro"; expectedReturn?: string; departedAt: string; returnedAt?: string }[];
+  currentOuting?: { reason: "consulta" | "familia" | "outro"; customReason?: string; expectedReturn?: string; departedAt: string } | null;
+  outingsHistory?: { id: string; reason: "consulta" | "familia" | "outro"; customReason?: string; expectedReturn?: string; departedAt: string; returnedAt?: string }[];
 }
 
 function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI: () => void }) {
@@ -1391,41 +1391,86 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   };
 
   // ---------- Registo de saídas (consultas, família, etc.) ----------
-  const [outingModalUtenteId, setOutingModalUtenteId] = useState<string | null>(null);
-  const [outingReason, setOutingReason] = useState<"consulta" | "familia" | "outro">("consulta");
-  const [outingExpectedReturn, setOutingExpectedReturn] = useState("");
+  const [pendingOuting, setPendingOuting] = useState<Record<string, { reason: "consulta" | "familia" | "outro"; customText: string }>>({});
 
-  const registerOuting = () => {
-    if (!outingModalUtenteId) return;
-    updateUtente(outingModalUtenteId, {
-      currentOuting: {
-        reason: outingReason,
-        expectedReturn: outingExpectedReturn.trim(),
-        departedAt: new Date().toISOString(),
-      },
-    });
-    setOutingModalUtenteId(null);
-    setOutingReason("consulta");
-    setOutingExpectedReturn("");
+  const OUTING_REASON_LABELS: Record<string, string> = { consulta: "🏥 Consulta", familia: "👪 Família", outro: "📍 Outro" };
+
+  const appendLogEntry = (utenteId: string, dateStr: string, text: string) => {
+    setUtentes((prev) => prev.map((u) => {
+      if (u.id !== utenteId) return u;
+      const logs = u.dailyLogs || [];
+      const existingIdx = logs.findIndex((l) => l.date === dateStr);
+      let newLogs;
+      if (existingIdx >= 0) {
+        newLogs = [...logs];
+        newLogs[existingIdx] = { ...newLogs[existingIdx], text: newLogs[existingIdx].text + "\n\n" + text };
+      } else {
+        newLogs = [{ date: dateStr, text }, ...logs];
+      }
+      const updated = { ...u, dailyLogs: newLogs };
+      if (openUtente?.id === utenteId) setOpenUtente(updated);
+      return updated;
+    }));
   };
 
-  const registerReturn = (utenteId: string) => {
+  const selectPendingReason = (utenteId: string, reason: "consulta" | "familia" | "outro") => {
+    setPendingOuting((prev) => ({ ...prev, [utenteId]: { reason, customText: prev[utenteId]?.reason === reason ? prev[utenteId].customText : "" } }));
+  };
+
+  const setPendingCustomText = (utenteId: string, text: string) => {
+    setPendingOuting((prev) => ({ ...prev, [utenteId]: { reason: prev[utenteId]?.reason || "outro", customText: text } }));
+  };
+
+  const confirmDeparture = (utenteId: string) => {
+    const pending = pendingOuting[utenteId];
+    if (!pending) return;
+    if (pending.reason === "outro" && !pending.customText.trim()) return;
+    const now = new Date();
+    updateUtente(utenteId, {
+      currentOuting: {
+        reason: pending.reason,
+        customReason: pending.reason === "outro" ? pending.customText.trim() : undefined,
+        departedAt: now.toISOString(),
+      },
+    });
+    const reasonLabel = pending.reason === "outro" ? `Outro (${pending.customText.trim()})` : OUTING_REASON_LABELS[pending.reason];
+    const timeStr = now.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+    appendLogEntry(utenteId, todayStr, `🚪 Saída registada às ${timeStr} — motivo: ${reasonLabel}`);
+    setPendingOuting((prev) => { const next = { ...prev }; delete next[utenteId]; return next; });
+  };
+
+  const confirmArrival = (utenteId: string) => {
     const u = utentes.find((x) => x.id === utenteId);
     if (!u?.currentOuting) return;
+    const now = new Date();
+    const departedDate = new Date(u.currentOuting.departedAt);
+    const departedDateStr = departedDate.toLocaleDateString("pt-PT");
+    const sameDay = departedDateStr === todayStr;
+    const reasonLabel = u.currentOuting.reason === "outro" ? `Outro (${u.currentOuting.customReason || ""})` : OUTING_REASON_LABELS[u.currentOuting.reason];
+    const timeStr = now.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+    const departedTimeStr = departedDate.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+
     const historyEntry = {
       id: Date.now().toString() + Math.random().toString(36).slice(2),
       reason: u.currentOuting.reason,
+      customReason: u.currentOuting.customReason,
       expectedReturn: u.currentOuting.expectedReturn,
       departedAt: u.currentOuting.departedAt,
-      returnedAt: new Date().toISOString(),
+      returnedAt: now.toISOString(),
     };
     updateUtente(utenteId, {
       currentOuting: null,
       outingsHistory: [...(u.outingsHistory || []), historyEntry],
     });
-  };
 
-  const OUTING_REASON_LABELS: Record<string, string> = { consulta: "🏥 Consulta", familia: "👪 Família", outro: "📍 Outro" };
+    // Regista o regresso no dia de HOJE (dia real do regresso) — se tiver sido uma saída
+    // de vários dias (ex: internamento hospitalar), não mexe nos registos dos dias entretanto,
+    // só refere aqui a data/hora de saída para dar contexto.
+    const nota = sameDay
+      ? `🏠 Regresso registado às ${timeStr} (motivo: ${reasonLabel})`
+      : `🏠 Regresso registado às ${timeStr} — tinha saído a ${departedDateStr} às ${departedTimeStr} (motivo: ${reasonLabel})`;
+    appendLogEntry(utenteId, todayStr, nota);
+  };
 
   const generateFamilyCode = () => {
     return Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
@@ -1919,16 +1964,18 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               <div key={u.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "#FFFFFF", borderRadius: 10, padding: "10px 14px", flexWrap: "wrap" as const }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontWeight: 600, fontSize: 14, color: "#2A241C" }}>{u.name}</span>
-                  <span style={{ fontSize: 13, color: "#8A6A2E" }}>{OUTING_REASON_LABELS[u.currentOuting!.reason]}</span>
+                  <span style={{ fontSize: 13, color: "#8A6A2E" }}>
+                    {u.currentOuting!.reason === "outro" ? `📍 ${u.currentOuting!.customReason || "Outro"}` : OUTING_REASON_LABELS[u.currentOuting!.reason]}
+                  </span>
                   {u.currentOuting!.expectedReturn && (
                     <span style={{ fontSize: 12, color: "#A39B8E" }}>· regresso previsto: {u.currentOuting!.expectedReturn}</span>
                   )}
                   <span style={{ fontSize: 11, color: "#A39B8E" }}>
-                    · saiu às {new Date(u.currentOuting!.departedAt).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+                    · saiu {new Date(u.currentOuting!.departedAt).toLocaleDateString("pt-PT") !== todayStr ? `a ${new Date(u.currentOuting!.departedAt).toLocaleDateString("pt-PT")} ` : ""}às {new Date(u.currentOuting!.departedAt).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
                 <button
-                  onClick={() => registerReturn(u.id)}
+                  onClick={() => confirmArrival(u.id)}
                   style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
                 >
                   ✓ Regressou
@@ -1958,20 +2005,6 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                 title="Remover utente"
               >
                 <IconTrash2 size={13} />
-              </button>
-              <button
-                style={{ position: "absolute" as const, top: 10, left: 10, border: "none", background: utente.currentOuting ? "#F5EBC8" : "transparent", cursor: "pointer", color: utente.currentOuting ? "#8A6A2E" : "#C2BAAC", padding: "3px 7px", borderRadius: 6, fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 3 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (utente.currentOuting) {
-                    registerReturn(utente.id);
-                  } else {
-                    setOutingModalUtenteId(utente.id);
-                  }
-                }}
-                title={utente.currentOuting ? "Marcar regresso" : "Registar saída"}
-              >
-                🚪 {utente.currentOuting ? "Fora" : ""}
               </button>
               <div
                 className="utente-avatar"
@@ -2005,6 +2038,67 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               {(utente.files?.length ?? 0) > 0 && (
                 <div style={{ fontSize: 11, color: "#5B8DBE", fontWeight: 600 }}>📎 {utente.files!.length} documento(s)</div>
               )}
+
+              {/* Célula de saídas */}
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{ width: "100%", marginTop: 4, paddingTop: 10, borderTop: "1px solid #F0EDE6", display: "flex", flexDirection: "column" as const, gap: 6 }}
+              >
+                {utente.currentOuting ? (
+                  <>
+                    <div style={{ fontSize: 11, color: "#8A6A2E", textAlign: "center" as const }}>
+                      🚪 Fora — {utente.currentOuting.reason === "outro" ? (utente.currentOuting.customReason || "Outro") : OUTING_REASON_LABELS[utente.currentOuting.reason]}
+                      <br />desde as {new Date(utente.currentOuting.departedAt).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                    <button
+                      onClick={() => confirmArrival(utente.id)}
+                      style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 8, padding: "6px 0", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+                    >
+                      ✓ Chegada
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {(["consulta", "familia", "outro"] as const).map((r) => (
+                        <button
+                          key={r}
+                          onClick={() => selectPendingReason(utente.id, r)}
+                          style={{
+                            flex: 1, border: pendingOuting[utente.id]?.reason === r ? "1px solid #2A241C" : "1px solid #E4DED3",
+                            background: pendingOuting[utente.id]?.reason === r ? "#2A241C" : "#FAFAF8",
+                            color: pendingOuting[utente.id]?.reason === r ? "#F5B944" : "#6B6358",
+                            borderRadius: 6, padding: "5px 2px", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif",
+                          }}
+                        >
+                          {OUTING_REASON_LABELS[r]}
+                        </button>
+                      ))}
+                    </div>
+                    {pendingOuting[utente.id]?.reason === "outro" && (
+                      <input
+                        autoFocus
+                        value={pendingOuting[utente.id]?.customText || ""}
+                        onChange={(e) => setPendingCustomText(utente.id, e.target.value)}
+                        placeholder="Qual o motivo?"
+                        style={{ border: "1px solid #E4DED3", borderRadius: 6, padding: "5px 8px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }}
+                      />
+                    )}
+                    <button
+                      onClick={() => confirmDeparture(utente.id)}
+                      disabled={!pendingOuting[utente.id]?.reason || (pendingOuting[utente.id]?.reason === "outro" && !pendingOuting[utente.id]?.customText.trim())}
+                      style={{
+                        background: pendingOuting[utente.id]?.reason ? "#F0E8D5" : "#F7F5F0",
+                        color: pendingOuting[utente.id]?.reason ? "#8A6A2E" : "#C2BAAC",
+                        border: "none", borderRadius: 6, padding: "6px 0", fontSize: 12, fontWeight: 700,
+                        cursor: pendingOuting[utente.id]?.reason ? "pointer" : "default", fontFamily: "'Inter', sans-serif",
+                      }}
+                    >
+                      🚪 Saída
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -2800,65 +2894,6 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                 <button onClick={() => setShowCCPanel(null)} style={{ width: "100%", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", marginTop: 8 }}>
                   Fechar
                 </button>
-              </div>
-            </div>
-          </>
-        );
-      })()}
-
-      {/* Modal de registo de saída */}
-      {outingModalUtenteId && (() => {
-        const u = utentes.find((x) => x.id === outingModalUtenteId);
-        if (!u) return null;
-        return (
-          <>
-            <div style={{ position: "fixed" as const, inset: 0, background: "rgba(42,36,28,0.4)", zIndex: 200 }} onClick={() => setOutingModalUtenteId(null)} />
-            <div style={{ position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "min(380px, 92vw)", background: "#FFFFFF", borderRadius: 20, zIndex: 201, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
-              <div style={{ padding: "20px 24px", background: "#FFF8E8", display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 26 }}>🚪</span>
-                <div>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#2A241C" }}>Registar saída</div>
-                  <div style={{ fontSize: 12, color: "#8A6A2E" }}>{u.name}</div>
-                </div>
-              </div>
-              <div style={{ padding: 24 }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 6 }}>Motivo</label>
-                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                  {(["consulta", "familia", "outro"] as const).map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setOutingReason(r)}
-                      style={{
-                        flex: 1, border: outingReason === r ? "1px solid #2A241C" : "1px solid #E4DED3",
-                        background: outingReason === r ? "#2A241C" : "#FFFFFF", color: outingReason === r ? "#F5B944" : "#6B6358",
-                        borderRadius: 8, padding: "8px 4px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif",
-                      }}
-                    >
-                      {OUTING_REASON_LABELS[r]}
-                    </button>
-                  ))}
-                </div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 6 }}>Regresso previsto (opcional)</label>
-                <input
-                  type="time"
-                  value={outingExpectedReturn}
-                  onChange={(e) => setOutingExpectedReturn(e.target.value)}
-                  style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, marginBottom: 20, colorScheme: "light" as const }}
-                />
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button
-                    onClick={() => setOutingModalUtenteId(null)}
-                    style={{ flex: 1, background: "transparent", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={registerOuting}
-                    style={{ flex: 1, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
-                  >
-                    Confirmar saída
-                  </button>
-                </div>
               </div>
             </div>
           </>
