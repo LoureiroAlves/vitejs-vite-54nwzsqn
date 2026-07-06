@@ -1430,7 +1430,7 @@ function SugestoesPage({ onBack }: { onBack: () => void }) {
       .sheet { width: 100%; max-width: 480px; text-align: center; border: 2px solid #2A241C; border-radius: 20px; padding: 48px 36px; }
       h1 { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
       .sub { font-size: 13px; color: #6B6358; margin: 0 0 28px; }
-      .qr-box { padding: 16px; border: 1px solid #E4DED3; border-radius: 16px; display: inline-block; margin-bottom: 24px; }
+      .qr-box { padding: 16px; border: 4px solid #6FA86F; border-radius: 16px; display: inline-block; margin-bottom: 24px; }
       .qr-box img { display: block; width: 260px; height: 260px; }
       .instructions { font-size: 14px; color: #6B6358; line-height: 1.7; margin: 0; }
     </style></head><body>
@@ -5268,7 +5268,7 @@ export default function App() {
       }
       h1 { font-size: 20px; font-weight: 700; margin: 0 0 4px; letter-spacing: .3px; }
       .sub { font-size: 13px; color: #6B6358; margin: 0 0 28px; }
-      .qr-box { padding: 16px; border: 1px solid #E4DED3; border-radius: 16px; display: inline-block; margin-bottom: 24px; }
+      .qr-box { padding: 16px; border: 4px solid #6FA86F; border-radius: 16px; display: inline-block; margin-bottom: 24px; }
       .qr-box img { display: block; width: 260px; height: 260px; }
       .instructions { font-size: 14px; color: #6B6358; line-height: 1.7; margin: 0 0 8px; }
       .month { font-size: 13px; font-weight: 700; color: #B08A4E; text-transform: uppercase; letter-spacing: .5px; margin-top: 20px; }
@@ -8342,7 +8342,7 @@ export default function App() {
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(colaboradorLinkModal.link)}`}
                 alt="QR code do horário"
-                style={{ width: 180, height: 180, margin: "0 auto 16px", border: "1px solid #E4DED3", borderRadius: 12, padding: 8 }}
+                style={{ width: 180, height: 180, margin: "0 auto 16px", border: "4px solid #6FA86F", borderRadius: 12, padding: 8 }}
               />
               <p style={{ fontSize: 13, color: "#6B6358", lineHeight: 1.6, margin: "0 0 14px", textAlign: "left" as const }}>
                 O colaborador aponta a câmara do telemóvel para este código e vê logo o seu próprio horário — sem precisar de login.
