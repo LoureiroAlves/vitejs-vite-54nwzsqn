@@ -4003,6 +4003,7 @@ function MapaGeralPage() {
   const [selectedDay, setSelectedDay] = useState(today.getDate());
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 640 : false);
   const [viewMode, setViewMode] = useState<"dia" | "mes">(isMobile ? "dia" : "mes");
+  const [generatingImage, setGeneratingImage] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 640);
@@ -4047,8 +4048,6 @@ function MapaGeralPage() {
     if (clampedDay === numDays) { goNext(); setSelectedDay(1); }
     else setSelectedDay(clampedDay + 1);
   };
-
-  const [generatingImage, setGeneratingImage] = useState(false);
 
   const generateMonthImage = () => {
     setGeneratingImage(true);
