@@ -1340,14 +1340,71 @@ interface Utente {
   outingsHistory?: { id: string; reason: "consulta" | "familia" | "outro"; details?: string; expectedReturn?: string; departedAt: string; returnedAt?: string }[];
 }
 
-const SATISFACTION_CATEGORIES = [
-  { key: "higiene", label: "Cuidados de Higiene e Conforto" },
-  { key: "alimentacao", label: "Alimentação" },
-  { key: "atividades", label: "Atividades de Animação Sociocultural" },
-  { key: "comunicacao", label: "Comunicação com a Equipa" },
-  { key: "instalacoes", label: "Instalações" },
+const SATISFACTION_QUESTIONNAIRE = [
+  {
+    title: "Fatores Tangíveis",
+    items: [
+      "Estado de conservação do edifício",
+      "Limpeza e arrumação das instalações",
+      "Facilidade de acesso, circulação e movimentação nas instalações",
+      "Estado de conservação dos equipamentos",
+      "Conforto e adequação das instalações",
+      "Apresentação e imagem dos colaboradores",
+    ],
+  },
+  {
+    title: "Fiabilidade",
+    items: [
+      "Participação no planeamento dos serviços que lhe são prestados",
+      "Planeamento, organização e execução dos serviços e atividades ocupacionais e de desenvolvimento pessoal",
+      "Informação sobre Regulamento Interno e regras de funcionamento",
+      "Informação e participação na elaboração do seu Plano Individual",
+      "Informação de como aceder a outros serviços que a organização disponibiliza",
+      "Confiança na capacidade de organização para ajudar a resolver os seus problemas/questões",
+    ],
+  },
+  {
+    title: "Capacidade de Resposta",
+    items: [
+      "Modo/desempenho como os colaboradores prestam o serviço",
+      "Adequação das refeições aos seus gostos e necessidades",
+      "Apoio nos cuidados de higiene e imagem de que precisa",
+      "Apoio nos cuidados de saúde de que precisa",
+      "Apoio na realização das suas atividades pessoais",
+      "Adequação das atividades ocupacionais e de desenvolvimento pessoal aos seus interesses e necessidades",
+      "Diversidade e quantidade das atividades ocupacionais e desenvolvimento pessoal disponibilizadas",
+      "Disponibilidade dos colaboradores sempre que precisa do seu apoio",
+    ],
+  },
+  {
+    title: "Confiança e Segurança",
+    items: [
+      "Sistemas de segurança contra roubo, incêndio e intrusão",
+      "Cumprimento dos seus direitos por parte de todos os colaboradores",
+      "Forma como a organização assegura a confidencialidade dos seus dados pessoais",
+      "Simpatia, educação e atenção dos colaboradores",
+      "Esclarecimento e informação prestada pelos colaboradores sempre que precisa",
+      "Respeito da organização pelas suas decisões e opções",
+      "Forma como os colaboradores cumprem o seu Plano Individual",
+    ],
+  },
+  {
+    title: "Empatia",
+    items: [
+      "Tratamento e encaminhamento das reclamações dos clientes",
+      "Respeito e consideração da organização pelas sugestões dos clientes",
+      "Nível de informação sobre mudanças/alterações na organização",
+      "Disponibilidade dos colaboradores para ouvirem e apoiarem a resolução dos seus problemas pessoais",
+      "Apoio dos colaboradores na sua dinamização e motivação para realizar e participar em atividades ocupacionais e de desenvolvimento pessoal",
+    ],
+  },
 ];
-const RATING_LABELS = ["Muito Insatisfeito", "Insatisfeito", "Neutro", "Satisfeito", "Muito Satisfeito"];
+const APRECIACAO_GLOBAL_ITEMS = [
+  "Se tivesse possibilidade, mudaria de ERPI",
+  "Recomenda a ERPI do Complexo Intergeracional Quinta dos Avós",
+];
+const RATING_SCALE = ["NA", "NS", "1", "2", "3", "4", "5"];
+const RATING_SCALE_TITLES: Record<string, string> = { NA: "Não Aplicável", NS: "Não Sabe", "1": "1 — Muito insatisfeito", "2": "2", "3": "3 — Neutro", "4": "4", "5": "5 — Muito satisfeito" };
 
 function SugestoesPage({ onBack }: { onBack: () => void }) {
   const [loading, setLoading] = useState(true);
@@ -1380,7 +1437,7 @@ function SugestoesPage({ onBack }: { onBack: () => void }) {
     <button class="no-print" onclick="window.print()" style="background:#2A241C;color:#F5B944;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
     <div class="sheet">
       <h1>ASSOCIAÇÃO OLIVEIRENSE DE SOCORROS MÚTUOS</h1>
-      <p class="sub">Questionário de Satisfação das Famílias</p>
+      <p class="sub">Questionário de Satisfação dos Clientes ERPI</p>
       <div class="qr-box"><img src="${qrUrl}" alt="QR code do questionário" /></div>
       <p class="instructions">Aponte a câmara do telemóvel para nos dar a sua opinião. Demora menos de 2 minutos e ajuda-nos a melhorar.</p>
     </div>
@@ -1401,11 +1458,17 @@ function SugestoesPage({ onBack }: { onBack: () => void }) {
     });
   };
 
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   const avgRating = (r: any) => {
-    const vals = SATISFACTION_CATEGORIES.map((c) => r.ratings?.[c.key]).filter((v) => typeof v === "number");
+    const allRatings = { ...(r.ratings || {}), ...(r.apreciacaoGlobal || {}) };
+    const vals = Object.values(allRatings).map((v) => Number(v)).filter((v) => !isNaN(v) && v >= 1 && v <= 5);
     if (vals.length === 0) return null;
-    return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
+    return (vals.reduce((a: number, b: number) => a + b, 0) / vals.length).toFixed(1);
   };
+
+  const IDADE_LABELS: Record<string, string> = { menos65: "Menos de 65 anos", "65-75": "De 65 a 75 anos", mais75: "Mais de 75 anos" };
+  const SEXO_LABELS: Record<string, string> = { feminino: "Feminino", masculino: "Masculino" };
 
   return (
     <div style={{ minHeight: "100vh", padding: "24px 20px 60px" }}>
@@ -1415,7 +1478,7 @@ function SugestoesPage({ onBack }: { onBack: () => void }) {
             <button onClick={onBack} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 10, padding: "8px 14px", cursor: "pointer", color: "#6B6358", fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>← Voltar</button>
             <div>
               <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 22, color: "#2A241C" }}>💬 Sugestões</div>
-              <div style={{ fontSize: 12, color: "#A39B8E" }}>Respostas ao questionário de satisfação das famílias</div>
+              <div style={{ fontSize: 12, color: "#A39B8E" }}>Respostas ao questionário de satisfação dos clientes ERPI</div>
             </div>
           </div>
           <button
@@ -1431,42 +1494,71 @@ function SugestoesPage({ onBack }: { onBack: () => void }) {
         ) : responses.length === 0 ? (
           <div style={{ background: "#FFFFFF", borderRadius: 16, padding: "40px 20px", textAlign: "center" as const, color: "#A39B8E" }}>
             Ainda não há nenhuma resposta.<br />
-            <span style={{ fontSize: 13 }}>Gera o QR code e partilha com as famílias para começares a receber respostas aqui.</span>
+            <span style={{ fontSize: 13 }}>Gera o QR code e partilha para começares a receber respostas aqui. As respostas são anónimas.</span>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column" as const, gap: 14 }}>
-            {responses.map((r) => (
-              <div key={r.id} style={{ background: "#FFFFFF", borderRadius: 14, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, flexWrap: "wrap" as const, gap: 8 }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#2A241C" }}>
-                      {r.respondentName || "Anónimo"}{r.utenteRelacionado ? ` · Familiar de ${r.utenteRelacionado}` : ""}
-                    </div>
-                    <div style={{ fontSize: 11, color: "#A39B8E" }}>{new Date(r.submittedAt).toLocaleString("pt-PT")}</div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    {avgRating(r) && (
-                      <div style={{ background: "#FFF0EE", color: "#C2554A", borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 700 }}>
-                        ⭐ {avgRating(r)}/5
+            {responses.map((r) => {
+              const isExpanded = expandedId === r.id;
+              return (
+                <div key={r.id} style={{ background: "#FFFFFF", borderRadius: 14, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, flexWrap: "wrap" as const, gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#2A241C" }}>
+                        Resposta anónima {r.idade ? `· ${IDADE_LABELS[r.idade] || r.idade}` : ""}{r.sexo ? ` · ${SEXO_LABELS[r.sexo] || r.sexo}` : ""}
                       </div>
-                    )}
-                    <button onClick={() => removeResponse(r.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 13 }}>✕</button>
-                  </div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, marginBottom: r.comments ? 12 : 0 }}>
-                  {SATISFACTION_CATEGORIES.map((c) => (
-                    <div key={c.key} style={{ fontSize: 12, color: "#6B6358", background: "#F7F5F0", borderRadius: 8, padding: "6px 10px" }}>
-                      {c.label}: <strong style={{ color: "#2A241C" }}>{r.ratings?.[c.key] ? RATING_LABELS[r.ratings[c.key] - 1] : "—"}</strong>
+                      <div style={{ fontSize: 11, color: "#A39B8E" }}>{new Date(r.submittedAt).toLocaleString("pt-PT")}</div>
                     </div>
-                  ))}
-                </div>
-                {r.comments && (
-                  <div style={{ fontSize: 13, color: "#2A241C", background: "#FAFAF8", borderRadius: 8, padding: "10px 12px", fontStyle: "italic" as const, lineHeight: 1.5 }}>
-                    "{r.comments}"
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      {avgRating(r) && (
+                        <div style={{ background: "#FFF0EE", color: "#C2554A", borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 700 }}>
+                          ⭐ {avgRating(r)}/5
+                        </div>
+                      )}
+                      <button onClick={() => setExpandedId(isExpanded ? null : r.id)} style={{ border: "1px solid #E4DED3", background: "#FAFAF8", borderRadius: 8, padding: "4px 10px", cursor: "pointer", color: "#3A5A70", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>
+                        {isExpanded ? "Ocultar" : "Ver tudo"}
+                      </button>
+                      <button onClick={() => removeResponse(r.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 13 }}>✕</button>
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {isExpanded && (
+                    <div style={{ marginBottom: 14 }}>
+                      {SATISFACTION_QUESTIONNAIRE.map((cat, ci) => (
+                        <div key={cat.title} style={{ marginBottom: 12 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 6 }}>{cat.title}</div>
+                          <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
+                            {cat.items.map((item, ii) => (
+                              <div key={ii} style={{ fontSize: 12, color: "#6B6358", background: "#F7F5F0", borderRadius: 6, padding: "5px 8px", display: "flex", justifyContent: "space-between", gap: 8 }}>
+                                <span>{item}</span>
+                                <strong style={{ color: "#2A241C", flexShrink: 0 }}>{r.ratings?.[`${ci}-${ii}`] || "—"}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      <div style={{ marginBottom: 4 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 6 }}>Apreciação Global</div>
+                        <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
+                          {APRECIACAO_GLOBAL_ITEMS.map((item, ii) => (
+                            <div key={ii} style={{ fontSize: 12, color: "#6B6358", background: "#F7F5F0", borderRadius: 6, padding: "5px 8px", display: "flex", justifyContent: "space-between", gap: 8 }}>
+                              <span>{item}</span>
+                              <strong style={{ color: "#2A241C", flexShrink: 0 }}>{r.apreciacaoGlobal?.[`g-${ii}`] || "—"}</strong>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {r.sugestaoMelhoria && (
+                    <div style={{ fontSize: 13, color: "#2A241C", background: "#FAFAF8", borderRadius: 8, padding: "10px 12px", fontStyle: "italic" as const, lineHeight: 1.5 }}>
+                      💡 "{r.sugestaoMelhoria}"
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -3193,6 +3285,10 @@ function FamilyPage({ code }: { code: string }) {
   const [month, setMonth] = useState(today.getMonth());
   const [selectedFamilyDay, setSelectedFamilyDay] = useState<string | null>(null);
 
+  useEffect(() => {
+    document.title = "Portal da Família — Associação Oliveirense de Socorros Mútuos";
+  }, []);
+
   // Impedir cache do browser para esta página — garante que a família vê sempre a versão mais recente
   useEffect(() => {
     const metaTags = [
@@ -3999,6 +4095,10 @@ function ColaboradorSchedulePage({ code }: { code: string }) {
   const [month, setMonth] = useState(today.getMonth());
 
   useEffect(() => {
+    document.title = "O Meu Horário — Associação Oliveirense de Socorros Mútuos";
+  }, []);
+
+  useEffect(() => {
     loadFromSupabase("escala_data").then((escala) => {
       const profiles = escala?.employee_profiles || {};
       const found = Object.keys(profiles).find((name) => profiles[name]?.colaboradorCode === code);
@@ -4137,6 +4237,10 @@ function MapaGeralPage() {
   const [month, setMonth] = useState(today.getMonth());
   const [generatingImage, setGeneratingImage] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+
+  useEffect(() => {
+    document.title = "Mapa de Turnos — Associação Oliveirense de Socorros Mútuos";
+  }, []);
 
   useEffect(() => {
     loadFromSupabase("escala_data").then((escala) => {
@@ -4404,19 +4508,29 @@ function MapaGeralPage() {
 // PÁGINA PÚBLICA — QUESTIONÁRIO DE SATISFAÇÃO (via QR code)
 // ============================================================
 function QuestionarioSatisfacaoPage() {
-  const [ratings, setRatings] = useState<Record<string, number>>({});
-  const [respondentName, setRespondentName] = useState("");
-  const [utenteRelacionado, setUtenteRelacionado] = useState("");
-  const [comments, setComments] = useState("");
+  const [idade, setIdade] = useState<string>("");
+  const [sexo, setSexo] = useState<string>("");
+  const [ratings, setRatings] = useState<Record<string, string>>({});
+  const [apreciacaoGlobal, setApreciacaoGlobal] = useState<Record<string, string>>({});
+  const [sugestaoMelhoria, setSugestaoMelhoria] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
-  const allRated = SATISFACTION_CATEGORIES.every((c) => ratings[c.key]);
+  useEffect(() => {
+    document.title = "Questionário — Associação Oliveirense de Socorros Mútuos";
+  }, []);
+
+  const setRating = (key: string, value: string) => setRatings((prev) => ({ ...prev, [key]: value }));
+  const setApreciacao = (key: string, value: string) => setApreciacaoGlobal((prev) => ({ ...prev, [key]: value }));
+
+  const totalItems = SATISFACTION_QUESTIONNAIRE.reduce((sum, cat) => sum + cat.items.length, 0) + APRECIACAO_GLOBAL_ITEMS.length;
+  const answeredItems = Object.keys(ratings).length + Object.keys(apreciacaoGlobal).length;
+  const allAnswered = answeredItems >= totalItems && idade && sexo;
 
   const handleSubmit = () => {
-    if (!allRated) {
-      setError("Por favor, avalie todas as categorias antes de enviar.");
+    if (!allAnswered) {
+      setError("Por favor, responda a todas as perguntas antes de enviar.");
       return;
     }
     setError("");
@@ -4426,10 +4540,11 @@ function QuestionarioSatisfacaoPage() {
       const novaResposta = {
         id: Date.now().toString() + Math.random().toString(36).slice(2),
         submittedAt: new Date().toISOString(),
-        respondentName: respondentName.trim() || undefined,
-        utenteRelacionado: utenteRelacionado.trim() || undefined,
+        idade,
+        sexo,
         ratings,
-        comments: comments.trim(),
+        apreciacaoGlobal,
+        sugestaoMelhoria: sugestaoMelhoria.trim(),
       };
       return saveToSupabase("escala_data", { satisfaction_responses: [...current, novaResposta] });
     }).then(() => {
@@ -4444,74 +4559,123 @@ function QuestionarioSatisfacaoPage() {
       <div style={{ minHeight: "100vh", background: "#F5EDD8", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", padding: 24 }}>
         <div style={{ textAlign: "center" as const, maxWidth: 360 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🙏</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "#2A241C", marginBottom: 8, fontFamily: "'Space Grotesk', sans-serif" }}>Obrigado pela sua opinião!</div>
-          <div style={{ fontSize: 14, color: "#6B6358", lineHeight: 1.6 }}>A sua resposta foi registada com sucesso e vai ajudar-nos a melhorar continuamente.</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#2A241C", marginBottom: 8, fontFamily: "'Space Grotesk', sans-serif" }}>Agradecemos a sua colaboração!</div>
+          <div style={{ fontSize: 14, color: "#6B6358", lineHeight: 1.6 }}>A sua resposta foi registada com sucesso.</div>
         </div>
       </div>
     );
   }
 
+  const ScaleRow = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
+    <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #F0EDE6" }}>
+      <div style={{ fontSize: 13, color: "#2A241C", marginBottom: 8, lineHeight: 1.4 }}>{label}</div>
+      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" as const }}>
+        {RATING_SCALE.map((opt) => {
+          const selected = value === opt;
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => onChange(opt)}
+              title={RATING_SCALE_TITLES[opt]}
+              style={{
+                flex: "1 1 32px", minWidth: 32, border: selected ? "1px solid #2A241C" : "1px solid #E4DED3",
+                background: selected ? "#2A241C" : "#FAFAF8", color: selected ? "#F5B944" : "#6B6358",
+                borderRadius: 7, padding: "7px 4px", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                fontFamily: "'Inter', sans-serif",
+              }}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ minHeight: "100vh", background: "#F5EDD8", fontFamily: "'Inter', sans-serif", padding: "24px 16px 60px" }}>
-      <div style={{ maxWidth: 620, margin: "0 auto", background: "#FFFFFF", borderRadius: 4, boxShadow: "0 4px 30px rgba(0,0,0,0.12)", border: "1px solid #E4DED3", overflow: "hidden" }}>
+      <div style={{ maxWidth: 640, margin: "0 auto", background: "#FFFFFF", borderRadius: 4, boxShadow: "0 4px 30px rgba(0,0,0,0.12)", border: "1px solid #E4DED3", overflow: "hidden" }}>
         {/* Cabeçalho tipo documento formal */}
         <div style={{ padding: "32px 36px 24px", borderBottom: "3px solid #2A241C", textAlign: "center" as const }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: "#8A6A2E", letterSpacing: "0.08em", marginBottom: 6 }}>ASSOCIAÇÃO OLIVEIRENSE DE SOCORROS MÚTUOS</div>
-          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700, color: "#2A241C" }}>Questionário de Satisfação</div>
-          <div style={{ fontSize: 13, color: "#6B6358", marginTop: 6 }}>Estrutura Residencial para Pessoas Idosas — Opinião das Famílias</div>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700, color: "#2A241C" }}>Questionário de Satisfação dos Clientes ERPI</div>
+          <div style={{ fontSize: 13, color: "#6B6358", marginTop: 10, lineHeight: 1.6 }}>
+            Para melhor prestarmos os nossos serviços, é importante que nos dê a sua opinião sincera.<br />Colabore connosco!
+          </div>
         </div>
 
         <div style={{ padding: "28px 36px" }}>
-          <p style={{ fontSize: 13, color: "#6B6358", lineHeight: 1.6, marginTop: 0 }}>
-            A sua opinião é muito importante para nós. Pedimos que avalie os seguintes aspetos com sinceridade — demora menos de 2 minutos.
-          </p>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 22 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#8A6A2E", textTransform: "uppercase" as const, letterSpacing: "0.04em", marginBottom: 5 }}>Nome (opcional)</label>
-              <input value={respondentName} onChange={(e) => setRespondentName(e.target.value)} style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
+          {/* I – Identificação Parcial */}
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#8A6A2E", textTransform: "uppercase" as const, letterSpacing: "0.04em", marginBottom: 14, background: "#FFF8E8", padding: "6px 10px", borderRadius: 6 }}>
+            I — Identificação Parcial
+          </div>
+          <div style={{ marginBottom: 22 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#2A241C", marginBottom: 8 }}>Idade</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
+              {[["menos65", "Menos de 65 anos"], ["65-75", "De 65 a 75 anos"], ["mais75", "Mais de 75 anos"]].map(([val, label]) => (
+                <button key={val} type="button" onClick={() => setIdade(val)} style={{
+                  flex: "1 1 120px", border: idade === val ? "1px solid #2A241C" : "1px solid #E4DED3",
+                  background: idade === val ? "#2A241C" : "#FAFAF8", color: idade === val ? "#F5B944" : "#6B6358",
+                  borderRadius: 8, padding: "9px 6px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif",
+                }}>{label}</button>
+              ))}
             </div>
-            <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#8A6A2E", textTransform: "uppercase" as const, letterSpacing: "0.04em", marginBottom: 5 }}>Familiar de (opcional)</label>
-              <input value={utenteRelacionado} onChange={(e) => setUtenteRelacionado(e.target.value)} placeholder="Nome do utente" style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
+          </div>
+          <div style={{ marginBottom: 26 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#2A241C", marginBottom: 8 }}>Sexo</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[["feminino", "Feminino"], ["masculino", "Masculino"]].map(([val, label]) => (
+                <button key={val} type="button" onClick={() => setSexo(val)} style={{
+                  flex: 1, border: sexo === val ? "1px solid #2A241C" : "1px solid #E4DED3",
+                  background: sexo === val ? "#2A241C" : "#FAFAF8", color: sexo === val ? "#F5B944" : "#6B6358",
+                  borderRadius: 8, padding: "9px 6px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif",
+                }}>{label}</button>
+              ))}
             </div>
           </div>
 
-          {SATISFACTION_CATEGORIES.map((c) => (
-            <div key={c.key} style={{ marginBottom: 22 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#2A241C", marginBottom: 8 }}>{c.label}</div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                {RATING_LABELS.map((label, idx) => {
-                  const value = idx + 1;
-                  const selected = ratings[c.key] === value;
-                  return (
-                    <button
-                      key={value}
-                      onClick={() => setRatings((prev) => ({ ...prev, [c.key]: value }))}
-                      style={{
-                        flex: "1 1 60px", border: selected ? "1px solid #2A241C" : "1px solid #E4DED3",
-                        background: selected ? "#2A241C" : "#FAFAF8", color: selected ? "#F5B944" : "#6B6358",
-                        borderRadius: 8, padding: "8px 4px", fontSize: 10, fontWeight: 600, cursor: "pointer",
-                        fontFamily: "'Inter', sans-serif", textAlign: "center" as const, lineHeight: 1.3,
-                      }}
-                    >
-                      {value}<br />{label}
-                    </button>
-                  );
-                })}
-              </div>
+          {/* II – Questionário */}
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#8A6A2E", textTransform: "uppercase" as const, letterSpacing: "0.04em", marginBottom: 6, background: "#FFF8E8", padding: "6px 10px", borderRadius: 6 }}>
+            II — Questionário
+          </div>
+          <div style={{ fontSize: 11, color: "#A39B8E", marginBottom: 18 }}>Escala: NA = Não Aplicável · NS = Não Sabe · 1 = Muito insatisfeito · 5 = Muito satisfeito</div>
+
+          {SATISFACTION_QUESTIONNAIRE.map((cat, ci) => (
+            <div key={cat.title} style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#2A241C", marginBottom: 12, borderBottom: "2px solid #2A241C", paddingBottom: 6 }}>{cat.title}</div>
+              {cat.items.map((item, ii) => {
+                const key = `${ci}-${ii}`;
+                return <ScaleRow key={key} label={item} value={ratings[key] || ""} onChange={(v) => setRating(key, v)} />;
+              })}
             </div>
           ))}
 
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#8A6A2E", textTransform: "uppercase" as const, letterSpacing: "0.04em", marginBottom: 5 }}>Sugestões ou comentários (opcional)</label>
+          {/* III – Apreciação Global */}
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#8A6A2E", textTransform: "uppercase" as const, letterSpacing: "0.04em", marginBottom: 14, background: "#FFF8E8", padding: "6px 10px", borderRadius: 6 }}>
+            III — Apreciação Global
+          </div>
+          {APRECIACAO_GLOBAL_ITEMS.map((item, ii) => {
+            const key = `g-${ii}`;
+            return <ScaleRow key={key} label={item} value={apreciacaoGlobal[key] || ""} onChange={(v) => setApreciacao(key, v)} />;
+          })}
+
+          {/* IV – Sugestões de Melhoria */}
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#8A6A2E", textTransform: "uppercase" as const, letterSpacing: "0.04em", marginBottom: 10, background: "#FFF8E8", padding: "6px 10px", borderRadius: 6, marginTop: 8 }}>
+            IV — Sugestões de Melhoria
+          </div>
+          <div style={{ marginBottom: 22 }}>
+            <label style={{ display: "block", fontSize: 13, color: "#2A241C", marginBottom: 8 }}>Na sua opinião, o que considera que deveria ser melhorado?</label>
             <textarea
               rows={4}
-              value={comments}
-              onChange={(e) => setComments(e.target.value)}
-              placeholder="Diga-nos o que podemos melhorar, ou o que já está a correr bem..."
+              value={sugestaoMelhoria}
+              onChange={(e) => setSugestaoMelhoria(e.target.value)}
               style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, resize: "vertical" as const }}
             />
+          </div>
+
+          <div style={{ fontSize: 12, color: "#A39B8E", textAlign: "center" as const, marginBottom: 16, fontStyle: "italic" as const }}>
+            Lembramos que este questionário é anónimo para que possam ser completamente sinceros(as)!
           </div>
 
           {error && <div style={{ color: "#C2554A", fontSize: 12, marginBottom: 14, textAlign: "center" as const }}>{error}</div>}
@@ -4528,6 +4692,7 @@ function QuestionarioSatisfacaoPage() {
     </div>
   );
 }
+
 
 export default function App() {
   // Detectar acesso público de família via URL (?familia=CODIGO)
