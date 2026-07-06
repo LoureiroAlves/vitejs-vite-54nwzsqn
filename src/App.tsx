@@ -1427,12 +1427,12 @@ function SugestoesPage({ onBack }: { onBack: () => void }) {
       body { font-family: Arial, sans-serif; color: #2A241C; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #FAFAF8; }
       .no-print { position: fixed; top: 16px; right: 16px; }
       @media print { .no-print { display: none !important; } body { background: #FFFFFF; } }
-      .sheet { width: 100%; max-width: 480px; text-align: center; border: 2px solid #2A241C; border-radius: 20px; padding: 48px 36px; }
-      h1 { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
-      .sub { font-size: 13px; color: #6B6358; margin: 0 0 28px; }
-      .qr-box { padding: 16px; border: 4px solid #6FA86F; border-radius: 16px; display: inline-block; margin-bottom: 24px; }
-      .qr-box img { display: block; width: 260px; height: 260px; }
-      .instructions { font-size: 14px; color: #6B6358; line-height: 1.7; margin: 0; }
+      .sheet { width: 100%; max-width: 520px; text-align: center; }
+      h1 { font-size: 32px; font-weight: 800; margin: 0 0 10px; line-height: 1.2; }
+      .sub { font-size: 18px; color: #6B6358; margin: 0 0 36px; }
+      .qr-box { padding: 20px; border: 6px solid #6FA86F; border-radius: 20px; display: inline-block; margin-bottom: 30px; }
+      .qr-box img { display: block; width: 300px; height: 300px; }
+      .instructions { font-size: 15px; color: #6B6358; line-height: 1.7; margin: 0; }
     </style></head><body>
     <button class="no-print" onclick="window.print()" style="background:#2A241C;color:#F5B944;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
     <div class="sheet">
@@ -5259,25 +5259,24 @@ export default function App() {
       .no-print { position: fixed; top: 16px; right: 16px; }
       @media print { .no-print { display: none !important; } body { background: #FFFFFF; } }
       .sheet {
-        width: 100%; max-width: 480px; text-align: center;
-        border: 2px solid #2A241C; border-radius: 20px; padding: 48px 36px;
+        width: 100%; max-width: 520px; text-align: center;
       }
       .logo-circle {
-        width: 64px; height: 64px; border-radius: 18px; background: #1A1612;
-        display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;
+        width: 80px; height: 80px; border-radius: 22px; background: #1A1612;
+        display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;
       }
-      h1 { font-size: 20px; font-weight: 700; margin: 0 0 4px; letter-spacing: .3px; }
-      .sub { font-size: 13px; color: #6B6358; margin: 0 0 28px; }
-      .qr-box { padding: 16px; border: 4px solid #6FA86F; border-radius: 16px; display: inline-block; margin-bottom: 24px; }
-      .qr-box img { display: block; width: 260px; height: 260px; }
-      .instructions { font-size: 14px; color: #6B6358; line-height: 1.7; margin: 0 0 8px; }
-      .month { font-size: 13px; font-weight: 700; color: #B08A4E; text-transform: uppercase; letter-spacing: .5px; margin-top: 20px; }
-      .footer { font-size: 10px; color: #A39B8E; margin-top: 24px; border-top: 1px solid #EFEAE2; padding-top: 12px; }
+      h1 { font-size: 32px; font-weight: 800; margin: 0 0 10px; letter-spacing: .3px; line-height: 1.2; }
+      .sub { font-size: 18px; color: #6B6358; margin: 0 0 36px; }
+      .qr-box { padding: 20px; border: 6px solid #6FA86F; border-radius: 20px; display: inline-block; margin-bottom: 30px; }
+      .qr-box img { display: block; width: 300px; height: 300px; }
+      .instructions { font-size: 15px; color: #6B6358; line-height: 1.7; margin: 0 0 10px; }
+      .month { font-size: 16px; font-weight: 700; color: #B08A4E; text-transform: uppercase; letter-spacing: .5px; margin-top: 24px; }
+      .footer { font-size: 11px; color: #A39B8E; margin-top: 28px; border-top: 1px solid #E4DED3; padding-top: 14px; }
     </style></head><body>
     <button class="no-print" onclick="window.print()" style="background:#2A241C;color:#F5B944;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
     <div class="sheet">
       <div class="logo-circle">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F5B944" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F5B944" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 21V7l9-4 9 4v14"/><path d="M9 21V13h6v8"/><path d="M9 9h.01M12 9h.01M15 9h.01M9 13h.01M15 13h.01"/>
         </svg>
       </div>
