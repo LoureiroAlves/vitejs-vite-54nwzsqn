@@ -1260,8 +1260,8 @@ interface Utente {
   // Documentos para a família (visíveis no portal familiar)
   filesFamily?: { name: string; type: string; url: string; uploadedAt: string }[];
   // Saídas (consultas, família, etc.)
-  currentOuting?: { reason: "consulta" | "familia" | "outro"; customReason?: string; expectedReturn?: string; departedAt: string } | null;
-  outingsHistory?: { id: string; reason: "consulta" | "familia" | "outro"; customReason?: string; expectedReturn?: string; departedAt: string; returnedAt?: string }[];
+  currentOuting?: { reason: "consulta" | "familia" | "outro"; details?: string; expectedReturn?: string; departedAt: string } | null;
+  outingsHistory?: { id: string; reason: "consulta" | "familia" | "outro"; details?: string; expectedReturn?: string; departedAt: string; returnedAt?: string }[];
 }
 
 function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI: () => void }) {
@@ -1394,6 +1394,11 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   const [pendingOuting, setPendingOuting] = useState<Record<string, { reason: "consulta" | "familia" | "outro"; customText: string }>>({});
 
   const OUTING_REASON_LABELS: Record<string, string> = { consulta: "🏥 Consulta", familia: "👪 Família", outro: "📍 Outro" };
+  const OUTING_DETAIL_PLACEHOLDER: Record<string, string> = {
+    consulta: "Onde foi? (ex: Hospital de Aveiro — Cardiologia)",
+    familia: "Quem foi buscar? (ex: filha, D. Ana)",
+    outro: "Qual o motivo?",
+  };
 
   const appendLogEntry = (utenteId: string, dateStr: string, text: string) => {
     setUtentes((prev) => prev.map((u) => {
@@ -1421,21 +1426,27 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
     setPendingOuting((prev) => ({ ...prev, [utenteId]: { reason: prev[utenteId]?.reason || "outro", customText: text } }));
   };
 
+  const outingLabelWithDetails = (reason: "consulta" | "familia" | "outro", details?: string) => {
+    const base = OUTING_REASON_LABELS[reason];
+    return details?.trim() ? `${base} — ${details.trim()}` : base;
+  };
+
   const confirmDeparture = (utenteId: string) => {
     const pending = pendingOuting[utenteId];
     if (!pending) return;
     if (pending.reason === "outro" && !pending.customText.trim()) return;
     const now = new Date();
+    const details = pending.customText.trim();
     updateUtente(utenteId, {
       currentOuting: {
         reason: pending.reason,
-        customReason: pending.reason === "outro" ? pending.customText.trim() : undefined,
+        details: details || undefined,
         departedAt: now.toISOString(),
       },
     });
-    const reasonLabel = pending.reason === "outro" ? `Outro (${pending.customText.trim()})` : OUTING_REASON_LABELS[pending.reason];
+    const reasonLabel = outingLabelWithDetails(pending.reason, details);
     const timeStr = now.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
-    appendLogEntry(utenteId, todayStr, `🚪 Saída registada às ${timeStr} — motivo: ${reasonLabel}`);
+    appendLogEntry(utenteId, todayStr, `📋 SAÍDA DO UTENTE\n🚪 Saída às ${timeStr} — ${reasonLabel}`);
     setPendingOuting((prev) => { const next = { ...prev }; delete next[utenteId]; return next; });
   };
 
@@ -1446,14 +1457,14 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
     const departedDate = new Date(u.currentOuting.departedAt);
     const departedDateStr = departedDate.toLocaleDateString("pt-PT");
     const sameDay = departedDateStr === todayStr;
-    const reasonLabel = u.currentOuting.reason === "outro" ? `Outro (${u.currentOuting.customReason || ""})` : OUTING_REASON_LABELS[u.currentOuting.reason];
+    const reasonLabel = outingLabelWithDetails(u.currentOuting.reason, u.currentOuting.details);
     const timeStr = now.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
     const departedTimeStr = departedDate.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
 
     const historyEntry = {
       id: Date.now().toString() + Math.random().toString(36).slice(2),
       reason: u.currentOuting.reason,
-      customReason: u.currentOuting.customReason,
+      details: u.currentOuting.details,
       expectedReturn: u.currentOuting.expectedReturn,
       departedAt: u.currentOuting.departedAt,
       returnedAt: now.toISOString(),
@@ -1467,8 +1478,8 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
     // de vários dias (ex: internamento hospitalar), não mexe nos registos dos dias entretanto,
     // só refere aqui a data/hora de saída para dar contexto.
     const nota = sameDay
-      ? `🏠 Regresso registado às ${timeStr} (motivo: ${reasonLabel})`
-      : `🏠 Regresso registado às ${timeStr} — tinha saído a ${departedDateStr} às ${departedTimeStr} (motivo: ${reasonLabel})`;
+      ? `📋 SAÍDA DO UTENTE\n🏠 Regresso às ${timeStr} (${reasonLabel})`
+      : `📋 SAÍDA DO UTENTE\n🏠 Regresso às ${timeStr} — tinha saído a ${departedDateStr} às ${departedTimeStr} (${reasonLabel})`;
     appendLogEntry(utenteId, todayStr, nota);
   };
 
@@ -1965,7 +1976,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontWeight: 600, fontSize: 14, color: "#2A241C" }}>{u.name}</span>
                   <span style={{ fontSize: 13, color: "#8A6A2E" }}>
-                    {u.currentOuting!.reason === "outro" ? `📍 ${u.currentOuting!.customReason || "Outro"}` : OUTING_REASON_LABELS[u.currentOuting!.reason]}
+                    {outingLabelWithDetails(u.currentOuting!.reason, u.currentOuting!.details)}
                   </span>
                   {u.currentOuting!.expectedReturn && (
                     <span style={{ fontSize: 12, color: "#A39B8E" }}>· regresso previsto: {u.currentOuting!.expectedReturn}</span>
@@ -2047,7 +2058,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                 {utente.currentOuting ? (
                   <>
                     <div style={{ fontSize: 11, color: "#8A6A2E", textAlign: "center" as const }}>
-                      🚪 Fora — {utente.currentOuting.reason === "outro" ? (utente.currentOuting.customReason || "Outro") : OUTING_REASON_LABELS[utente.currentOuting.reason]}
+                      🚪 Fora — {outingLabelWithDetails(utente.currentOuting.reason, utente.currentOuting.details)}
                       <br />desde as {new Date(utente.currentOuting.departedAt).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
                     </div>
                     <button
@@ -2075,12 +2086,12 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                         </button>
                       ))}
                     </div>
-                    {pendingOuting[utente.id]?.reason === "outro" && (
+                    {pendingOuting[utente.id]?.reason && (
                       <input
                         autoFocus
                         value={pendingOuting[utente.id]?.customText || ""}
                         onChange={(e) => setPendingCustomText(utente.id, e.target.value)}
-                        placeholder="Qual o motivo?"
+                        placeholder={OUTING_DETAIL_PLACEHOLDER[pendingOuting[utente.id]!.reason]}
                         style={{ border: "1px solid #E4DED3", borderRadius: 6, padding: "5px 8px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }}
                       />
                     )}
