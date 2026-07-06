@@ -1982,7 +1982,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     <span style={{ fontSize: 12, color: "#A39B8E" }}>· regresso previsto: {u.currentOuting!.expectedReturn}</span>
                   )}
                   <span style={{ fontSize: 11, color: "#A39B8E" }}>
-                    · saiu {new Date(u.currentOuting!.departedAt).toLocaleDateString("pt-PT") !== todayStr ? `a ${new Date(u.currentOuting!.departedAt).toLocaleDateString("pt-PT")} ` : ""}às {new Date(u.currentOuting!.departedAt).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+                    · saiu a {new Date(u.currentOuting!.departedAt).toLocaleDateString("pt-PT")} às {new Date(u.currentOuting!.departedAt).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
                 <button
@@ -8221,3 +8221,4 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
+              
