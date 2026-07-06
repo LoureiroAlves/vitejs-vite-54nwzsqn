@@ -1340,6 +1340,140 @@ interface Utente {
   outingsHistory?: { id: string; reason: "consulta" | "familia" | "outro"; details?: string; expectedReturn?: string; departedAt: string; returnedAt?: string }[];
 }
 
+const SATISFACTION_CATEGORIES = [
+  { key: "higiene", label: "Cuidados de Higiene e Conforto" },
+  { key: "alimentacao", label: "Alimentação" },
+  { key: "atividades", label: "Atividades de Animação Sociocultural" },
+  { key: "comunicacao", label: "Comunicação com a Equipa" },
+  { key: "instalacoes", label: "Instalações" },
+];
+const RATING_LABELS = ["Muito Insatisfeito", "Insatisfeito", "Neutro", "Satisfeito", "Muito Satisfeito"];
+
+function SugestoesPage({ onBack }: { onBack: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [responses, setResponses] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadFromSupabase("escala_data").then((escala) => {
+      setResponses((escala?.satisfaction_responses || []).slice().reverse());
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  const handleGerarFolhaQuestionario = () => {
+    const link = `${window.location.origin}${window.location.pathname}?questionario=1`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(link)}`;
+    const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>QR Code — Questionário de Satisfação</title>
+    <style>
+      @page { size: A4; margin: 20mm; }
+      * { box-sizing: border-box; }
+      body { font-family: Arial, sans-serif; color: #2A241C; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #FAFAF8; }
+      .no-print { position: fixed; top: 16px; right: 16px; }
+      @media print { .no-print { display: none !important; } body { background: #FFFFFF; } }
+      .sheet { width: 100%; max-width: 480px; text-align: center; border: 2px solid #2A241C; border-radius: 20px; padding: 48px 36px; }
+      h1 { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
+      .sub { font-size: 13px; color: #6B6358; margin: 0 0 28px; }
+      .qr-box { padding: 16px; border: 1px solid #E4DED3; border-radius: 16px; display: inline-block; margin-bottom: 24px; }
+      .qr-box img { display: block; width: 260px; height: 260px; }
+      .instructions { font-size: 14px; color: #6B6358; line-height: 1.7; margin: 0; }
+    </style></head><body>
+    <button class="no-print" onclick="window.print()" style="background:#2A241C;color:#F5B944;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
+    <div class="sheet">
+      <h1>ASSOCIAÇÃO OLIVEIRENSE DE SOCORROS MÚTUOS</h1>
+      <p class="sub">Questionário de Satisfação das Famílias</p>
+      <div class="qr-box"><img src="${qrUrl}" alt="QR code do questionário" /></div>
+      <p class="instructions">Aponte a câmara do telemóvel para nos dar a sua opinião. Demora menos de 2 minutos e ajuda-nos a melhorar.</p>
+    </div>
+    </body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+    w.document.open(); w.document.write(html); w.document.close(); w.focus();
+  };
+
+  const removeResponse = (id: string) => {
+    if (!window.confirm("Remover esta resposta?")) return;
+    loadFromSupabase("escala_data").then((escala) => {
+      const current = escala?.satisfaction_responses || [];
+      const updated = current.filter((r: any) => r.id !== id);
+      saveToSupabase("escala_data", { satisfaction_responses: updated }).then(() => {
+        setResponses(updated.slice().reverse());
+      });
+    });
+  };
+
+  const avgRating = (r: any) => {
+    const vals = SATISFACTION_CATEGORIES.map((c) => r.ratings?.[c.key]).filter((v) => typeof v === "number");
+    if (vals.length === 0) return null;
+    return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", padding: "24px 20px 60px" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap" as const, gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={onBack} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 10, padding: "8px 14px", cursor: "pointer", color: "#6B6358", fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>← Voltar</button>
+            <div>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 22, color: "#2A241C" }}>💬 Sugestões</div>
+              <div style={{ fontSize: 12, color: "#A39B8E" }}>Respostas ao questionário de satisfação das famílias</div>
+            </div>
+          </div>
+          <button
+            onClick={handleGerarFolhaQuestionario}
+            style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+          >
+            📱 Gerar QR code do questionário
+          </button>
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign: "center" as const, color: "#A39B8E", padding: "40px 0" }}>A carregar...</div>
+        ) : responses.length === 0 ? (
+          <div style={{ background: "#FFFFFF", borderRadius: 16, padding: "40px 20px", textAlign: "center" as const, color: "#A39B8E" }}>
+            Ainda não há nenhuma resposta.<br />
+            <span style={{ fontSize: 13 }}>Gera o QR code e partilha com as famílias para começares a receber respostas aqui.</span>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column" as const, gap: 14 }}>
+            {responses.map((r) => (
+              <div key={r.id} style={{ background: "#FFFFFF", borderRadius: 14, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, flexWrap: "wrap" as const, gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#2A241C" }}>
+                      {r.respondentName || "Anónimo"}{r.utenteRelacionado ? ` · Familiar de ${r.utenteRelacionado}` : ""}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#A39B8E" }}>{new Date(r.submittedAt).toLocaleString("pt-PT")}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {avgRating(r) && (
+                      <div style={{ background: "#FFF0EE", color: "#C2554A", borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 700 }}>
+                        ⭐ {avgRating(r)}/5
+                      </div>
+                    )}
+                    <button onClick={() => removeResponse(r.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 13 }}>✕</button>
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, marginBottom: r.comments ? 12 : 0 }}>
+                  {SATISFACTION_CATEGORIES.map((c) => (
+                    <div key={c.key} style={{ fontSize: 12, color: "#6B6358", background: "#F7F5F0", borderRadius: 8, padding: "6px 10px" }}>
+                      {c.label}: <strong style={{ color: "#2A241C" }}>{r.ratings?.[c.key] ? RATING_LABELS[r.ratings[c.key] - 1] : "—"}</strong>
+                    </div>
+                  ))}
+                </div>
+                {r.comments && (
+                  <div style={{ fontSize: 13, color: "#2A241C", background: "#FAFAF8", borderRadius: 8, padding: "10px 12px", fontStyle: "italic" as const, lineHeight: 1.5 }}>
+                    "{r.comments}"
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
@@ -3779,9 +3913,10 @@ const DEFAULT_APP_USERS: AppUser[] = [
   { username: "Admin", password: "admin", role: "admin" },
 ];
 
-function canAccessPage(user: AppUser | null, page: "utentes" | "schedule" | "stock"): boolean {
+function canAccessPage(user: AppUser | null, page: "utentes" | "schedule" | "stock" | "sugestoes"): boolean {
   if (!user) return false;
   if (user.role === "admin") return true;
+  if (page === "sugestoes") return false;
   if (user.role === "colaboradores") return page === "schedule";
   return user.role === page;
 }
@@ -4000,16 +4135,8 @@ function MapaGeralPage() {
   const [schedule, setSchedule] = useState<Record<string, Record<string, Record<number, string>>>>({});
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
-  const [selectedDay, setSelectedDay] = useState(today.getDate());
-  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 640 : false);
-  const [viewMode, setViewMode] = useState<"dia" | "mes">(isMobile ? "dia" : "mes");
   const [generatingImage, setGeneratingImage] = useState(false);
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 640);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   useEffect(() => {
     loadFromSupabase("escala_data").then((escala) => {
@@ -4036,18 +4163,9 @@ function MapaGeralPage() {
   const numDays = new Date(year, month + 1, 0).getDate();
   const days = Array.from({ length: numDays }, (_, i) => i + 1);
   const allNames = [...rvEmployees, ...employees];
-  const clampedDay = Math.min(selectedDay, numDays);
 
   const goPrev = () => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); };
   const goNext = () => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); };
-  const goPrevDay = () => {
-    if (clampedDay === 1) { goPrev(); setSelectedDay(new Date(month === 0 ? year - 1 : year, month === 0 ? 11 : month - 1, 0).getDate()); }
-    else setSelectedDay(clampedDay - 1);
-  };
-  const goNextDay = () => {
-    if (clampedDay === numDays) { goNext(); setSelectedDay(1); }
-    else setSelectedDay(clampedDay + 1);
-  };
 
   const generateMonthImage = () => {
     setGeneratingImage(true);
@@ -4180,8 +4298,6 @@ function MapaGeralPage() {
       setGeneratingImage(false);
     }, 50);
   };
-  const dateObj = new Date(year, month, clampedDay);
-  const dayWeekday = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][dateObj.getDay()];
 
   return (
     <div style={{ minHeight: "100vh", background: "#F5EDD8", fontFamily: "'Inter', sans-serif", padding: "20px 16px 60px" }}>
@@ -4200,67 +4316,37 @@ function MapaGeralPage() {
             <button onClick={goNext} style={{ border: "1px solid #F5B944", background: "#FFF8E8", borderRadius: 8, padding: "8px 14px", cursor: "pointer", color: "#8A6A2E", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>
               Mês seguinte <IconChevronRight size={16} />
             </button>
-            <button
-              className="no-print"
-              onClick={() => setViewMode((v) => (v === "dia" ? "mes" : "dia"))}
-              style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "8px 14px", cursor: "pointer", color: "#3A5A70", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}
-            >
-              {viewMode === "dia" ? "📋 Ver mês completo" : "📅 Ver por dia"}
-            </button>
-            <button
-              className="no-print"
-              onClick={generateMonthImage}
-              disabled={generatingImage}
-              style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "8px 14px", cursor: generatingImage ? "default" : "pointer", color: "#3A5A70", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif", opacity: generatingImage ? 0.6 : 1 }}
-            >
-              {generatingImage ? "⏳ A gerar..." : "📸 Guardar como imagem"}
-            </button>
-            <button onClick={() => window.print()} style={{ border: "1px solid #E4DED3", background: "#2A241C", color: "#F5B944", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>
-              🖨️ Imprimir
-            </button>
+            <div className="no-print" style={{ position: "relative" as const }}>
+              <button
+                onClick={() => setShowExportMenu((v) => !v)}
+                style={{ border: "1px solid #E4DED3", background: "#2A241C", color: "#F5B944", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif", display: "flex", alignItems: "center", gap: 6 }}
+              >
+                📤 Exportar
+              </button>
+              {showExportMenu && (
+                <>
+                  <div style={{ position: "fixed" as const, inset: 0, zIndex: 9 }} onClick={() => setShowExportMenu(false)} />
+                  <div style={{ position: "absolute" as const, top: "calc(100% + 6px)", right: 0, background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", overflow: "hidden", zIndex: 10, minWidth: 190 }}>
+                    <button
+                      onClick={() => { setShowExportMenu(false); window.print(); }}
+                      style={{ width: "100%", textAlign: "left" as const, border: "none", background: "#FFFFFF", padding: "10px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#2A241C", fontFamily: "'Inter', sans-serif" }}
+                    >
+                      🖨️ Imprimir
+                    </button>
+                    <button
+                      onClick={() => { setShowExportMenu(false); generateMonthImage(); }}
+                      disabled={generatingImage}
+                      style={{ width: "100%", textAlign: "left" as const, border: "none", borderTop: "1px solid #EFEAE2", background: "#FFFFFF", padding: "10px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#2A241C", fontFamily: "'Inter', sans-serif" }}
+                    >
+                      {generatingImage ? "⏳ A gerar..." : "📸 Guardar como foto"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
-        {viewMode === "dia" ? (
-          <div style={{ background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 14, padding: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-              <button onClick={goPrevDay} style={{ border: "1px solid #E4DED3", background: "#FAFAF8", borderRadius: 8, padding: "10px 14px", cursor: "pointer", color: "#8A6A2E" }}>
-                <IconChevronLeft size={18} />
-              </button>
-              <div style={{ textAlign: "center" as const }}>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, color: "#2A241C" }}>{dayWeekday}, {clampedDay} de {MONTH_NAMES[month]}</div>
-                {clampedDay === today.getDate() && month === today.getMonth() && year === today.getFullYear() && (
-                  <div style={{ fontSize: 11, color: "#3B6D11", fontWeight: 700, marginTop: 2 }}>● HOJE</div>
-                )}
-              </div>
-              <button onClick={goNextDay} style={{ border: "1px solid #E4DED3", background: "#FAFAF8", borderRadius: 8, padding: "10px 14px", cursor: "pointer", color: "#8A6A2E" }}>
-                <IconChevronRight size={18} />
-              </button>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
-              {allNames.length === 0 ? (
-                <div style={{ textAlign: "center" as const, color: "#A39B8E", fontSize: 13, padding: "20px 0" }}>Sem colaboradores registados.</div>
-              ) : allNames.map((name) => {
-                const matchedKey = Object.keys(monthData).find((k) => k.trim().toLowerCase() === name.trim().toLowerCase());
-                const personSchedule = matchedKey ? monthData[matchedKey] : (monthData[name] || {});
-                const turno = personSchedule[clampedDay];
-                const def = turno ? SHIFT_TYPES[turno] : null;
-                return (
-                  <div key={name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FAFAF8", borderRadius: 10, padding: "10px 14px" }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: "#2A241C" }}>{name}</span>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 44, padding: "5px 10px", borderRadius: 8,
-                      background: def ? def.color : "#EFEAE2", color: def && !LIGHT_SHIFTS.includes(turno) ? "#FFFFFF" : "#9A9388",
-                      fontWeight: 700, fontSize: 13, fontFamily: "'Space Grotesk', sans-serif",
-                    }}>
-                      {turno || "—"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
         <div style={{ overflowX: "auto" as const, background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 14 }}>
           <table style={{ borderCollapse: "collapse" as const, width: "100%", fontSize: 12 }}>
             <thead>
@@ -4300,7 +4386,6 @@ function MapaGeralPage() {
             </tbody>
           </table>
         </div>
-        )}
 
         <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 14, marginTop: 16, fontSize: 12, color: "#6B6358" }}>
           {SHIFT_ORDER.map((key) => (
@@ -4309,6 +4394,135 @@ function MapaGeralPage() {
               {key} · {SHIFT_TYPES[key].label}
             </div>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// PÁGINA PÚBLICA — QUESTIONÁRIO DE SATISFAÇÃO (via QR code)
+// ============================================================
+function QuestionarioSatisfacaoPage() {
+  const [ratings, setRatings] = useState<Record<string, number>>({});
+  const [respondentName, setRespondentName] = useState("");
+  const [utenteRelacionado, setUtenteRelacionado] = useState("");
+  const [comments, setComments] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+
+  const allRated = SATISFACTION_CATEGORIES.every((c) => ratings[c.key]);
+
+  const handleSubmit = () => {
+    if (!allRated) {
+      setError("Por favor, avalie todas as categorias antes de enviar.");
+      return;
+    }
+    setError("");
+    setSubmitting(true);
+    loadFromSupabase("escala_data").then((escala) => {
+      const current = escala?.satisfaction_responses || [];
+      const novaResposta = {
+        id: Date.now().toString() + Math.random().toString(36).slice(2),
+        submittedAt: new Date().toISOString(),
+        respondentName: respondentName.trim() || undefined,
+        utenteRelacionado: utenteRelacionado.trim() || undefined,
+        ratings,
+        comments: comments.trim(),
+      };
+      return saveToSupabase("escala_data", { satisfaction_responses: [...current, novaResposta] });
+    }).then(() => {
+      setSubmitted(true);
+    }).catch(() => {
+      setError("Não foi possível enviar a resposta. Verifique a ligação à internet e tente novamente.");
+    }).finally(() => setSubmitting(false));
+  };
+
+  if (submitted) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#F5EDD8", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", padding: 24 }}>
+        <div style={{ textAlign: "center" as const, maxWidth: 360 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🙏</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#2A241C", marginBottom: 8, fontFamily: "'Space Grotesk', sans-serif" }}>Obrigado pela sua opinião!</div>
+          <div style={{ fontSize: 14, color: "#6B6358", lineHeight: 1.6 }}>A sua resposta foi registada com sucesso e vai ajudar-nos a melhorar continuamente.</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#F5EDD8", fontFamily: "'Inter', sans-serif", padding: "24px 16px 60px" }}>
+      <div style={{ maxWidth: 620, margin: "0 auto", background: "#FFFFFF", borderRadius: 4, boxShadow: "0 4px 30px rgba(0,0,0,0.12)", border: "1px solid #E4DED3", overflow: "hidden" }}>
+        {/* Cabeçalho tipo documento formal */}
+        <div style={{ padding: "32px 36px 24px", borderBottom: "3px solid #2A241C", textAlign: "center" as const }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#8A6A2E", letterSpacing: "0.08em", marginBottom: 6 }}>ASSOCIAÇÃO OLIVEIRENSE DE SOCORROS MÚTUOS</div>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700, color: "#2A241C" }}>Questionário de Satisfação</div>
+          <div style={{ fontSize: 13, color: "#6B6358", marginTop: 6 }}>Estrutura Residencial para Pessoas Idosas — Opinião das Famílias</div>
+        </div>
+
+        <div style={{ padding: "28px 36px" }}>
+          <p style={{ fontSize: 13, color: "#6B6358", lineHeight: 1.6, marginTop: 0 }}>
+            A sua opinião é muito importante para nós. Pedimos que avalie os seguintes aspetos com sinceridade — demora menos de 2 minutos.
+          </p>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 22 }}>
+            <div>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#8A6A2E", textTransform: "uppercase" as const, letterSpacing: "0.04em", marginBottom: 5 }}>Nome (opcional)</label>
+              <input value={respondentName} onChange={(e) => setRespondentName(e.target.value)} style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#8A6A2E", textTransform: "uppercase" as const, letterSpacing: "0.04em", marginBottom: 5 }}>Familiar de (opcional)</label>
+              <input value={utenteRelacionado} onChange={(e) => setUtenteRelacionado(e.target.value)} placeholder="Nome do utente" style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
+            </div>
+          </div>
+
+          {SATISFACTION_CATEGORIES.map((c) => (
+            <div key={c.key} style={{ marginBottom: 22 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#2A241C", marginBottom: 8 }}>{c.label}</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                {RATING_LABELS.map((label, idx) => {
+                  const value = idx + 1;
+                  const selected = ratings[c.key] === value;
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => setRatings((prev) => ({ ...prev, [c.key]: value }))}
+                      style={{
+                        flex: "1 1 60px", border: selected ? "1px solid #2A241C" : "1px solid #E4DED3",
+                        background: selected ? "#2A241C" : "#FAFAF8", color: selected ? "#F5B944" : "#6B6358",
+                        borderRadius: 8, padding: "8px 4px", fontSize: 10, fontWeight: 600, cursor: "pointer",
+                        fontFamily: "'Inter', sans-serif", textAlign: "center" as const, lineHeight: 1.3,
+                      }}
+                    >
+                      {value}<br />{label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#8A6A2E", textTransform: "uppercase" as const, letterSpacing: "0.04em", marginBottom: 5 }}>Sugestões ou comentários (opcional)</label>
+            <textarea
+              rows={4}
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
+              placeholder="Diga-nos o que podemos melhorar, ou o que já está a correr bem..."
+              style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, resize: "vertical" as const }}
+            />
+          </div>
+
+          {error && <div style={{ color: "#C2554A", fontSize: 12, marginBottom: 14, textAlign: "center" as const }}>{error}</div>}
+
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            style={{ width: "100%", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "13px 0", fontSize: 14, fontWeight: 700, cursor: submitting ? "default" : "pointer", fontFamily: "'Inter', sans-serif", opacity: submitting ? 0.7 : 1 }}
+          >
+            {submitting ? "A enviar..." : "Enviar resposta"}
+          </button>
         </div>
       </div>
     </div>
@@ -4326,6 +4540,9 @@ export default function App() {
   const isMapaGeralParam = typeof window !== "undefined"
     ? new URLSearchParams(window.location.search).get("mapageral")
     : null;
+  const isQuestionarioParam = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("questionario")
+    : null;
 
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [appUsersList, setAppUsersList] = useState<AppUser[]>(DEFAULT_APP_USERS);
@@ -4335,7 +4552,7 @@ export default function App() {
   const [changePassConfirm, setChangePassConfirm] = useState("");
 
   const today = new Date();
-  const [activePage, setActivePage] = useState<"home" | "schedule" | "stock" | "utentes">("home");
+  const [activePage, setActivePage] = useState<"home" | "schedule" | "stock" | "utentes" | "sugestoes">("home");
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
@@ -6333,6 +6550,7 @@ export default function App() {
   }, [quickSearch, employees, rvEmployees]);
   const isUtentesPage = (activePage as string) === "utentes";
   const isSchedulePage = (activePage as string) === "schedule";
+  const isSugestoesPage = (activePage as string) === "sugestoes";
 
   // Dia de hoje neste mês/ano (null se estamos a ver outro mês)
   const todayDay = today.getFullYear() === year && today.getMonth() === month
@@ -6391,6 +6609,11 @@ export default function App() {
   // Acesso público ao mapa geral da equipa, via QR code
   if (isMapaGeralParam) {
     return <MapaGeralPage />;
+  }
+
+  // Acesso público ao questionário de satisfação, via QR code
+  if (isQuestionarioParam) {
+    return <QuestionarioSatisfacaoPage />;
   }
 
   // Acesso interno da equipa requer login
@@ -6849,8 +7072,8 @@ export default function App() {
               </div>
             )}
 
-            {/* 3 botões */}
-            <div className="home-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+            {/* 4 botões */}
+            <div className="home-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
               {canAccessPage(currentUser, "utentes") && (
               <button onClick={() => setActivePage("utentes")} className="home-btn"
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 16, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
@@ -6895,6 +7118,21 @@ export default function App() {
                 <div style={{ width: 40, height: 4, borderRadius: 2, background: "#6FA86F" }} />
               </button>
               )}
+
+              {canAccessPage(currentUser, "sugestoes") && (
+              <button onClick={() => setActivePage("sugestoes")} className="home-btn"
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 16, transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(194,85,74,0.5)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
+                <div style={{ width: 59, height: 59, borderRadius: 18, background: "#FFF0EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 26 }}>💬</span>
+                </div>
+                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                  Sugestões
+                </div>
+                <div style={{ width: 40, height: 4, borderRadius: 2, background: "#C2554A" }} />
+              </button>
+              )}
             </div>
           </div>
         </div>
@@ -6920,6 +7158,13 @@ export default function App() {
       {isUtentesPage && (
         <div className="page-enter" style={{ background: "#E8EEF5" }}>
           <UtentesPage key={`utentes-${syncDone}`} onBack={() => navigateHome()} onGerarERPI={handleGerarRelatorioERPI} />
+        </div>
+      )}
+
+      {/* Página de sugestões */}
+      {isSugestoesPage && (
+        <div className="page-enter" style={{ background: "#FFF0EE" }}>
+          <SugestoesPage key={`sugestoes-${syncDone}`} onBack={() => navigateHome()} />
         </div>
       )}
 
