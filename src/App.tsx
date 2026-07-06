@@ -4000,6 +4000,15 @@ function MapaGeralPage() {
   const [schedule, setSchedule] = useState<Record<string, Record<string, Record<number, string>>>>({});
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
+  const [selectedDay, setSelectedDay] = useState(today.getDate());
+  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 640 : false);
+  const [viewMode, setViewMode] = useState<"dia" | "mes">(isMobile ? "dia" : "mes");
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     loadFromSupabase("escala_data").then((escala) => {
@@ -4026,9 +4035,20 @@ function MapaGeralPage() {
   const numDays = new Date(year, month + 1, 0).getDate();
   const days = Array.from({ length: numDays }, (_, i) => i + 1);
   const allNames = [...rvEmployees, ...employees];
+  const clampedDay = Math.min(selectedDay, numDays);
 
   const goPrev = () => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); };
   const goNext = () => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); };
+  const goPrevDay = () => {
+    if (clampedDay === 1) { goPrev(); setSelectedDay(new Date(month === 0 ? year - 1 : year, month === 0 ? 11 : month - 1, 0).getDate()); }
+    else setSelectedDay(clampedDay - 1);
+  };
+  const goNextDay = () => {
+    if (clampedDay === numDays) { goNext(); setSelectedDay(1); }
+    else setSelectedDay(clampedDay + 1);
+  };
+  const dateObj = new Date(year, month, clampedDay);
+  const dayWeekday = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][dateObj.getDay()];
 
   return (
     <div style={{ minHeight: "100vh", background: "#F5EDD8", fontFamily: "'Inter', sans-serif", padding: "20px 16px 60px" }}>
@@ -4047,12 +4067,59 @@ function MapaGeralPage() {
             <button onClick={goNext} style={{ border: "1px solid #F5B944", background: "#FFF8E8", borderRadius: 8, padding: "8px 14px", cursor: "pointer", color: "#8A6A2E", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>
               Mês seguinte <IconChevronRight size={16} />
             </button>
+            <button
+              className="no-print"
+              onClick={() => setViewMode((v) => (v === "dia" ? "mes" : "dia"))}
+              style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "8px 14px", cursor: "pointer", color: "#3A5A70", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}
+            >
+              {viewMode === "dia" ? "📋 Ver mês completo" : "📅 Ver por dia"}
+            </button>
             <button onClick={() => window.print()} style={{ border: "1px solid #E4DED3", background: "#2A241C", color: "#F5B944", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>
               🖨️ Imprimir
             </button>
           </div>
         </div>
 
+        {viewMode === "dia" ? (
+          <div style={{ background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 14, padding: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <button onClick={goPrevDay} style={{ border: "1px solid #E4DED3", background: "#FAFAF8", borderRadius: 8, padding: "10px 14px", cursor: "pointer", color: "#8A6A2E" }}>
+                <IconChevronLeft size={18} />
+              </button>
+              <div style={{ textAlign: "center" as const }}>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, color: "#2A241C" }}>{dayWeekday}, {clampedDay} de {MONTH_NAMES[month]}</div>
+                {clampedDay === today.getDate() && month === today.getMonth() && year === today.getFullYear() && (
+                  <div style={{ fontSize: 11, color: "#3B6D11", fontWeight: 700, marginTop: 2 }}>● HOJE</div>
+                )}
+              </div>
+              <button onClick={goNextDay} style={{ border: "1px solid #E4DED3", background: "#FAFAF8", borderRadius: 8, padding: "10px 14px", cursor: "pointer", color: "#8A6A2E" }}>
+                <IconChevronRight size={18} />
+              </button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+              {allNames.length === 0 ? (
+                <div style={{ textAlign: "center" as const, color: "#A39B8E", fontSize: 13, padding: "20px 0" }}>Sem colaboradores registados.</div>
+              ) : allNames.map((name) => {
+                const matchedKey = Object.keys(monthData).find((k) => k.trim().toLowerCase() === name.trim().toLowerCase());
+                const personSchedule = matchedKey ? monthData[matchedKey] : (monthData[name] || {});
+                const turno = personSchedule[clampedDay];
+                const def = turno ? SHIFT_TYPES[turno] : null;
+                return (
+                  <div key={name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FAFAF8", borderRadius: 10, padding: "10px 14px" }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: "#2A241C" }}>{name}</span>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 44, padding: "5px 10px", borderRadius: 8,
+                      background: def ? def.color : "#EFEAE2", color: def && !LIGHT_SHIFTS.includes(turno) ? "#FFFFFF" : "#9A9388",
+                      fontWeight: 700, fontSize: 13, fontFamily: "'Space Grotesk', sans-serif",
+                    }}>
+                      {turno || "—"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
         <div style={{ overflowX: "auto" as const, background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 14 }}>
           <table style={{ borderCollapse: "collapse" as const, width: "100%", fontSize: 12 }}>
             <thead>
@@ -4092,6 +4159,7 @@ function MapaGeralPage() {
             </tbody>
           </table>
         </div>
+        )}
 
         <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 14, marginTop: 16, fontSize: 12, color: "#6B6358" }}>
           {SHIFT_ORDER.map((key) => (
