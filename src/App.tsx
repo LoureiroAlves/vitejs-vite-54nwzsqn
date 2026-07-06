@@ -1246,7 +1246,7 @@ interface Utente {
   nacionalidade?: string;
   estadoCivil?: string;
   // Dia a dia
-  medications?: { id: string; name: string; dose: string; schedule: string; timesPerDay?: string; intervalHours?: string }[];
+  medications?: { id: string; name: string; administration: string }[];
   medicationNotes?: string;
   hygieneNotes?: string;
   feedingNotes?: string;
@@ -1396,12 +1396,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   const handleGeneratePIC = async (u: Utente) => {
     const hoje = new Date().toLocaleDateString("pt-PT");
     const dataRevisao = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-PT");
-    const meds = (u.medications || []).map((m) => {
-      const freq = m.timesPerDay ? `${m.timesPerDay}x/dia` : "";
-      const interval = m.intervalHours ? `de ${m.intervalHours}/${m.intervalHours}h` : "";
-      const freqParts = [freq, interval].filter(Boolean).join(", ");
-      return `${m.name}${m.dose ? " — " + m.dose : ""}${freqParts ? " (" + freqParts + ")" : ""}${m.schedule ? " [" + m.schedule + "]" : ""}`;
-    }).join("\n") || u.medicationNotes || "";
+    const meds = (u.medications || []).map((m) => `${m.name}${m.administration ? " — " + m.administration : ""}`).join("\n") || u.medicationNotes || "";
 
     // Carregar dados guardados anteriormente do PIC
     const picData = u.picData || {};
@@ -1639,28 +1634,49 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
   const [showCCPanel, setShowCCPanel] = useState<string | null>(null);
   const [newMedName, setNewMedName] = useState("");
-  const [newMedDose, setNewMedDose] = useState("");
-  const [newMedSchedule, setNewMedSchedule] = useState("");
-  const [newMedTimesPerDay, setNewMedTimesPerDay] = useState("");
-  const [newMedIntervalHours, setNewMedIntervalHours] = useState("");
+  const [newMedAdministration, setNewMedAdministration] = useState("");
+  const [editingMedId, setEditingMedId] = useState<string | null>(null);
 
-  const addMedication = (utenteId: string) => {
+  const saveMedication = (utenteId: string) => {
     if (!newMedName.trim()) return;
-    const med = {
-      id: Date.now().toString() + Math.random().toString(36).slice(2),
-      name: newMedName.trim(),
-      dose: newMedDose.trim(),
-      schedule: newMedSchedule.trim(),
-      timesPerDay: newMedTimesPerDay.trim(),
-      intervalHours: newMedIntervalHours.trim(),
-    };
     setUtentes((prev) => prev.map((u) => {
       if (u.id !== utenteId) return u;
-      const updated = { ...u, medications: [...(u.medications || []), med] };
+      let updated;
+      if (editingMedId) {
+        // Editar medicamento existente
+        updated = {
+          ...u,
+          medications: (u.medications || []).map((m) =>
+            m.id === editingMedId
+              ? { ...m, name: newMedName.trim(), administration: newMedAdministration.trim() }
+              : m
+          ),
+        };
+      } else {
+        // Adicionar medicamento novo
+        const med = {
+          id: Date.now().toString() + Math.random().toString(36).slice(2),
+          name: newMedName.trim(),
+          administration: newMedAdministration.trim(),
+        };
+        updated = { ...u, medications: [...(u.medications || []), med] };
+      }
       if (openUtente?.id === utenteId) setOpenUtente(updated);
       return updated;
     }));
-    setNewMedName(""); setNewMedDose(""); setNewMedSchedule(""); setNewMedTimesPerDay(""); setNewMedIntervalHours("");
+    setNewMedName(""); setNewMedAdministration(""); setEditingMedId(null);
+  };
+
+  const startEditMedication = (med: { id: string; name: string; administration?: string }) => {
+    setEditingMedId(med.id);
+    setNewMedName(med.name);
+    setNewMedAdministration(med.administration || "");
+  };
+
+  const cancelEditMedication = () => {
+    setEditingMedId(null);
+    setNewMedName("");
+    setNewMedAdministration("");
   };
 
   const removeMedication = (utenteId: string, medId: string) => {
@@ -1670,6 +1686,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
       if (openUtente?.id === utenteId) setOpenUtente(updated);
       return updated;
     }));
+    if (editingMedId === medId) cancelEditMedication();
   };
 
   // ---------- Registo diário (substitui o campo Observações único) ----------
@@ -2502,43 +2519,33 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
             {utenteTab === "medicacao" && (
               <div style={{ maxWidth: 600, margin: "0 auto", display: "flex", flexDirection: "column" as const, gap: 12 }}>
                 {(u.medications || []).map((med) => (
-                  <div key={med.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#FFFFFF", borderRadius: 10, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div
+                    key={med.id}
+                    onClick={() => startEditMedication(med)}
+                    style={{ display: "flex", alignItems: "center", gap: 10, background: editingMedId === med.id ? "#EEF4FF" : "#FFFFFF", borderRadius: 10, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", cursor: "pointer", border: editingMedId === med.id ? "1px solid #B8CCE0" : "1px solid transparent" }}
+                  >
                     <div style={{ flex: 1 }}>
                       <span style={{ fontSize: 14, fontWeight: 600, color: "#2A241C" }}>{med.name}</span>
-                      {med.dose && <span style={{ fontSize: 13, color: "#6B6358" }}> · {med.dose}</span>}
-                      {med.timesPerDay && <span style={{ fontSize: 13, color: "#3A5A70" }}> · {med.timesPerDay}x/dia</span>}
-                      {med.intervalHours && <span style={{ fontSize: 13, color: "#3A5A70" }}> · de {med.intervalHours}/{med.intervalHours} horas</span>}
-                      {med.schedule && <span style={{ fontSize: 13, color: "#8A6A2E" }}> · {med.schedule}</span>}
+                      {med.administration && <span style={{ fontSize: 13, color: "#6B6358" }}> · {med.administration}</span>}
                     </div>
-                    <button onClick={() => removeMedication(u.id, med.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 14 }}>✕</button>
+                    <button onClick={(e) => { e.stopPropagation(); removeMedication(u.id, med.id); }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 14 }}>✕</button>
                   </div>
                 ))}
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8, marginBottom: 8 }}>
+                  {editingMedId && (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, background: "#EEF4FF", borderRadius: 8, padding: "6px 10px" }}>
+                      <span style={{ fontSize: 12, color: "#3A5A70", fontWeight: 600 }}>✏️ A editar medicamento</span>
+                      <button onClick={cancelEditMedication} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#3A5A70", fontSize: 12, fontWeight: 600 }}>Cancelar</button>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, marginBottom: 8 }}>
                     <input value={newMedName} onChange={(e) => setNewMedName(e.target.value)} placeholder="Medicamento" style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
-                    <input value={newMedDose} onChange={(e) => setNewMedDose(e.target.value)} placeholder="Dose (ex: 500mg)" style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
+                    <textarea rows={2} value={newMedAdministration} onChange={(e) => setNewMedAdministration(e.target.value)} placeholder="Forma de administração (dose, frequência, horário...)" style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }} />
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                    <input
-                      type="number"
-                      min="1"
-                      value={newMedTimesPerDay}
-                      onChange={(e) => setNewMedTimesPerDay(e.target.value)}
-                      placeholder="Doses por dia (ex: 3)"
-                      style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", colorScheme: "light" as const }}
-                    />
-                    <input
-                      type="number"
-                      min="1"
-                      value={newMedIntervalHours}
-                      onChange={(e) => setNewMedIntervalHours(e.target.value)}
-                      placeholder="De quanto em quantas horas (ex: 8)"
-                      style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", colorScheme: "light" as const }}
-                    />
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input value={newMedSchedule} onChange={(e) => setNewMedSchedule(e.target.value)} placeholder="Horário (ex: 8h, 13h, 20h)" style={{ flex: 1, border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
-                    <button onClick={() => addMedication(u.id)} disabled={!newMedName.trim()} style={{ background: newMedName.trim() ? "#2A241C" : "#E4DED3", color: newMedName.trim() ? "#F5B944" : "#A39B8E", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: newMedName.trim() ? "pointer" : "default", fontFamily: "'Inter', sans-serif" }}>+ Adicionar</button>
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <button onClick={() => saveMedication(u.id)} disabled={!newMedName.trim()} style={{ background: newMedName.trim() ? "#2A241C" : "#E4DED3", color: newMedName.trim() ? "#F5B944" : "#A39B8E", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: newMedName.trim() ? "pointer" : "default", fontFamily: "'Inter', sans-serif" }}>
+                      {editingMedId ? "Guardar alterações" : "+ Adicionar"}
+                    </button>
                   </div>
                 </div>
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
@@ -3343,10 +3350,7 @@ function QuickSearchPanel({ target, schedule, onClose }: {
                         {utenteData.medications.map((med: any) => (
                           <div key={med.id} style={{ background: "#F7F5F0", borderRadius: 8, padding: "8px 10px", fontSize: 13 }}>
                             <span style={{ fontWeight: 600, color: "#2A241C" }}>{med.name}</span>
-                            {med.dose && <span style={{ color: "#6B6358" }}> · {med.dose}</span>}
-                            {med.timesPerDay && <span style={{ color: "#3A5A70" }}> · {med.timesPerDay}x/dia</span>}
-                            {med.intervalHours && <span style={{ color: "#3A5A70" }}> · de {med.intervalHours}/{med.intervalHours} horas</span>}
-                            {med.schedule && <span style={{ color: "#8A6A2E" }}> · {med.schedule}</span>}
+                            {med.administration && <span style={{ color: "#6B6358" }}> · {med.administration}</span>}
                           </div>
                         ))}
                       </div>
