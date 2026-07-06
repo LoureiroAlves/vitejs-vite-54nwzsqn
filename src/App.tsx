@@ -4047,6 +4047,140 @@ function MapaGeralPage() {
     if (clampedDay === numDays) { goNext(); setSelectedDay(1); }
     else setSelectedDay(clampedDay + 1);
   };
+
+  const [generatingImage, setGeneratingImage] = useState(false);
+
+  const generateMonthImage = () => {
+    setGeneratingImage(true);
+    setTimeout(() => {
+      try {
+        const nameColWidth = 170;
+        const dayColWidth = 34;
+        const rowHeight = 32;
+        const headerHeight = 46;
+        const topMargin = 90;
+        const legendHeight = 70;
+        const width = nameColWidth + numDays * dayColWidth + 20;
+        const height = topMargin + headerHeight + allNames.length * rowHeight + legendHeight + 20;
+
+        const canvas = document.createElement("canvas");
+        const scale = 2; // maior resolução para ficar nítido no telemóvel
+        canvas.width = width * scale;
+        canvas.height = height * scale;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { setGeneratingImage(false); return; }
+        ctx.scale(scale, scale);
+
+        // Fundo
+        ctx.fillStyle = "#F5EDD8";
+        ctx.fillRect(0, 0, width, height);
+
+        // Título
+        ctx.fillStyle = "#2A241C";
+        ctx.font = "bold 20px Arial";
+        ctx.fillText("Mapa de Turnos — Equipa", 10, 28);
+        ctx.fillStyle = "#8A6A2E";
+        ctx.font = "13px Arial";
+        ctx.fillText(`${MONTH_NAMES[month]} ${year} · Associação Oliveirense de Socorros Mútuos`, 10, 48);
+
+        let x = 10;
+        let y = topMargin;
+
+        // Cabeçalho: coluna nome
+        ctx.fillStyle = "#FBF9F5";
+        ctx.fillRect(x, y, nameColWidth, headerHeight);
+        ctx.strokeStyle = "#E4DED3";
+        ctx.strokeRect(x, y, nameColWidth, headerHeight);
+        ctx.fillStyle = "#8A6A2E";
+        ctx.font = "bold 12px Arial";
+        ctx.fillText("Funcionário", x + 8, y + headerHeight / 2 + 4);
+
+        // Cabeçalho: dias
+        for (let d = 1; d <= numDays; d++) {
+          const dx = x + nameColWidth + (d - 1) * dayColWidth;
+          const date = new Date(year, month, d);
+          const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+          ctx.fillStyle = isWeekend ? "#F4EFE6" : "#FBF9F5";
+          ctx.fillRect(dx, y, dayColWidth, headerHeight);
+          ctx.strokeStyle = "#E4DED3";
+          ctx.strokeRect(dx, y, dayColWidth, headerHeight);
+          ctx.fillStyle = "#2A241C";
+          ctx.font = "bold 12px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText(String(d), dx + dayColWidth / 2, y + 18);
+          ctx.fillStyle = "#A39B8E";
+          ctx.font = "9px Arial";
+          ctx.fillText(WEEKDAY_LETTERS[date.getDay()], dx + dayColWidth / 2, y + 34);
+          ctx.textAlign = "left";
+        }
+
+        y += headerHeight;
+
+        // Linhas de cada colaborador
+        allNames.forEach((name) => {
+          const matchedKey = Object.keys(monthData).find((k) => k.trim().toLowerCase() === name.trim().toLowerCase());
+          const personSchedule = matchedKey ? monthData[matchedKey] : (monthData[name] || {});
+
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(x, y, nameColWidth, rowHeight);
+          ctx.strokeStyle = "#EFEAE2";
+          ctx.strokeRect(x, y, nameColWidth, rowHeight);
+          ctx.fillStyle = "#2A241C";
+          ctx.font = "12px Arial";
+          const displayName = name.length > 20 ? name.slice(0, 19) + "…" : name;
+          ctx.fillText(displayName, x + 8, y + rowHeight / 2 + 4);
+
+          for (let d = 1; d <= numDays; d++) {
+            const dx = x + nameColWidth + (d - 1) * dayColWidth;
+            const turno = personSchedule[d];
+            const def = turno ? SHIFT_TYPES[turno] : null;
+            ctx.fillStyle = def ? def.color : "#FBF9F5";
+            ctx.fillRect(dx, y, dayColWidth, rowHeight);
+            ctx.strokeStyle = "#EFEAE2";
+            ctx.strokeRect(dx, y, dayColWidth, rowHeight);
+            if (turno) {
+              ctx.fillStyle = def && !LIGHT_SHIFTS.includes(turno) ? "#FFFFFF" : "#9A9388";
+              ctx.font = "bold 11px Arial";
+              ctx.textAlign = "center";
+              ctx.fillText(turno, dx + dayColWidth / 2, y + rowHeight / 2 + 4);
+              ctx.textAlign = "left";
+            }
+          }
+          y += rowHeight;
+        });
+
+        // Legenda
+        y += 14;
+        ctx.font = "11px Arial";
+        let lx = x;
+        SHIFT_ORDER.forEach((key) => {
+          ctx.fillStyle = SHIFT_TYPES[key].color;
+          ctx.fillRect(lx, y - 9, 10, 10);
+          ctx.fillStyle = "#6B6358";
+          const label = `${key} · ${SHIFT_TYPES[key].label}`;
+          ctx.fillText(label, lx + 14, y);
+          lx += ctx.measureText(label).width + 34;
+          if (lx > width - 100) { lx = x; y += 18; }
+        });
+
+        const dataUrl = canvas.toDataURL("image/png");
+        const w = window.open("", "_blank");
+        if (w) {
+          w.document.write(`<!DOCTYPE html><html><head><title>Mapa ${MONTH_NAMES[month]} ${year}</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>body{margin:0;background:#111;display:flex;flex-direction:column;align-items:center;font-family:Arial,sans-serif}
+            .hint{color:#fff;padding:14px;text-align:center;font-size:14px}
+            img{max-width:100%;height:auto;display:block}</style></head>
+            <body><div class="hint">📸 Mantém o dedo premido na imagem e escolhe "Guardar imagem"</div>
+            <img src="${dataUrl}" alt="Mapa de turnos" /></body></html>`);
+          w.document.close();
+        }
+      } catch (e) {
+        alert("Não foi possível gerar a imagem. Tenta a opção de imprimir em alternativa.");
+      }
+      setGeneratingImage(false);
+    }, 50);
+  };
   const dateObj = new Date(year, month, clampedDay);
   const dayWeekday = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][dateObj.getDay()];
 
@@ -4073,6 +4207,14 @@ function MapaGeralPage() {
               style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "8px 14px", cursor: "pointer", color: "#3A5A70", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}
             >
               {viewMode === "dia" ? "📋 Ver mês completo" : "📅 Ver por dia"}
+            </button>
+            <button
+              className="no-print"
+              onClick={generateMonthImage}
+              disabled={generatingImage}
+              style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "8px 14px", cursor: generatingImage ? "default" : "pointer", color: "#3A5A70", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif", opacity: generatingImage ? 0.6 : 1 }}
+            >
+              {generatingImage ? "⏳ A gerar..." : "📸 Guardar como imagem"}
             </button>
             <button onClick={() => window.print()} style={{ border: "1px solid #E4DED3", background: "#2A241C", color: "#F5B944", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>
               🖨️ Imprimir
