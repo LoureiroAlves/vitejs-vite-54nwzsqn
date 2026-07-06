@@ -362,6 +362,9 @@ interface StockProduct {
   unit: string;
   quantity: number;
   minQuantity: number;
+  supplierName?: string;
+  supplierContact?: string;
+  supplierPrice?: number;
 }
 
 interface StockMovement {
@@ -395,7 +398,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
   const [moveQty, setMoveQty] = useState<number | string>("");
   const [moveWho, setMoveWho] = useState("");
   const [moveNote, setMoveNote] = useState("");
-  const [newProduct, setNewProduct] = useState({ name: "", category: "Alimentos", unit: "un", quantity: "", minQuantity: "" });
+  const [newProduct, setNewProduct] = useState({ name: "", category: "Alimentos", unit: "un", quantity: "", minQuantity: "", supplierName: "", supplierContact: "", supplierPrice: "" });
   const [tooltip2, setTooltip2] = useState<{ text: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -526,15 +529,31 @@ function StockPage({ onBack }: { onBack: () => void }) {
       unit: newProduct.unit || "un",
       quantity: Number(newProduct.quantity) || 0,
       minQuantity: Number(newProduct.minQuantity) || 0,
+      supplierName: newProduct.supplierName.trim() || undefined,
+      supplierContact: newProduct.supplierContact.trim() || undefined,
+      supplierPrice: newProduct.supplierPrice ? Number(newProduct.supplierPrice) : undefined,
     };
     setProducts((prev) => [...prev, prod]);
-    setNewProduct({ name: "", category: "Alimentos", unit: "un", quantity: "", minQuantity: "" });
+    setNewProduct({ name: "", category: "Alimentos", unit: "un", quantity: "", minQuantity: "", supplierName: "", supplierContact: "", supplierPrice: "" });
     setShowAddProduct(false);
   };
 
   const removeProduct = (id: string) => {
     if (!window.confirm("Remover este produto? O histórico de movimentos é mantido.")) return;
     setProducts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  // Previsão de quando o stock se esgota, com base no consumo (saídas) dos últimos 30 dias
+  const estimateDaysRemaining = (productId: string, currentQty: number): number | null => {
+    const WINDOW_DAYS = 30;
+    const cutoff = Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000;
+    const relevant = movements.filter((m) => m.productId === productId && m.type === "saida" && new Date(m.date).getTime() >= cutoff);
+    if (relevant.length === 0) return null;
+    const totalConsumed = relevant.reduce((sum, m) => sum + m.quantity, 0);
+    if (totalConsumed <= 0) return null;
+    const dailyRate = totalConsumed / WINDOW_DAYS;
+    if (dailyRate <= 0) return null;
+    return Math.max(0, Math.round(currentQty / dailyRate));
   };
 
   const registerMove = () => {
@@ -894,6 +913,18 @@ function StockPage({ onBack }: { onBack: () => void }) {
                   <label style={stockStyles.label}>Mínimo (alerta abaixo de)</label>
                   <input style={stockStyles.input} type="number" min="0" placeholder="1" value={newProduct.minQuantity} onChange={(e) => setNewProduct((p) => ({ ...p, minQuantity: e.target.value }))} />
                 </div>
+                <div>
+                  <label style={stockStyles.label}>Fornecedor (opcional)</label>
+                  <input style={stockStyles.input} value={newProduct.supplierName} onChange={(e) => setNewProduct((p) => ({ ...p, supplierName: e.target.value }))} placeholder="Ex: Makro, Recheio..." />
+                </div>
+                <div>
+                  <label style={stockStyles.label}>Contacto do fornecedor</label>
+                  <input style={stockStyles.input} value={newProduct.supplierContact} onChange={(e) => setNewProduct((p) => ({ ...p, supplierContact: e.target.value }))} placeholder="Telefone ou email" />
+                </div>
+                <div>
+                  <label style={stockStyles.label}>Preço de compra (€)</label>
+                  <input style={stockStyles.input} type="number" min="0" step="0.01" placeholder="0.00" value={newProduct.supplierPrice} onChange={(e) => setNewProduct((p) => ({ ...p, supplierPrice: e.target.value }))} />
+                </div>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                 <button style={stockStyles.addBtn} onClick={addProduct}>Guardar</button>
@@ -986,6 +1017,17 @@ function StockPage({ onBack }: { onBack: () => void }) {
                       }} />
                     </div>
 
+                    {/* Previsão de rutura, com base no consumo dos últimos 30 dias */}
+                    {(() => {
+                      const daysRemaining = estimateDaysRemaining(prod.id, prod.quantity);
+                      if (daysRemaining === null || isEmpty) return null;
+                      return (
+                        <div style={{ fontSize: 11, color: daysRemaining <= 7 ? "#C2554A" : "#8A6A2E", marginBottom: 6, fontWeight: daysRemaining <= 7 ? 700 : 400 }}>
+                          📉 {daysRemaining === 0 ? "esgota hoje/amanhã" : `≈ acaba em ${daysRemaining} dia${daysRemaining === 1 ? "" : "s"}`} (com base no consumo recente)
+                        </div>
+                      );
+                    })()}
+
                     {/* Mínimo editável */}
                     {editingProduct === prod.id ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
@@ -1002,7 +1044,41 @@ function StockPage({ onBack }: { onBack: () => void }) {
                         <span style={{ fontSize: 11, color: "#A39B8E" }}>{prod.unit}</span>
                       </div>
                     ) : (
-                      <div style={{ fontSize: 11, color: "#A39B8E", marginBottom: 12 }}>mín. {prod.minQuantity} {prod.unit}</div>
+                      <div style={{ fontSize: 11, color: "#A39B8E", marginBottom: 8 }}>mín. {prod.minQuantity} {prod.unit}</div>
+                    )}
+
+                    {/* Fornecedor editável */}
+                    {editingProduct === prod.id ? (
+                      <div style={{ display: "flex", flexDirection: "column" as const, gap: 5, marginBottom: 12, background: "#F7F5F0", borderRadius: 8, padding: 8 }}>
+                        <input
+                          value={prod.supplierName || ""}
+                          onChange={(e) => setProducts((prev) => prev.map((p) => p.id === prod.id ? { ...p, supplierName: e.target.value } : p))}
+                          onKeyDown={(e) => { if (e.key === "Enter") setEditingProduct(null); }}
+                          placeholder="Fornecedor"
+                          style={{ border: "1px solid #E4DED3", borderRadius: 6, padding: "4px 7px", fontSize: 11, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C" }}
+                        />
+                        <input
+                          value={prod.supplierContact || ""}
+                          onChange={(e) => setProducts((prev) => prev.map((p) => p.id === prod.id ? { ...p, supplierContact: e.target.value } : p))}
+                          onKeyDown={(e) => { if (e.key === "Enter") setEditingProduct(null); }}
+                          placeholder="Contacto"
+                          style={{ border: "1px solid #E4DED3", borderRadius: 6, padding: "4px 7px", fontSize: 11, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C" }}
+                        />
+                        <input
+                          type="number" min="0" step="0.01"
+                          value={prod.supplierPrice ?? ""}
+                          onChange={(e) => setProducts((prev) => prev.map((p) => p.id === prod.id ? { ...p, supplierPrice: e.target.value === "" ? undefined : Number(e.target.value) } : p))}
+                          onKeyDown={(e) => { if (e.key === "Enter") setEditingProduct(null); }}
+                          placeholder="Preço (€)"
+                          style={{ border: "1px solid #E4DED3", borderRadius: 6, padding: "4px 7px", fontSize: 11, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C" }}
+                        />
+                      </div>
+                    ) : (prod.supplierName || prod.supplierContact || prod.supplierPrice != null) && (
+                      <div style={{ fontSize: 11, color: "#6B6358", marginBottom: 12, background: "#F7F5F0", borderRadius: 8, padding: "6px 8px" }}>
+                        🏬 {prod.supplierName || "Fornecedor"}
+                        {prod.supplierContact && ` · ${prod.supplierContact}`}
+                        {prod.supplierPrice != null && ` · ${prod.supplierPrice.toFixed(2)}€`}
+                      </div>
                     )}
 
                     {(isLow || isEmpty) && (
@@ -8221,4 +8297,3 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
-              
