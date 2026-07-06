@@ -4037,14 +4037,15 @@ function MapaGeralPage() {
           <div>
             <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 20, color: "#2A241C" }}>Mapa de Turnos — Equipa</div>
             <div style={{ fontSize: 12, color: "#A39B8E" }}>Associação Oliveirense de Socorros Mútuos · só de leitura</div>
+            <div style={{ fontSize: 11, color: "#B08A4E", marginTop: 2 }}>💡 Perto do final do mês, usa "Mês seguinte" para veres já o próximo horário</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <button onClick={goPrev} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: "#8A6A2E" }}>
               <IconChevronLeft size={18} />
             </button>
             <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15, minWidth: 120, textAlign: "center" as const }}>{MONTH_NAMES[month]} {year}</div>
-            <button onClick={goNext} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: "#8A6A2E" }}>
-              <IconChevronRight size={18} />
+            <button onClick={goNext} style={{ border: "1px solid #F5B944", background: "#FFF8E8", borderRadius: 8, padding: "8px 14px", cursor: "pointer", color: "#8A6A2E", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>
+              Mês seguinte <IconChevronRight size={16} />
             </button>
             <button onClick={() => window.print()} style={{ border: "1px solid #E4DED3", background: "#2A241C", color: "#F5B944", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>
               🖨️ Imprimir
