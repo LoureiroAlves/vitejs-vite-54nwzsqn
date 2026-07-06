@@ -1470,6 +1470,84 @@ function SugestoesPage({ onBack }: { onBack: () => void }) {
   const IDADE_LABELS: Record<string, string> = { menos65: "Menos de 65 anos", "65-75": "De 65 a 75 anos", mais75: "Mais de 75 anos" };
   const SEXO_LABELS: Record<string, string> = { feminino: "Feminino", masculino: "Masculino" };
 
+  const buildResponseHTML = (r: any) => {
+    const media = avgRating(r);
+    const categoriasHTML = SATISFACTION_QUESTIONNAIRE.map((cat, ci) => `
+      <div class="cat-title">${cat.title}</div>
+      <table class="q-table">
+        ${cat.items.map((item, ii) => `
+          <tr><td class="q-label">${item}</td><td class="q-answer">${r.ratings?.[`${ci}-${ii}`] || "—"}</td></tr>
+        `).join("")}
+      </table>
+    `).join("");
+    const globalHTML = `
+      <div class="cat-title">Apreciação Global</div>
+      <table class="q-table">
+        ${APRECIACAO_GLOBAL_ITEMS.map((item, ii) => `
+          <tr><td class="q-label">${item}</td><td class="q-answer">${r.apreciacaoGlobal?.[`g-${ii}`] || "—"}</td></tr>
+        `).join("")}
+      </table>
+    `;
+    return `
+      <div class="resposta-page">
+        <div class="resposta-header">
+          <div class="resposta-titulo">Questionário de Satisfação — Resposta</div>
+          <div class="resposta-meta">
+            ${new Date(r.submittedAt).toLocaleString("pt-PT")}
+            ${r.idade ? " · " + (IDADE_LABELS[r.idade] || r.idade) : ""}
+            ${r.sexo ? " · " + (SEXO_LABELS[r.sexo] || r.sexo) : ""}
+          </div>
+          ${media ? `<div class="resposta-cotacao">⭐ Cotação média: ${media} / 5</div>` : ""}
+        </div>
+        ${categoriasHTML}
+        ${globalHTML}
+        ${r.sugestaoMelhoria ? `<div class="cat-title">Sugestões de Melhoria</div><div class="sugestao-box">${r.sugestaoMelhoria}</div>` : ""}
+      </div>
+    `;
+  };
+
+  const PRINT_STYLE = `
+    @page { size: A4; margin: 15mm; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; color: #2A241C; margin: 0; background: #FAFAF8; }
+    .no-print { position: fixed; top: 16px; right: 16px; z-index: 10; }
+    @media print { .no-print { display: none !important; } body { background: #FFFFFF; } .resposta-page { page-break-after: always; } }
+    .resposta-page { max-width: 700px; margin: 0 auto 30px; background: #FFFFFF; padding: 10px 0 20px; }
+    .resposta-header { border-bottom: 3px solid #2A241C; padding-bottom: 10px; margin-bottom: 16px; }
+    .resposta-titulo { font-size: 18px; font-weight: 700; }
+    .resposta-meta { font-size: 12px; color: #6B6358; margin-top: 4px; }
+    .resposta-cotacao { font-size: 14px; font-weight: 700; color: #C2554A; margin-top: 8px; }
+    .cat-title { font-size: 13px; font-weight: 700; color: #8A6A2E; text-transform: uppercase; letter-spacing: 0.04em; margin: 16px 0 8px; background: #FFF8E8; padding: 5px 8px; border-radius: 4px; }
+    .q-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+    .q-table td { padding: 5px 8px; font-size: 12px; border-bottom: 1px solid #EFEAE2; }
+    .q-label { width: 80%; }
+    .q-answer { width: 20%; text-align: center; font-weight: 700; }
+    .sugestao-box { font-size: 13px; font-style: italic; background: #FAFAF8; border: 1px solid #E4DED3; border-radius: 6px; padding: 10px 12px; line-height: 1.5; }
+  `;
+
+  const handlePrintResponse = (r: any) => {
+    const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Questionário de Satisfação</title>
+    <style>${PRINT_STYLE}</style></head><body>
+    <button class="no-print" onclick="window.print()" style="background:#2A241C;color:#F5B944;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
+    ${buildResponseHTML(r)}
+    </body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+    w.document.open(); w.document.write(html); w.document.close(); w.focus();
+  };
+
+  const handlePrintAll = () => {
+    if (responses.length === 0) return;
+    const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Questionários de Satisfação — Todos</title>
+    <style>${PRINT_STYLE}</style></head><body>
+    <button class="no-print" onclick="window.print()" style="background:#2A241C;color:#F5B944;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">🖨️ Imprimir todas (${responses.length})</button>
+    ${responses.map((r) => buildResponseHTML(r)).join("")}
+    </body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+    w.document.open(); w.document.write(html); w.document.close(); w.focus();
+  };
+
   return (
     <div style={{ minHeight: "100vh", padding: "24px 20px 60px" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
@@ -1481,12 +1559,21 @@ function SugestoesPage({ onBack }: { onBack: () => void }) {
               <div style={{ fontSize: 12, color: "#A39B8E" }}>Respostas ao questionário de satisfação dos clientes ERPI</div>
             </div>
           </div>
-          <button
-            onClick={handleGerarFolhaQuestionario}
-            style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
-          >
-            📱 Gerar QR code do questionário
-          </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
+            <button
+              onClick={handlePrintAll}
+              disabled={responses.length === 0}
+              style={{ background: "#FFFFFF", color: "#3A5A70", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: responses.length === 0 ? "default" : "pointer", fontFamily: "'Inter', sans-serif", opacity: responses.length === 0 ? 0.5 : 1 }}
+            >
+              🖨️ Imprimir todas
+            </button>
+            <button
+              onClick={handleGerarFolhaQuestionario}
+              style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+            >
+              📱 Gerar QR code do questionário
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -1517,6 +1604,9 @@ function SugestoesPage({ onBack }: { onBack: () => void }) {
                       )}
                       <button onClick={() => setExpandedId(isExpanded ? null : r.id)} style={{ border: "1px solid #E4DED3", background: "#FAFAF8", borderRadius: 8, padding: "4px 10px", cursor: "pointer", color: "#3A5A70", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>
                         {isExpanded ? "Ocultar" : "Ver tudo"}
+                      </button>
+                      <button onClick={() => handlePrintResponse(r)} style={{ border: "1px solid #E4DED3", background: "#FAFAF8", borderRadius: 8, padding: "4px 10px", cursor: "pointer", color: "#3A5A70", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>
+                        🖨️ Imprimir
                       </button>
                       <button onClick={() => removeResponse(r.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 13 }}>✕</button>
                     </div>
