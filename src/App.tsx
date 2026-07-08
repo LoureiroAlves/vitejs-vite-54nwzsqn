@@ -2417,12 +2417,30 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                   const input = document.createElement("input");
                   input.type = "file";
                   input.accept = "image/*";
-                  input.onchange = (ev: Event) => {
+                  input.onchange = async (ev: Event) => {
                     const file = (ev.target as HTMLInputElement).files?.[0];
                     if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (r) => updateUtente(utente.id, { photo: r.target?.result as string });
-                    reader.readAsDataURL(file);
+                    // Tentar upload para Storage primeiro (evita guardar a foto embutida nos dados)
+                    const url = await uploadUtenteDoc(utente.id + "_photo", file);
+                    if (url) {
+                      updateUtente(utente.id, { photo: url });
+                    } else {
+                      // Fallback base64 comprimido, só se o Storage falhar
+                      const img = new Image();
+                      const objUrl = URL.createObjectURL(file);
+                      img.onload = () => {
+                        const canvas = document.createElement("canvas");
+                        const MAX = 400;
+                        let { width, height } = img;
+                        if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+                        else { width = Math.round(width * MAX / height); height = MAX; }
+                        canvas.width = width; canvas.height = height;
+                        canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+                        URL.revokeObjectURL(objUrl);
+                        updateUtente(utente.id, { photo: canvas.toDataURL("image/jpeg", 0.7) });
+                      };
+                      img.src = objUrl;
+                    }
                   };
                   document.body.appendChild(input); input.click(); document.body.removeChild(input);
                 }}
