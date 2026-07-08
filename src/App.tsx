@@ -4094,9 +4094,28 @@ function QuickSearchPanel({ target, schedule, onClose }: {
 type AppRole = "admin" | "stock" | "utentes" | "colaboradores";
 interface AppUser { username: string; password: string; role: AppRole; }
 
+// As passwords nunca são guardadas em texto simples — só o resultado
+// de uma função de hash (SHA-256), que não pode ser revertida ao texto original.
+async function hashPassword(password: string): Promise<string> {
+  const data = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Compara a password escrita com a guardada — aceita tanto hashes (novo formato)
+// como texto simples (compatibilidade com contas antigas, que são automaticamente
+// convertidas para hash da próxima vez que a password for alterada).
+async function verifyPassword(inputPassword: string, storedPassword: string): Promise<boolean> {
+  if (inputPassword === storedPassword) return true;
+  const hashed = await hashPassword(inputPassword);
+  return hashed === storedPassword;
+}
+
+// Hashes SHA-256 de "sonialoureiro" e "admin" — as passwords de fábrica
+// nunca aparecem em texto simples no código.
 const DEFAULT_APP_USERS: AppUser[] = [
-  { username: "Sónia Loureiro", password: "sonialoureiro", role: "admin" },
-  { username: "Admin", password: "admin", role: "admin" },
+  { username: "Sónia Loureiro", password: "32d1b23400eda6cd3660ade00827a93bb36b9da7dff551720022304d5dd66724", role: "admin" },
+  { username: "Admin", password: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", role: "admin" },
 ];
 
 function canAccessPage(user: AppUser | null, page: "utentes" | "schedule" | "stock" | "sugestoes"): boolean {
@@ -4112,15 +4131,14 @@ function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: App
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const trimmed = username.trim().toLowerCase();
-    const found = users.find(
-      (u) => u.username.trim().toLowerCase() === trimmed && u.password === password
-    );
-    if (found) {
+    const candidate = users.find((u) => u.username.trim().toLowerCase() === trimmed);
+    const ok = candidate ? await verifyPassword(password, candidate.password) : false;
+    if (candidate && ok) {
       setError("");
-      onLogin(found);
+      onLogin(candidate);
     } else {
       setError("Nome de utilizador ou password incorretos.");
     }
@@ -5312,9 +5330,10 @@ export default function App() {
 
   // ---------- Alterar password do utilizador atual ----------
   const [changePasswordError, setChangePasswordError] = useState("");
-  const handleChangePassword = (currentPass: string, newPass: string, confirmPass: string) => {
+  const handleChangePassword = async (currentPass: string, newPass: string, confirmPass: string) => {
     if (!currentUser) return;
-    if (currentPass !== currentUser.password) {
+    const currentOk = await verifyPassword(currentPass, currentUser.password);
+    if (!currentOk) {
       setChangePasswordError("A password atual está incorreta.");
       return;
     }
@@ -5326,11 +5345,12 @@ export default function App() {
       setChangePasswordError("As duas passwords novas não coincidem.");
       return;
     }
+    const newHash = await hashPassword(newPass);
     const updatedList = appUsersList.map((u) =>
-      u.username === currentUser.username ? { ...u, password: newPass } : u
+      u.username === currentUser.username ? { ...u, password: newHash } : u
     );
     setAppUsersList(updatedList);
-    setCurrentUser({ ...currentUser, password: newPass });
+    setCurrentUser({ ...currentUser, password: newHash });
     saveToSupabase("escala_data", { app_users: updatedList }).catch(() => {
       alert("⚠️ A password foi alterada nesta sessão, mas não foi possível gravar na nuvem. Tenta novamente mais tarde.");
     });
