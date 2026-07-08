@@ -5278,6 +5278,93 @@ export default function App() {
     setColaboradorLinkModal({ name, link });
   };
 
+  // ---------- Gravação manual imediata (download local, "guardar como") ----------
+  const [manualBackupState, setManualBackupState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [restoreModalData, setRestoreModalData] = useState<{ backup: any; fileName: string } | null>(null);
+  const [restoreState, setRestoreState] = useState<"idle" | "restoring" | "done" | "error">("idle");
+  const [restoreError, setRestoreError] = useState("");
+
+  const handleManualBackup = async () => {
+    setManualBackupState("loading");
+    try {
+      const [escala, stock, utentesRow, ementaRow] = await Promise.all([
+        loadFromSupabase("escala_data"),
+        loadFromSupabase("stock_data"),
+        loadFromSupabase("utentes_data"),
+        loadFromSupabase("ementa_data"),
+      ]);
+      const backup = {
+        gerado_em: new Date().toISOString(),
+        dados: {
+          escala_data: escala || null,
+          stock_data: stock || null,
+          utentes_data: utentesRow || null,
+          ementa_data: ementaRow || null,
+        },
+      };
+      const jsonStr = JSON.stringify(backup, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `backup-aosm-${dateStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setManualBackupState("done");
+      setTimeout(() => setManualBackupState("idle"), 3000);
+    } catch (e) {
+      setManualBackupState("error");
+      setTimeout(() => setManualBackupState("idle"), 4000);
+    }
+  };
+
+  // ---------- Restaurar a partir de um ficheiro de backup ----------
+  const handlePickRestoreFile = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const parsed = JSON.parse(ev.target?.result as string);
+          if (!parsed || typeof parsed !== "object" || !parsed.dados) {
+            setRestoreError("Este ficheiro não parece ser um backup válido da app.");
+            return;
+          }
+          setRestoreError("");
+          setRestoreModalData({ backup: parsed, fileName: file.name });
+        } catch (err) {
+          setRestoreError("Não foi possível ler este ficheiro — confirma que é o backup certo (.json).");
+        }
+      };
+      reader.readAsText(file);
+    };
+    document.body.appendChild(input); input.click(); document.body.removeChild(input);
+  };
+
+  const handleConfirmRestore = async () => {
+    if (!restoreModalData) return;
+    setRestoreState("restoring");
+    try {
+      const { dados } = restoreModalData.backup;
+      const tabelas = ["escala_data", "stock_data", "utentes_data", "ementa_data"];
+      for (const tabela of tabelas) {
+        if (dados[tabela]) {
+          await saveToSupabase(tabela, dados[tabela]);
+        }
+      }
+      setRestoreState("done");
+    } catch (e) {
+      setRestoreState("error");
+    }
+  };
+
   // ---------- Folha de impressão do QR code geral do mapa ----------
   const handleGerarFolhaQRGeral = () => {
     const mapaLink = `${window.location.origin}${window.location.pathname}?mapageral=1`;
@@ -7156,6 +7243,26 @@ export default function App() {
           <div style={{ position: "absolute" as const, top: 16, right: 20, display: "flex", alignItems: "center", gap: 10, zIndex: 2 }}>
             <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", fontFamily: "'Inter', sans-serif" }}>{currentUser.username}</span>
             <button
+              onClick={handleManualBackup}
+              disabled={manualBackupState === "loading"}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                background: manualBackupState === "done" ? "rgba(111,168,111,0.3)" : manualBackupState === "error" ? "rgba(194,85,74,0.3)" : "rgba(255,255,255,0.1)",
+                border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px",
+                cursor: manualBackupState === "loading" ? "default" : "pointer", color: "#FFFFFF", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif",
+              }}
+              title="Descarregar agora uma cópia de segurança de tudo (turnos, utentes, stock, ementa)"
+            >
+              {manualBackupState === "loading" ? "⏳ A gravar..." : manualBackupState === "done" ? "✅ Gravado!" : manualBackupState === "error" ? "⚠️ Erro" : "💾 Guardar tudo"}
+            </button>
+            <button
+              onClick={handlePickRestoreFile}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#FFFFFF", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
+              title="Restaurar dados a partir de um ficheiro de backup"
+            >
+              📥 Restaurar backup
+            </button>
+            <button
               onClick={() => setShowChangePassword(true)}
               style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#FFFFFF", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
               title="Alterar a tua password"
@@ -7170,6 +7277,83 @@ export default function App() {
               Sair
             </button>
           </div>
+
+          {/* Modal de confirmação de restauro de backup */}
+          {restoreError && !restoreModalData && (
+            <div
+              style={{ position: "fixed" as const, inset: 0, background: "rgba(20,18,14,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+              onClick={() => setRestoreError("")}
+            >
+              <div style={{ background: "#FFFFFF", borderRadius: 20, padding: 28, width: "100%", maxWidth: 360, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", textAlign: "center" as const }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ fontSize: 32, marginBottom: 10 }}>⚠️</div>
+                <div style={{ fontSize: 14, color: "#C2554A", marginBottom: 18 }}>{restoreError}</div>
+                <button onClick={() => setRestoreError("")} style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 20px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Fechar</button>
+              </div>
+            </div>
+          )}
+          {restoreModalData && (() => {
+            const { backup, fileName } = restoreModalData;
+            const dados = backup.dados || {};
+            const geradoEm = backup.gerado_em ? new Date(backup.gerado_em).toLocaleString("pt-PT") : "data desconhecida";
+            const numColaboradores = (dados.escala_data?.employees?.length || 0) + (dados.escala_data?.rv_employees?.length || 0);
+            const numUtentes = dados.utentes_data?.utentes?.length || 0;
+            const numProdutos = dados.stock_data?.products?.length || 0;
+            return (
+              <div style={{ position: "fixed" as const, inset: 0, background: "rgba(20,18,14,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+                <div style={{ background: "#FFFFFF", borderRadius: 20, padding: 28, width: "100%", maxWidth: 400, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+                  {restoreState === "done" ? (
+                    <div style={{ textAlign: "center" as const }}>
+                      <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: "#2A241C", marginBottom: 8, fontFamily: "'Space Grotesk', sans-serif" }}>Backup restaurado!</div>
+                      <div style={{ fontSize: 13, color: "#6B6358", marginBottom: 20, lineHeight: 1.5 }}>Recarrega a página para veres os dados repostos em todas as páginas.</div>
+                      <button
+                        onClick={() => window.location.reload()}
+                        style={{ width: "100%", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+                      >
+                        🔄 Recarregar agora
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                        <span style={{ fontSize: 28 }}>⚠️</span>
+                        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: "#2A241C" }}>Restaurar backup</div>
+                      </div>
+                      <div style={{ background: "#FFF8E8", border: "1px solid #E8D28A", borderRadius: 10, padding: "12px 14px", marginBottom: 16, fontSize: 13, color: "#6B6358", lineHeight: 1.6 }}>
+                        <div><strong>Ficheiro:</strong> {fileName}</div>
+                        <div><strong>Gerado em:</strong> {geradoEm}</div>
+                        <div style={{ marginTop: 6 }}>
+                          Contém: {numColaboradores} colaborador(es), {numUtentes} utente(s), {numProdutos} produto(s) de stock.
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 13, color: "#C2554A", fontWeight: 600, marginBottom: 20, lineHeight: 1.5 }}>
+                        Isto vai SUBSTITUIR todos os dados atuais pelos deste ficheiro. Não pode ser desfeito. Tens a certeza?
+                      </div>
+                      <div style={{ display: "flex", gap: 10 }}>
+                        <button
+                          onClick={() => { setRestoreModalData(null); setRestoreState("idle"); }}
+                          disabled={restoreState === "restoring"}
+                          style={{ flex: 1, background: "transparent", border: "1px solid #E4DED3", borderRadius: 10, padding: "11px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={handleConfirmRestore}
+                          disabled={restoreState === "restoring"}
+                          style={{ flex: 1, background: "#C2554A", color: "#FFFFFF", border: "none", borderRadius: 10, padding: "11px 0", fontSize: 13, fontWeight: 700, cursor: restoreState === "restoring" ? "default" : "pointer", fontFamily: "'Inter', sans-serif", opacity: restoreState === "restoring" ? 0.7 : 1 }}
+                        >
+                          {restoreState === "restoring" ? "A restaurar..." : restoreState === "error" ? "Tentar novamente" : "Sim, restaurar tudo"}
+                        </button>
+                      </div>
+                      {restoreState === "error" && (
+                        <div style={{ color: "#C2554A", fontSize: 12, marginTop: 10, textAlign: "center" as const }}>Não foi possível restaurar. Verifica a ligação e tenta novamente.</div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Modal de alterar password */}
           {showChangePassword && (
