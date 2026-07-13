@@ -1365,6 +1365,18 @@ interface Utente {
     documentosNecessarios?: { id: string; documento: string; entregue: boolean; data: string }[];
     fundamentacaoTecnica?: string;
   };
+  // Cardex — folha de esquema terapêutico (medicação detalhada por horário)
+  cardex?: {
+    esquemaTerapeutico: { id: string; inicio: string; fim: string; medicamento: string; jj: string; pa: string; a: string; l: string; j: string; c: string; indicacoes: string }[];
+    sos: { id: string; inicio: string; fim: string; medicamento: string; jj: string; pa: string; a: string; l: string; j: string; c: string; indicacoes: string }[];
+  };
+  // Folha de Rosto de Enfermagem
+  folhaRosto?: {
+    pessoasResponsaveis: { id: string; nome: string; contacto: string; email: string }[];
+    antecedentesPessoais: string;
+    alergias: string;
+    outrosDados: string;
+  };
   // Dia a dia
   medications?: { id: string; name: string; administration: string; note?: string }[];
   medicationNotes?: string;
@@ -1698,6 +1710,78 @@ function SugestoesPage({ onBack }: { onBack: () => void }) {
       </div>
     </div>
   );
+}
+
+function handleImprimirCardex(u: Utente) {
+  const cardex = u.cardex || { esquemaTerapeutico: [], sos: [] };
+  const linhaTabela = (l: any) => `<tr>
+    <td>${l.inicio || ""}</td><td>${l.fim || ""}</td><td class="med">${l.medicamento || ""}</td>
+    <td>${l.jj || ""}</td><td>${l.pa || ""}</td><td>${l.a || ""}</td><td>${l.l || ""}</td><td>${l.j || ""}</td><td>${l.c || ""}</td>
+    <td class="ind">${(l.indicacoes || "").replace(/\n/g, "<br>")}</td>
+  </tr>`;
+
+  const esquemaHTML = (cardex.esquemaTerapeutico || []).length
+    ? (cardex.esquemaTerapeutico || []).map(linhaTabela).join("")
+    : `<tr><td colspan="10" class="vazio">Sem medicamentos registados.</td></tr>`;
+
+  const sosHTML = (cardex.sos || []).length
+    ? (cardex.sos || []).map(linhaTabela).join("")
+    : `<tr><td colspan="10" class="vazio">Sem medicamentos SOS registados.</td></tr>`;
+
+  const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Folha de Terapêutica — ${u.name}</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; color: #2A241C; margin: 0; background: #FAFAF8; font-size: 12px; }
+    .no-print { position: fixed; top: 16px; right: 16px; z-index: 10; }
+    @media print { .no-print { display: none !important; } body { background: #FFFFFF; } }
+    .folha { max-width: 950px; margin: 0 auto; padding: 20px 0 60px; }
+    .cabecalho { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1F4D2E; padding-bottom: 12px; margin-bottom: 16px; }
+    .cabecalho .inst { font-size: 11px; color: #6B6358; line-height: 1.5; }
+    .cabecalho .nome-lar { text-align: right; font-weight: 700; color: #1F4D2E; font-size: 15px; }
+    .utente { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .utente img { width: 70px; height: 70px; border-radius: 10px; object-fit: cover; border: 2px solid #1F4D2E; }
+    .utente h1 { font-size: 20px; margin: 0 0 4px; }
+    .utente .sns { font-size: 12px; color: #6B6358; }
+    h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; color: #1F4D2E; border-bottom: 2px solid #1F4D2E; padding-bottom: 6px; margin: 20px 0 10px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #C7C0B4; padding: 6px 8px; font-size: 11px; text-align: center; vertical-align: top; }
+    th { background: #F0EDE6; font-weight: 700; color: #1F4D2E; }
+    td.med { text-align: left; font-weight: 600; }
+    td.ind { text-align: left; font-size: 10px; }
+    td.vazio { color: #A39B8E; font-style: italic; }
+  </style></head><body>
+  <button class="no-print" onclick="window.print()" style="background:#2A241C;color:#F5B944;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
+  <div class="folha">
+    <div class="cabecalho">
+      <div class="inst">Associação Oliveirense de Socorros Mútuos<br>Complexo Intergeracional Quinta dos Avós</div>
+      <div class="nome-lar">Esquema Terapêutico</div>
+    </div>
+    <div class="utente">
+      ${u.photo ? `<img src="${u.photo}" alt="${u.name}" />` : ""}
+      <div>
+        <h1>${u.name}</h1>
+        <div class="sns">Nº utente SNS — ${u.numeroUtenteSaude || "—"}</div>
+      </div>
+    </div>
+
+    <h2>Esquema Terapêutico</h2>
+    <table>
+      <tr><th>Início</th><th>Fim</th><th>Medicamento e dose</th><th>JJ</th><th>PA</th><th>A</th><th>L</th><th>J</th><th>C</th><th>Indicações</th></tr>
+      ${esquemaHTML}
+    </table>
+
+    <h2>SOS</h2>
+    <table>
+      <tr><th>Início</th><th>Fim</th><th>Medicamento e dose</th><th>JJ</th><th>PA</th><th>A</th><th>L</th><th>J</th><th>C</th><th>Indicações</th></tr>
+      ${sosHTML}
+    </table>
+  </div>
+  </body></html>`;
+
+  const w = window.open("", "_blank");
+  if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+  w.document.open(); w.document.write(html); w.document.close(); w.focus();
 }
 
 function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI: () => void }) {
@@ -3799,6 +3883,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               );
             })()}
 
+            {/* ── CARDEX (Esquema Terapêutico) ── */}
           </div>
         </div>
       ); })()}
@@ -3922,6 +4007,268 @@ const TURNO_LABELS: Record<string, string> = {
 // ============================================================
 // PÁGINA PÚBLICA DA FAMÍLIA — acesso via link individual
 // ============================================================
+function calcularIdade(birthDate?: string): string {
+  if (!birthDate) return "";
+  const partes = birthDate.split("/");
+  if (partes.length !== 3) return "";
+  const [d, m, a] = partes.map((p) => parseInt(p, 10));
+  if (!d || !m || !a) return "";
+  const nascimento = new Date(a, m - 1, d);
+  const hoje = new Date();
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const aindaNaoFezAnos = hoje.getMonth() < nascimento.getMonth() || (hoje.getMonth() === nascimento.getMonth() && hoje.getDate() < nascimento.getDate());
+  if (aindaNaoFezAnos) idade--;
+  return isNaN(idade) ? "" : String(idade);
+}
+
+function handleImprimirFolhaRosto(u: Utente) {
+  const fr = u.folhaRosto || { pessoasResponsaveis: [], antecedentesPessoais: "", alergias: "", outrosDados: "" };
+  const idade = calcularIdade(u.birthDate);
+  const pessoasHTML = (fr.pessoasResponsaveis || []).length
+    ? (fr.pessoasResponsaveis || []).map((p) => `<tr><td>${p.nome || ""}</td><td>${p.contacto || ""}</td><td>${p.email || ""}</td></tr>`).join("")
+    : `<tr><td colspan="3" class="vazio">Sem pessoas responsáveis registadas.</td></tr>`;
+
+  const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Folha de Rosto — ${u.name}</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; color: #2A241C; margin: 0; background: #FAFAF8; font-size: 12px; }
+    .no-print { position: fixed; top: 16px; right: 16px; z-index: 10; }
+    @media print { .no-print { display: none !important; } body { background: #FFFFFF; } }
+    .folha { max-width: 900px; margin: 0 auto; padding: 20px 0 60px; }
+    .titulo { text-align: center; font-weight: 700; font-size: 15px; border: 2px solid #2A241C; border-radius: 8px; padding: 10px; margin-bottom: 20px; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: #1F4D2E; border-bottom: 2px solid #1F4D2E; padding-bottom: 5px; margin: 18px 0 8px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+    td, th { border: 1px solid #C7C0B4; padding: 6px 8px; font-size: 11px; text-align: left; vertical-align: top; }
+    td.lbl { background: #F0EDE6; font-weight: 700; color: #1F4D2E; width: 22%; }
+    .caixa { border: 1px solid #C7C0B4; border-radius: 6px; padding: 10px; font-size: 11px; min-height: 40px; white-space: pre-wrap; margin-bottom: 4px; }
+    .vazio { color: #A39B8E; font-style: italic; }
+  </style></head><body>
+  <button class="no-print" onclick="window.print()" style="background:#2A241C;color:#F5B944;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
+  <div class="folha">
+    <div class="titulo">Dados identificação utente e clínicos</div>
+
+    <h2>1. Identificação do utente</h2>
+    <table>
+      <tr><td class="lbl">Nome</td><td colspan="3">${u.name}</td></tr>
+      <tr><td class="lbl">Data nascimento</td><td>${u.birthDate || ""}</td><td class="lbl">Idade</td><td>${idade}</td></tr>
+      <tr><td class="lbl">Nº CC/BI</td><td>${u.ccNumber || ""}</td><td class="lbl">Nº utente SNS</td><td>${u.numeroUtenteSaude || ""}</td></tr>
+      <tr><td class="lbl">Estado civil</td><td>${u.estadoCivil || ""}</td><td class="lbl">Data admissão</td><td>${u.entryDate || ""}</td></tr>
+      <tr><td class="lbl">Centro de Saúde</td><td>${u.centroSaude || ""}</td><td class="lbl">Médico</td><td>${u.medicoAssistente || ""}</td></tr>
+    </table>
+
+    <h2>Pessoa(s) responsável(is)</h2>
+    <table><tr><th>Nome</th><th>Contacto</th><th>Email</th></tr>${pessoasHTML}</table>
+
+    <h2>2. História clínica</h2>
+    <div style="font-size:11px;font-weight:700;color:#1F4D2E;margin-bottom:4px">Antecedentes pessoais</div>
+    <div class="caixa">${fr.antecedentesPessoais || "—"}</div>
+
+    <div style="font-size:11px;font-weight:700;color:#1F4D2E;margin:10px 0 4px">Medicação habitual</div>
+    <div class="caixa">Ver aba Cardex — Esquema Terapêutico</div>
+
+    <div style="font-size:11px;font-weight:700;color:#1F4D2E;margin:10px 0 4px">Alergias alimentares/medicamentosas</div>
+    <div class="caixa">${fr.alergias || "—"}</div>
+
+    <div style="font-size:11px;font-weight:700;color:#1F4D2E;margin:10px 0 4px">Outros dados</div>
+    <div class="caixa">${fr.outrosDados || "—"}</div>
+  </div>
+  </body></html>`;
+
+  const w = window.open("", "_blank");
+  if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+  w.document.open(); w.document.write(html); w.document.close(); w.focus();
+}
+
+function EnfermagemPage({ onBack }: { onBack: () => void }) {
+  const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
+  const [openUtente, setOpenUtente] = useState<Utente | null>(null);
+  const [tab, setTab] = useState<"cardex" | "rosto">("cardex");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    saveUtentesData({ utentes });
+  }, [utentes]);
+
+  const updateUtente = (id: string, updates: Partial<Utente>) => {
+    setUtentes((prev) => prev.map((u) => u.id === id ? { ...u, ...updates } : u));
+    if (openUtente?.id === id) setOpenUtente((prev) => prev ? { ...prev, ...updates } : prev);
+  };
+
+  const filtered = utentes.filter((u) => u.name.toLowerCase().includes(search.toLowerCase()));
+  const boxStyle = { background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" };
+  const boxTitle = { fontWeight: 800, color: "#1F4D2E", fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 };
+  const fieldLabel = { display: "block", fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.05em" };
+  const inputStyle = { width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const };
+
+  if (openUtente) {
+    const u = openUtente;
+    const fr = u.folhaRosto || { pessoasResponsaveis: [], antecedentesPessoais: "", alergias: "", outrosDados: "" };
+    const updateFolhaRosto = (patch: any) => updateUtente(u.id, { folhaRosto: { ...fr, ...patch } });
+
+    return (
+      <div style={{ minHeight: "100vh", padding: "24px 20px 60px" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+            <button onClick={() => setOpenUtente(null)} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 10, padding: "8px 14px", cursor: "pointer", color: "#6B6358", fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>← Voltar à lista</button>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 20, color: "#2A241C" }}>🩺 {u.name}</div>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+            {([["cardex", "🗂️ Cardex"], ["rosto", "📋 Folha de Rosto"]] as const).map(([key, label]) => (
+              <button key={key} onClick={() => setTab(key)} style={{ border: "none", background: tab === key ? "#1F4D2E" : "#FFFFFF", color: tab === key ? "#FFFFFF" : "#6B6358", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>{label}</button>
+            ))}
+          </div>
+
+          {tab === "cardex" && (() => {
+            const cardex = u.cardex || { esquemaTerapeutico: [], sos: [] };
+            const updateCardex = (patch: any) => updateUtente(u.id, { cardex: { ...cardex, ...patch } });
+            const cellInput = { width: "100%", border: "1px solid #E4DED3", borderRadius: 6, padding: "5px 6px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, textAlign: "center" as const };
+            const colHeaders = ["Início", "Fim", "Medicamento e dose", "JJ", "PA", "A", "L", "J", "C", "Indicações", ""];
+            const colWidths = ["90px", "90px", "1.6fr", "44px", "44px", "44px", "44px", "44px", "44px", "1.2fr", "32px"];
+
+            const Tabela = ({ linhas, campo }: { linhas: any[]; campo: "esquemaTerapeutico" | "sos" }) => (
+              <div style={{ overflowX: "auto" as const }}>
+                <div style={{ display: "grid", gridTemplateColumns: colWidths.join(" "), gap: 4, marginBottom: 6, minWidth: 760 }}>
+                  {colHeaders.map((h, i) => (
+                    <div key={i} style={{ fontSize: 10, fontWeight: 700, color: "#8A6A2E", textTransform: "uppercase" as const, textAlign: "center" as const }}>{h}</div>
+                  ))}
+                </div>
+                {linhas.map((linha, idx) => (
+                  <div key={linha.id || idx} style={{ display: "grid", gridTemplateColumns: colWidths.join(" "), gap: 4, marginBottom: 5, minWidth: 760 }}>
+                    {(["inicio", "fim"] as const).map((f) => (
+                      <input key={f} value={linha[f]} placeholder="DD-MM-AA" onChange={(e) => updateCardex({ [campo]: linhas.map((l, i) => i === idx ? { ...l, [f]: e.target.value } : l) })} style={cellInput} />
+                    ))}
+                    <input value={linha.medicamento} placeholder="Medicamento e dose" onChange={(e) => updateCardex({ [campo]: linhas.map((l, i) => i === idx ? { ...l, medicamento: e.target.value } : l) })} style={{ ...cellInput, textAlign: "left" as const }} />
+                    {(["jj", "pa", "a", "l", "j", "c"] as const).map((f) => (
+                      <input key={f} value={linha[f]} onChange={(e) => updateCardex({ [campo]: linhas.map((l, i) => i === idx ? { ...l, [f]: e.target.value } : l) })} style={cellInput} />
+                    ))}
+                    <input value={linha.indicacoes} placeholder="Indicações" onChange={(e) => updateCardex({ [campo]: linhas.map((l, i) => i === idx ? { ...l, indicacoes: e.target.value } : l) })} style={{ ...cellInput, textAlign: "left" as const }} />
+                    <button onClick={() => updateCardex({ [campo]: linhas.filter((_, i) => i !== idx) })} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC" }}>✕</button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => updateCardex({ [campo]: [...linhas, { id: Date.now().toString() + Math.random().toString(36).slice(2), inicio: "", fim: "", medicamento: "", jj: "", pa: "", a: "", l: "", j: "", c: "", indicacoes: "" }] })}
+                  style={{ border: "1px dashed #B8CCE0", background: "#F7F9FB", color: "#3A5A70", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", marginTop: 4 }}
+                >
+                  + Adicionar medicamento
+                </button>
+              </div>
+            );
+
+            return (
+              <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
+                <div style={{ fontSize: 11, color: "#A39B8E", textAlign: "center" as const }}>
+                  Legenda: JJ = Jejum · PA = Pequeno-almoço · A = Almoço · L = Lanche · J = Jantar · C = Colação/Ceia
+                </div>
+                <div style={boxStyle}>
+                  <div style={boxTitle}>💊 Esquema Terapêutico</div>
+                  <Tabela linhas={cardex.esquemaTerapeutico || []} campo="esquemaTerapeutico" />
+                </div>
+                <div style={boxStyle}>
+                  <div style={boxTitle}>🆘 SOS</div>
+                  <Tabela linhas={cardex.sos || []} campo="sos" />
+                </div>
+                <button onClick={() => handleImprimirCardex(u)} style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 12, padding: "14px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                  🖨️ Imprimir Cardex
+                </button>
+              </div>
+            );
+          })()}
+
+          {tab === "rosto" && (
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
+              <div style={boxStyle}>
+                <div style={boxTitle}>🪪 Identificação do Utente</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  {[
+                    { key: "birthDate", label: "Data de nascimento", placeholder: "DD/MM/AAAA" },
+                    { key: "ccNumber", label: "Nº CC/BI", placeholder: "Ex: 12345678" },
+                    { key: "numeroUtenteSaude", label: "Nº utente SNS", placeholder: "Ex: 123456789" },
+                    { key: "estadoCivil", label: "Estado civil", placeholder: "Ex: Casado(a)" },
+                    { key: "entryDate", label: "Data de admissão", placeholder: "DD/MM/AAAA" },
+                    { key: "centroSaude", label: "Centro de Saúde", placeholder: "Ex: USF Abel Salazar" },
+                    { key: "medicoAssistente", label: "Médico", placeholder: "Ex: Dr(a). Nome" },
+                  ].map(({ key, label, placeholder }) => (
+                    <div key={key}>
+                      <label style={fieldLabel}>{label}</label>
+                      <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder} style={inputStyle} />
+                    </div>
+                  ))}
+                  <div>
+                    <label style={fieldLabel}>Idade (calculada)</label>
+                    <input value={calcularIdade(u.birthDate)} disabled style={{ ...inputStyle, background: "#F0EDE6", color: "#A39B8E" }} />
+                  </div>
+                </div>
+              </div>
+
+              <div style={boxStyle}>
+                <div style={boxTitle}>👪 Pessoa(s) Responsável(is)</div>
+                {(fr.pessoasResponsaveis || []).map((p, idx) => (
+                  <div key={p.id || idx} style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1.4fr auto", gap: 8, marginBottom: 8, alignItems: "center" }}>
+                    <input value={p.nome} placeholder="Nome" onChange={(e) => updateFolhaRosto({ pessoasResponsaveis: (fr.pessoasResponsaveis || []).map((x, i) => i === idx ? { ...x, nome: e.target.value } : x) })} style={inputStyle} />
+                    <input value={p.contacto} placeholder="Contacto" onChange={(e) => updateFolhaRosto({ pessoasResponsaveis: (fr.pessoasResponsaveis || []).map((x, i) => i === idx ? { ...x, contacto: e.target.value } : x) })} style={inputStyle} />
+                    <input value={p.email} placeholder="Email" onChange={(e) => updateFolhaRosto({ pessoasResponsaveis: (fr.pessoasResponsaveis || []).map((x, i) => i === idx ? { ...x, email: e.target.value } : x) })} style={inputStyle} />
+                    <button onClick={() => updateFolhaRosto({ pessoasResponsaveis: (fr.pessoasResponsaveis || []).filter((_, i) => i !== idx) })} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC" }}>✕</button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => updateFolhaRosto({ pessoasResponsaveis: [...(fr.pessoasResponsaveis || []), { id: Date.now().toString() + Math.random().toString(36).slice(2), nome: "", contacto: "", email: "" }] })}
+                  style={{ border: "1px dashed #B8CCE0", background: "#F7F9FB", color: "#3A5A70", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+                >
+                  + Adicionar pessoa responsável
+                </button>
+              </div>
+
+              <div style={boxStyle}>
+                <div style={boxTitle}>🩺 História Clínica</div>
+                <label style={fieldLabel}>Antecedentes pessoais</label>
+                <textarea rows={4} value={fr.antecedentesPessoais || ""} onChange={(e) => updateFolhaRosto({ antecedentesPessoais: e.target.value })} style={{ ...inputStyle, resize: "vertical" as const, marginBottom: 12 }} />
+                <label style={fieldLabel}>Alergias alimentares/medicamentosas</label>
+                <textarea rows={2} value={fr.alergias || ""} onChange={(e) => updateFolhaRosto({ alergias: e.target.value })} style={{ ...inputStyle, resize: "vertical" as const, marginBottom: 12 }} />
+                <label style={fieldLabel}>Outros dados</label>
+                <textarea rows={3} value={fr.outrosDados || ""} onChange={(e) => updateFolhaRosto({ outrosDados: e.target.value })} style={{ ...inputStyle, resize: "vertical" as const }} />
+              </div>
+
+              <button onClick={() => handleImprimirFolhaRosto(u)} style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 12, padding: "14px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                🖨️ Imprimir Folha de Rosto
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", padding: "24px 20px 60px" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap" as const, gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={onBack} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 10, padding: "8px 14px", cursor: "pointer", color: "#6B6358", fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>← Voltar</button>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 22, color: "#2A241C" }}>🩺 Enfermagem</div>
+          </div>
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔎 Pesquisar utente..." style={{ ...inputStyle, maxWidth: 260 }} />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+          {filtered.map((u) => (
+            <button key={u.id} onClick={() => { setOpenUtente(u); setTab("cardex"); }} style={{ display: "flex", alignItems: "center", gap: 14, background: "#FFFFFF", border: "none", borderRadius: 12, padding: "12px 16px", cursor: "pointer", textAlign: "left" as const, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#E8F0E8", color: "#1F4D2E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", overflow: "hidden", flexShrink: 0 }}>
+                {u.photo ? <img src={u.photo} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover" as const }} /> : u.name.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#2A241C", fontFamily: "'Inter', sans-serif" }}>{u.name}</div>
+            </button>
+          ))}
+          {filtered.length === 0 && (
+            <div style={{ textAlign: "center" as const, color: "#A39B8E", padding: "40px 0" }}>Nenhum utente encontrado.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FamilyPage({ code }: { code: string }) {
   const [utente, setUtente] = useState<Utente | null | "not_found">(null);
   const [ementa, setEmenta] = useState<{ url: string; type: string; uploadedAt: string } | null>(null);
@@ -4674,10 +5021,11 @@ const DEFAULT_APP_USERS: AppUser[] = [
   { username: "Admin", password: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", role: "admin" },
 ];
 
-function canAccessPage(user: AppUser | null, page: "utentes" | "schedule" | "stock" | "sugestoes"): boolean {
+function canAccessPage(user: AppUser | null, page: "utentes" | "schedule" | "stock" | "sugestoes" | "enfermagem"): boolean {
   if (!user) return false;
   if (user.role === "admin") return true;
   if (page === "sugestoes") return false;
+  if (page === "enfermagem") return user.role === "utentes";
   if (user.role === "colaboradores") return page === "schedule";
   return user.role === page;
 }
@@ -5381,7 +5729,7 @@ export default function App() {
   const [changePassConfirm, setChangePassConfirm] = useState("");
 
   const today = new Date();
-  const [activePage, setActivePage] = useState<"home" | "schedule" | "stock" | "utentes" | "sugestoes">("home");
+  const [activePage, setActivePage] = useState<"home" | "schedule" | "stock" | "utentes" | "sugestoes" | "enfermagem">("home");
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
@@ -7468,6 +7816,7 @@ export default function App() {
   const isUtentesPage = (activePage as string) === "utentes";
   const isSchedulePage = (activePage as string) === "schedule";
   const isSugestoesPage = (activePage as string) === "sugestoes";
+  const isEnfermagemPage = (activePage as string) === "enfermagem";
 
   // Dia de hoje neste mês/ano (null se estamos a ver outro mês)
   const todayDay = today.getFullYear() === year && today.getMonth() === month
@@ -8147,6 +8496,21 @@ export default function App() {
                 <div style={{ width: 40, height: 4, borderRadius: 2, background: "#C2554A" }} />
               </button>
               )}
+
+              {canAccessPage(currentUser, "enfermagem") && (
+              <button onClick={() => setActivePage("enfermagem")} className="home-btn"
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 16, minHeight: 190, width: 190, flex: "0 0 190px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(31,77,46,0.5)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
+                <div style={{ width: 59, height: 59, borderRadius: 18, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 26 }}>🩺</span>
+                </div>
+                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                  Enfermagem
+                </div>
+                <div style={{ width: 40, height: 4, borderRadius: 2, background: "#1F4D2E" }} />
+              </button>
+              )}
             </div>
           </div>
         </div>
@@ -8179,6 +8543,12 @@ export default function App() {
       {isSugestoesPage && (
         <div className="page-enter" style={{ background: "#FFF0EE" }}>
           <SugestoesPage key={`sugestoes-${syncDone}`} onBack={() => navigateHome()} />
+        </div>
+      )}
+
+      {isEnfermagemPage && (
+        <div className="page-enter" style={{ background: "#E8F0E8" }}>
+          <EnfermagemPage key={`enfermagem-${syncDone}`} onBack={() => navigateHome()} />
         </div>
       )}
 
