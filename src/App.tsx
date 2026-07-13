@@ -2885,7 +2885,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       { key: "numeroInscricao", label: "Nº de inscrição", placeholder: "Ex: SS25" },
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
-                        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>{label}</label>
                         <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
                           style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                       </div>
@@ -2904,7 +2904,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       { key: "familyEmail", label: "Email", placeholder: "Ex: nome@email.com" },
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
-                        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>{label}</label>
                         <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
                           style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                       </div>
@@ -2925,14 +2925,14 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       { key: "estadoCivil", label: "Estado civil", placeholder: "Ex: Viúvo(a)" },
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
-                        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>{label}</label>
                         <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
                           style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                       </div>
                     ))}
                   </div>
                   <div style={{ marginTop: 12 }}>
-                    <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>Morada</label>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Morada</label>
                     <input value={u.morada || ""} onChange={(e) => updateUtente(u.id, { morada: e.target.value })} placeholder="Endereço completo"
                       style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                   </div>
@@ -2944,7 +2944,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       { key: "distrito", label: "Distrito", placeholder: "Ex: Porto" },
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
-                        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>{label}</label>
                         <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
                           style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                       </div>
@@ -2963,7 +2963,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       { key: "medicoAssistente", label: "Médico assistente", placeholder: "Ex: Dr(a). Nome" },
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
-                        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>{label}</label>
                         <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
                           style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                       </div>
@@ -3414,7 +3414,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               const NIVEL_LABELS: Record<string, string> = { autonomo: "Autónomo(a)", pontual: "Apoio pontual", permanente: "Apoio permanente" };
               const boxStyle = { background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" };
               const boxTitle = { fontWeight: 800, color: "#1F4D2E", fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 };
-              const fieldLabel = { display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" };
+              const fieldLabel = { display: "block", fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.05em" };
               const inputStyle = { width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const };
               const toggleBtn = (active: boolean) => ({ border: active ? "1px solid #2A241C" : "1px solid #E4DED3", background: active ? "#2A241C" : "#FAFAF8", color: active ? "#F5B944" : "#6B6358", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" });
 
