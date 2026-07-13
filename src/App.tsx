@@ -1321,6 +1321,50 @@ interface Utente {
   morada?: string;
   nacionalidade?: string;
   estadoCivil?: string;
+  // Identificação — nível 1 (consulta frequente)
+  sexo?: "feminino" | "masculino" | "";
+  nomeTratado?: string;
+  grupoSanguineo?: string;
+  codigoPostal?: string;
+  localidade?: string;
+  concelho?: string;
+  distrito?: string;
+  ssNumero?: string;
+  numeroUtenteSaude?: string;
+  centroSaude?: string;
+  medicoAssistente?: string;
+  dataInscricao?: string;
+  numeroInscricao?: string;
+  familyParentesco?: string;
+  familyEmail?: string;
+  // Agregado familiar — nível 2
+  agregadoFamiliar?: { id: string; nome: string; parentesco: string; idade: string; profissao: string }[];
+  // Ficha de Admissão — nível 3 (consulta ocasional)
+  fichaAdmissao?: {
+    funcionalidade?: Record<string, "autonomo" | "pontual" | "permanente" | "">;
+    estadoSaude?: {
+      problemasSaude?: boolean; problemasSaudeEspecifique?: string;
+      medicacaoDiaria?: boolean;
+      internamentos?: boolean; internamentosEspecifique?: string;
+      cirurgias?: boolean; cirurgiasEspecifique?: string;
+      quedas?: boolean; quedasEspecifique?: string;
+      controloSinaisVitais?: boolean;
+    };
+    relacoesSociais?: {
+      familiares1Grau?: boolean; outrosFamiliares?: boolean; vizinhos?: boolean;
+      amigos?: boolean; conhecidosInstituicao?: boolean; comoOcupaTempoLivre?: string;
+    };
+    habitacao?: { tipo?: string; propriedade?: string; beneficiaRSI?: boolean };
+    redeSuporte?: { encaminhadoPorOrganizacao?: boolean; qualOrganizacao?: string; necessitaApoioABVD?: boolean; tipoApoio?: string };
+    motivoPedido?: { respostaSolicitada?: string; recetividade?: string };
+    avaliacaoAdmissao?: {
+      situacaoDesfavorecida?: string; situacaoRisco?: string; inexistenciaRetaguarda?: string;
+      familiarFrequentaResposta?: string; necessidadeExpressaCliente?: string; ligadoFreguesia?: string;
+      total?: string; selecionado?: boolean; dataAdmissaoPrevista?: string; observacoes?: string;
+    };
+    documentosNecessarios?: { id: string; documento: string; entregue: boolean; data: string }[];
+    fundamentacaoTecnica?: string;
+  };
   // Dia a dia
   medications?: { id: string; name: string; administration: string; note?: string }[];
   medicationNotes?: string;
@@ -1659,7 +1703,7 @@ function SugestoesPage({ onBack }: { onBack: () => void }) {
 function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
-  const [utenteTab, setUtenteTab] = useState<"geral" | "registo" | "medicacao" | "cuidados" | "pic">("geral");
+  const [utenteTab, setUtenteTab] = useState<"geral" | "registo" | "medicacao" | "cuidados" | "pic" | "admissao">("geral");
   const [importResult, setImportResult] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -1748,6 +1792,35 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               morada: u.morada || u.address || undefined,
               nacionalidade: u.nacionalidade || undefined,
               estadoCivil: u.estadoCivil || u.estado_civil || undefined,
+              sexo: u.sexo || undefined,
+              nomeTratado: u.nomeTratado || undefined,
+              grupoSanguineo: u.grupoSanguineo || undefined,
+              codigoPostal: u.codigoPostal || undefined,
+              localidade: u.localidade || undefined,
+              concelho: u.concelho || undefined,
+              distrito: u.distrito || undefined,
+              ssNumero: u.ssNumero || undefined,
+              numeroUtenteSaude: u.numeroUtenteSaude || undefined,
+              centroSaude: u.centroSaude || undefined,
+              medicoAssistente: u.medicoAssistente || undefined,
+              dataInscricao: u.dataInscricao || undefined,
+              numeroInscricao: u.numeroInscricao || undefined,
+              familyParentesco: u.familyParentesco || undefined,
+              familyEmail: u.familyEmail || undefined,
+              agregadoFamiliar: Array.isArray(u.agregadoFamiliar)
+                ? u.agregadoFamiliar.map((m: any) => ({
+                    id: Date.now().toString() + Math.random().toString(36).slice(2),
+                    nome: m.nome || "",
+                    parentesco: m.parentesco || "",
+                    idade: m.idade || "",
+                    profissao: m.profissao || "",
+                  }))
+                : undefined,
+              fichaAdmissao: u.fichaAdmissao || undefined,
+              medicationNotes: u.medicationNotes || undefined,
+              hygieneNotes: u.hygieneNotes || undefined,
+              feedingNotes: u.feedingNotes || undefined,
+              otherNotes: u.otherNotes || undefined,
               dailyLogs: initialNote ? [{ date: new Date().toLocaleDateString("pt-PT"), text: initialNote }] : undefined,
             };
           });
@@ -2608,6 +2681,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               { key: "medicacao", label: "💊 Medicação" },
               { key: "cuidados", label: "🧼 Cuidados" },
               { key: "pic", label: "📋 PIC" },
+              { key: "admissao", label: "📑 Ficha de Admissão" },
             ] as { key: typeof utenteTab; label: string }[]).map((tab) => (
               <button key={tab.key} onClick={() => setUtenteTab(tab.key)}
                 style={{ padding: "10px 18px", border: "none", background: "transparent", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const, color: utenteTab === tab.key ? "#F5B944" : "#A39B8E", borderBottom: utenteTab === tab.key ? "2px solid #F5B944" : "2px solid transparent" }}>
@@ -2804,6 +2878,11 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       { key: "room", label: "Quarto", placeholder: "Ex: 14 cama 2" },
                       { key: "entryDate", label: "Data de entrada", placeholder: "Ex: 15/03/2022" },
                       { key: "birthDate", label: "Data de nascimento", placeholder: "Ex: 01/01/1940" },
+                      { key: "nomeTratado", label: "Nome pelo qual é tratado(a)", placeholder: "Ex: Zé" },
+                      { key: "sexo", label: "Sexo", placeholder: "Feminino / Masculino" },
+                      { key: "grupoSanguineo", label: "Grupo sanguíneo", placeholder: "Ex: A+" },
+                      { key: "dataInscricao", label: "Data de inscrição", placeholder: "DD/MM/AAAA" },
+                      { key: "numeroInscricao", label: "Nº de inscrição", placeholder: "Ex: SS25" },
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
                         <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
@@ -2821,6 +2900,8 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     {[
                       { key: "familyContact", label: "Nome do familiar", placeholder: "Ex: João Silva (filho)" },
                       { key: "familyPhone", label: "Telefone", placeholder: "Ex: 912 345 678" },
+                      { key: "familyParentesco", label: "Parentesco", placeholder: "Ex: Filho, Irmã..." },
+                      { key: "familyEmail", label: "Email", placeholder: "Ex: nome@email.com" },
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
                         <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
@@ -2855,6 +2936,63 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     <input value={u.morada || ""} onChange={(e) => updateUtente(u.id, { morada: e.target.value })} placeholder="Endereço completo"
                       style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                   </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                    {[
+                      { key: "codigoPostal", label: "Código Postal", placeholder: "0000-000" },
+                      { key: "localidade", label: "Localidade", placeholder: "Ex: Oliveira do Douro" },
+                      { key: "concelho", label: "Concelho", placeholder: "Ex: Vila Nova de Gaia" },
+                      { key: "distrito", label: "Distrito", placeholder: "Ex: Porto" },
+                    ].map(({ key, label, placeholder }) => (
+                      <div key={key}>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
+                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
+                          style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Saúde e Segurança Social */}
+                <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>🩺 Saúde e Segurança Social</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    {[
+                      { key: "ssNumero", label: "Nº Segurança Social", placeholder: "Ex: 11223344556" },
+                      { key: "numeroUtenteSaude", label: "Nº Utente de Saúde", placeholder: "Ex: 123456789" },
+                      { key: "centroSaude", label: "Centro de Saúde", placeholder: "Ex: USF Oceanos" },
+                      { key: "medicoAssistente", label: "Médico assistente", placeholder: "Ex: Dr(a). Nome" },
+                    ].map(({ key, label, placeholder }) => (
+                      <div key={key}>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
+                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
+                          style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Agregado Familiar */}
+                <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>👪 Agregado Familiar</div>
+                  {(u.agregadoFamiliar || []).map((membro) => (
+                    <div key={membro.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 0.6fr 1.2fr auto", gap: 8, marginBottom: 8, alignItems: "center" }}>
+                      <input value={membro.nome} placeholder="Nome" onChange={(e) => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).map((m) => m.id === membro.id ? { ...m, nome: e.target.value } : m) })}
+                        style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "6px 8px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
+                      <input value={membro.parentesco} placeholder="Parentesco" onChange={(e) => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).map((m) => m.id === membro.id ? { ...m, parentesco: e.target.value } : m) })}
+                        style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "6px 8px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
+                      <input value={membro.idade} placeholder="Idade" onChange={(e) => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).map((m) => m.id === membro.id ? { ...m, idade: e.target.value } : m) })}
+                        style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "6px 8px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
+                      <input value={membro.profissao} placeholder="Profissão" onChange={(e) => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).map((m) => m.id === membro.id ? { ...m, profissao: e.target.value } : m) })}
+                        style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "6px 8px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
+                      <button onClick={() => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).filter((m) => m.id !== membro.id) })} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC" }}>✕</button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => updateUtente(u.id, { agregadoFamiliar: [...(u.agregadoFamiliar || []), { id: Date.now().toString() + Math.random().toString(36).slice(2), nome: "", parentesco: "", idade: "", profissao: "" }] })}
+                    style={{ border: "1px dashed #B8CCE0", background: "#F7F9FB", color: "#3A5A70", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+                  >
+                    + Adicionar elemento do agregado
+                  </button>
                 </div>
 
                 {/* Documentos */}
@@ -3267,6 +3405,242 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                 )}
               </div>
             )}
+
+            {/* ── FICHA DE ADMISSÃO ── */}
+            {utenteTab === "admissao" && (() => {
+              const fa = u.fichaAdmissao || {};
+              const updateFicha = (patch: any) => updateUtente(u.id, { fichaAdmissao: { ...fa, ...patch } });
+              const FUNCIONALIDADE_ITEMS = ["Banho/higiene", "Cuidados de imagem", "Vestir-se", "Ir ao WC", "Alimentação", "Mobilidade", "Tratamento de roupas", "Acompanhamento ao exterior", "Aquisição de bens e serviços", "Toma medicamentosa", "Ocupação do tempo livre", "Comunicação"];
+              const NIVEL_LABELS: Record<string, string> = { autonomo: "Autónomo(a)", pontual: "Apoio pontual", permanente: "Apoio permanente" };
+              const boxStyle = { background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" };
+              const boxTitle = { fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 };
+              const fieldLabel = { display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" };
+              const inputStyle = { width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const };
+              const toggleBtn = (active: boolean) => ({ border: active ? "1px solid #2A241C" : "1px solid #E4DED3", background: active ? "#2A241C" : "#FAFAF8", color: active ? "#F5B944" : "#6B6358", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" });
+
+              return (
+                <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", flexDirection: "column" as const, gap: 12 }}>
+
+                  {/* Avaliação da funcionalidade */}
+                  <div style={boxStyle}>
+                    <div style={boxTitle}>🧍 Avaliação da Funcionalidade</div>
+                    {FUNCIONALIDADE_ITEMS.map((item) => (
+                      <div key={item} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 8, padding: "6px 0", borderBottom: "1px solid #F0EDE6" }}>
+                        <span style={{ fontSize: 12, color: "#2A241C", flex: "1 1 160px" }}>{item}</span>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {(["autonomo", "pontual", "permanente"] as const).map((nivel) => (
+                            <button key={nivel} onClick={() => updateFicha({ funcionalidade: { ...(fa.funcionalidade || {}), [item]: nivel } })} style={toggleBtn(fa.funcionalidade?.[item] === nivel)}>
+                              {NIVEL_LABELS[nivel]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Estado de saúde */}
+                  <div style={boxStyle}>
+                    <div style={boxTitle}>🩺 Estado de Saúde</div>
+                    {[
+                      { key: "problemasSaude", label: "Problemas de saúde", especKey: "problemasSaudeEspecifique" },
+                      { key: "internamentos", label: "Internamentos hospitalares", especKey: "internamentosEspecifique" },
+                      { key: "cirurgias", label: "Intervenções cirúrgicas", especKey: "cirurgiasEspecifique" },
+                      { key: "quedas", label: "Historial de quedas", especKey: "quedasEspecifique" },
+                    ].map(({ key, label, especKey }) => (
+                      <div key={key} style={{ marginBottom: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                          <span style={{ fontSize: 12, color: "#2A241C" }}>{label}</span>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), [key]: true } })} style={toggleBtn((fa.estadoSaude as any)?.[key] === true)}>Sim</button>
+                            <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), [key]: false } })} style={toggleBtn((fa.estadoSaude as any)?.[key] === false)}>Não</button>
+                          </div>
+                        </div>
+                        {(fa.estadoSaude as any)?.[key] && (
+                          <input value={(fa.estadoSaude as any)?.[especKey] || ""} onChange={(e) => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), [especKey]: e.target.value } })} placeholder="Especifique..." style={{ ...inputStyle, marginTop: 6 }} />
+                        )}
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                      <span style={{ fontSize: 12, color: "#2A241C" }}>Medicação diária</span>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), medicacaoDiaria: true } })} style={toggleBtn(fa.estadoSaude?.medicacaoDiaria === true)}>Sim</button>
+                        <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), medicacaoDiaria: false } })} style={toggleBtn(fa.estadoSaude?.medicacaoDiaria === false)}>Não</button>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
+                      <span style={{ fontSize: 12, color: "#2A241C" }}>Controlo de sinais vitais frequente</span>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), controloSinaisVitais: true } })} style={toggleBtn(fa.estadoSaude?.controloSinaisVitais === true)}>Sim</button>
+                        <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), controloSinaisVitais: false } })} style={toggleBtn(fa.estadoSaude?.controloSinaisVitais === false)}>Não</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Relações sociais */}
+                  <div style={boxStyle}>
+                    <div style={boxTitle}>👥 Relações Sociais</div>
+                    {[
+                      { key: "familiares1Grau", label: "Relaciona-se bem com familiares de 1º grau?" },
+                      { key: "outrosFamiliares", label: "Relaciona-se bem com outros familiares?" },
+                      { key: "vizinhos", label: "Relaciona-se bem com vizinhos?" },
+                      { key: "amigos", label: "Tem amigos(as) com quem se relacione?" },
+                      { key: "conhecidosInstituicao", label: "Existe alguém na instituição que conheça?" },
+                    ].map(({ key, label }) => (
+                      <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "5px 0" }}>
+                        <span style={{ fontSize: 12, color: "#2A241C" }}>{label}</span>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button onClick={() => updateFicha({ relacoesSociais: { ...(fa.relacoesSociais || {}), [key]: true } })} style={toggleBtn((fa.relacoesSociais as any)?.[key] === true)}>Sim</button>
+                          <button onClick={() => updateFicha({ relacoesSociais: { ...(fa.relacoesSociais || {}), [key]: false } })} style={toggleBtn((fa.relacoesSociais as any)?.[key] === false)}>Não</button>
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{ marginTop: 8 }}>
+                      <label style={fieldLabel}>Como ocupa os tempos livres</label>
+                      <textarea rows={2} value={fa.relacoesSociais?.comoOcupaTempoLivre || ""} onChange={(e) => updateFicha({ relacoesSociais: { ...(fa.relacoesSociais || {}), comoOcupaTempoLivre: e.target.value } })} style={{ ...inputStyle, resize: "vertical" as const }} />
+                    </div>
+                  </div>
+
+                  {/* Habitação e Rede de Suporte */}
+                  <div style={boxStyle}>
+                    <div style={boxTitle}>🏘️ Habitação e Rede de Suporte</div>
+                    <div style={{ marginBottom: 10 }}>
+                      <label style={fieldLabel}>Tipo de habitação</label>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                        {["Vivenda", "Apartamento", "Parte de casa", "Quarto", "Barraca", "Outra"].map((tipo) => (
+                          <button key={tipo} onClick={() => updateFicha({ habitacao: { ...(fa.habitacao || {}), tipo } })} style={toggleBtn(fa.habitacao?.tipo === tipo)}>{tipo}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ marginBottom: 10 }}>
+                      <label style={fieldLabel}>Propriedade</label>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {["Própria", "Alugada"].map((prop) => (
+                          <button key={prop} onClick={() => updateFicha({ habitacao: { ...(fa.habitacao || {}), propriedade: prop } })} style={toggleBtn(fa.habitacao?.propriedade === prop)}>{prop}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
+                      <span style={{ fontSize: 12, color: "#2A241C" }}>Beneficia de RSI?</span>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => updateFicha({ habitacao: { ...(fa.habitacao || {}), beneficiaRSI: true } })} style={toggleBtn(fa.habitacao?.beneficiaRSI === true)}>Sim</button>
+                        <button onClick={() => updateFicha({ habitacao: { ...(fa.habitacao || {}), beneficiaRSI: false } })} style={toggleBtn(fa.habitacao?.beneficiaRSI === false)}>Não</button>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: 12, color: "#2A241C" }}>Foi encaminhado(a) por outra organização?</span>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), encaminhadoPorOrganizacao: true } })} style={toggleBtn(fa.redeSuporte?.encaminhadoPorOrganizacao === true)}>Sim</button>
+                        <button onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), encaminhadoPorOrganizacao: false } })} style={toggleBtn(fa.redeSuporte?.encaminhadoPorOrganizacao === false)}>Não</button>
+                      </div>
+                    </div>
+                    {fa.redeSuporte?.encaminhadoPorOrganizacao && (
+                      <input value={fa.redeSuporte?.qualOrganizacao || ""} onChange={(e) => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), qualOrganizacao: e.target.value } })} placeholder="Qual organização?" style={{ ...inputStyle, marginBottom: 10 }} />
+                    )}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
+                      <span style={{ fontSize: 12, color: "#2A241C" }}>Necessita de apoio para atividades básicas de vida diária?</span>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), necessitaApoioABVD: true } })} style={toggleBtn(fa.redeSuporte?.necessitaApoioABVD === true)}>Sim</button>
+                        <button onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), necessitaApoioABVD: false } })} style={toggleBtn(fa.redeSuporte?.necessitaApoioABVD === false)}>Não</button>
+                      </div>
+                    </div>
+                    <div>
+                      <label style={fieldLabel}>Tipo de apoio atual</label>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                        {["Diário e permanente", "Diário e pontual", "Pontual", "Inexistente"].map((tipo) => (
+                          <button key={tipo} onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), tipoApoio: tipo } })} style={toggleBtn(fa.redeSuporte?.tipoApoio === tipo)}>{tipo}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Motivo do pedido */}
+                  <div style={boxStyle}>
+                    <div style={boxTitle}>📌 Motivo do Pedido</div>
+                    <div style={{ marginBottom: 10 }}>
+                      <label style={fieldLabel}>Resposta solicitada</label>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {["Temporária", "Permanente"].map((r) => (
+                          <button key={r} onClick={() => updateFicha({ motivoPedido: { ...(fa.motivoPedido || {}), respostaSolicitada: r } })} style={toggleBtn(fa.motivoPedido?.respostaSolicitada === r)}>{r}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label style={fieldLabel}>Recetividade</label>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {["Por opção", "Contrariado"].map((r) => (
+                          <button key={r} onClick={() => updateFicha({ motivoPedido: { ...(fa.motivoPedido || {}), recetividade: r } })} style={toggleBtn(fa.motivoPedido?.recetividade === r)}>{r}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Avaliação de admissão (ponderação) */}
+                  <div style={boxStyle}>
+                    <div style={boxTitle}>⚖️ Avaliação de Admissão (Hierarquização)</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                      {[
+                        { key: "situacaoDesfavorecida", label: "Situação economicamente desfavorecida (34%)" },
+                        { key: "situacaoRisco", label: "Situação de risco (25%)" },
+                        { key: "inexistenciaRetaguarda", label: "Inexistência de retaguarda familiar (16%)" },
+                        { key: "familiarFrequentaResposta", label: "Familiar a frequentar a resposta (11%)" },
+                        { key: "necessidadeExpressaCliente", label: "Necessidade expressa pelo cliente (9%)" },
+                        { key: "ligadoFreguesia", label: "Ligado à freguesia/instituição (5%)" },
+                      ].map(({ key, label }) => (
+                        <div key={key}>
+                          <label style={fieldLabel}>{label}</label>
+                          <input value={(fa.avaliacaoAdmissao as any)?.[key] || ""} onChange={(e) => updateFicha({ avaliacaoAdmissao: { ...(fa.avaliacaoAdmissao || {}), [key]: e.target.value } })} placeholder="Pontuação/%" style={inputStyle} />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                      <div>
+                        <label style={fieldLabel}>Total</label>
+                        <input value={fa.avaliacaoAdmissao?.total || ""} onChange={(e) => updateFicha({ avaliacaoAdmissao: { ...(fa.avaliacaoAdmissao || {}), total: e.target.value } })} placeholder="Ex: 75%" style={inputStyle} />
+                      </div>
+                      <div>
+                        <label style={fieldLabel}>Data prevista para admissão</label>
+                        <input value={fa.avaliacaoAdmissao?.dataAdmissaoPrevista || ""} onChange={(e) => updateFicha({ avaliacaoAdmissao: { ...(fa.avaliacaoAdmissao || {}), dataAdmissaoPrevista: e.target.value } })} placeholder="DD/MM/AAAA" style={inputStyle} />
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
+                      <span style={{ fontSize: 12, color: "#2A241C" }}>Candidato(a) selecionado(a) para admissão?</span>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => updateFicha({ avaliacaoAdmissao: { ...(fa.avaliacaoAdmissao || {}), selecionado: true } })} style={toggleBtn(fa.avaliacaoAdmissao?.selecionado === true)}>Sim</button>
+                        <button onClick={() => updateFicha({ avaliacaoAdmissao: { ...(fa.avaliacaoAdmissao || {}), selecionado: false } })} style={toggleBtn(fa.avaliacaoAdmissao?.selecionado === false)}>Não</button>
+                      </div>
+                    </div>
+                    <label style={fieldLabel}>Observações</label>
+                    <textarea rows={2} value={fa.avaliacaoAdmissao?.observacoes || ""} onChange={(e) => updateFicha({ avaliacaoAdmissao: { ...(fa.avaliacaoAdmissao || {}), observacoes: e.target.value } })} style={{ ...inputStyle, resize: "vertical" as const }} />
+                  </div>
+
+                  {/* Documentos necessários */}
+                  <div style={boxStyle}>
+                    <div style={boxTitle}>📎 Documentos Necessários</div>
+                    {(fa.documentosNecessarios || []).map((doc) => (
+                      <div key={doc.id} style={{ display: "grid", gridTemplateColumns: "2fr auto 1fr auto", gap: 8, marginBottom: 8, alignItems: "center" }}>
+                        <input value={doc.documento} placeholder="Documento" onChange={(e) => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d) => d.id === doc.id ? { ...d, documento: e.target.value } : d) })} style={{ ...inputStyle, width: "auto" }} />
+                        <button onClick={() => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d) => d.id === doc.id ? { ...d, entregue: !d.entregue } : d) })} style={toggleBtn(doc.entregue)}>{doc.entregue ? "✓ Entregue" : "Pendente"}</button>
+                        <input value={doc.data} placeholder="Data" onChange={(e) => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d) => d.id === doc.id ? { ...d, data: e.target.value } : d) })} style={{ ...inputStyle, width: "auto" }} />
+                        <button onClick={() => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).filter((d) => d.id !== doc.id) })} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC" }}>✕</button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => updateFicha({ documentosNecessarios: [...(fa.documentosNecessarios || []), { id: Date.now().toString() + Math.random().toString(36).slice(2), documento: "", entregue: false, data: "" }] })}
+                      style={{ border: "1px dashed #B8CCE0", background: "#F7F9FB", color: "#3A5A70", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+                    >
+                      + Adicionar documento
+                    </button>
+                  </div>
+
+                  {/* Fundamentação técnica */}
+                  <div style={boxStyle}>
+                    <div style={boxTitle}>📝 Fundamentação Técnica</div>
+                    <textarea rows={8} value={fa.fundamentacaoTecnica || ""} onChange={(e) => updateFicha({ fundamentacaoTecnica: e.target.value })} placeholder="Histórico clínico e social, percurso de vida, contexto familiar..." style={{ ...inputStyle, resize: "vertical" as const }} />
+                  </div>
+
+                </div>
+              );
+            })()}
 
           </div>
         </div>
