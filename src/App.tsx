@@ -1816,7 +1816,17 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     profissao: m.profissao || "",
                   }))
                 : undefined,
-              fichaAdmissao: u.fichaAdmissao || undefined,
+              fichaAdmissao: u.fichaAdmissao ? {
+                ...u.fichaAdmissao,
+                documentosNecessarios: Array.isArray(u.fichaAdmissao.documentosNecessarios)
+                  ? u.fichaAdmissao.documentosNecessarios.map((d: any) => ({
+                      id: d.id || (Date.now().toString() + Math.random().toString(36).slice(2)),
+                      documento: d.documento || "",
+                      entregue: !!d.entregue,
+                      data: d.data || "",
+                    }))
+                  : undefined,
+              } : undefined,
               medicationNotes: u.medicationNotes || undefined,
               hygieneNotes: u.hygieneNotes || undefined,
               feedingNotes: u.feedingNotes || undefined,
@@ -1960,6 +1970,146 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   };
 
   const [familyLinkModal, setFamilyLinkModal] = useState<{ name: string; link: string } | null>(null);
+
+  const handleImprimirProcesso = (u: Utente) => {
+    const fa = u.fichaAdmissao || {};
+    const NIVEL_LABELS: Record<string, string> = { autonomo: "Autónomo(a)", pontual: "Apoio pontual", permanente: "Apoio permanente" };
+    const simNao = (v: any) => v === true ? "Sim" : v === false ? "Não" : "—";
+
+    const linhaTabela = (label: string, valor: string) => `<tr><td class="lbl">${label}</td><td class="val">${valor || "—"}</td></tr>`;
+
+    const funcionalidadeHTML = Object.keys(fa.funcionalidade || {}).length
+      ? `<table class="tbl">${Object.entries(fa.funcionalidade || {}).map(([item, nivel]) => linhaTabela(item, NIVEL_LABELS[nivel as string] || "—")).join("")}</table>`
+      : `<p class="vazio">Sem dados preenchidos.</p>`;
+
+    const estadoSaudeHTML = `<table class="tbl">
+      ${linhaTabela("Problemas de saúde", simNao(fa.estadoSaude?.problemasSaude) + (fa.estadoSaude?.problemasSaudeEspecifique ? ` — ${fa.estadoSaude.problemasSaudeEspecifique}` : ""))}
+      ${linhaTabela("Medicação diária", simNao(fa.estadoSaude?.medicacaoDiaria))}
+      ${linhaTabela("Internamentos hospitalares", simNao(fa.estadoSaude?.internamentos) + (fa.estadoSaude?.internamentosEspecifique ? ` — ${fa.estadoSaude.internamentosEspecifique}` : ""))}
+      ${linhaTabela("Intervenções cirúrgicas", simNao(fa.estadoSaude?.cirurgias) + (fa.estadoSaude?.cirurgiasEspecifique ? ` — ${fa.estadoSaude.cirurgiasEspecifique}` : ""))}
+      ${linhaTabela("Historial de quedas", simNao(fa.estadoSaude?.quedas) + (fa.estadoSaude?.quedasEspecifique ? ` — ${fa.estadoSaude.quedasEspecifique}` : ""))}
+      ${linhaTabela("Controlo de sinais vitais frequente", simNao(fa.estadoSaude?.controloSinaisVitais))}
+    </table>`;
+
+    const relacoesSociaisHTML = `<table class="tbl">
+      ${linhaTabela("Relaciona-se bem com familiares de 1º grau", simNao(fa.relacoesSociais?.familiares1Grau))}
+      ${linhaTabela("Relaciona-se bem com outros familiares", simNao(fa.relacoesSociais?.outrosFamiliares))}
+      ${linhaTabela("Relaciona-se bem com vizinhos", simNao(fa.relacoesSociais?.vizinhos))}
+      ${linhaTabela("Tem amigos(as) com quem se relacione", simNao(fa.relacoesSociais?.amigos))}
+      ${linhaTabela("Existe alguém na instituição que conheça", simNao(fa.relacoesSociais?.conhecidosInstituicao))}
+      ${linhaTabela("Como ocupa os tempos livres", fa.relacoesSociais?.comoOcupaTempoLivre || "")}
+    </table>`;
+
+    const habitacaoHTML = `<table class="tbl">
+      ${linhaTabela("Tipo de habitação", fa.habitacao?.tipo || "")}
+      ${linhaTabela("Propriedade", fa.habitacao?.propriedade || "")}
+      ${linhaTabela("Beneficia de RSI", simNao(fa.habitacao?.beneficiaRSI))}
+    </table>`;
+
+    const redeSuporteHTML = `<table class="tbl">
+      ${linhaTabela("Foi encaminhado(a) por outra organização", simNao(fa.redeSuporte?.encaminhadoPorOrganizacao) + (fa.redeSuporte?.qualOrganizacao ? ` — ${fa.redeSuporte.qualOrganizacao}` : ""))}
+      ${linhaTabela("Necessita de apoio para atividades básicas de vida diária", simNao(fa.redeSuporte?.necessitaApoioABVD))}
+      ${linhaTabela("Tipo de apoio atual", fa.redeSuporte?.tipoApoio || "")}
+    </table>`;
+
+    const motivoPedidoHTML = `<table class="tbl">
+      ${linhaTabela("Resposta solicitada", fa.motivoPedido?.respostaSolicitada || "")}
+      ${linhaTabela("Recetividade", fa.motivoPedido?.recetividade || "")}
+    </table>`;
+
+    const av = fa.avaliacaoAdmissao || {};
+    const avaliacaoHTML = `<table class="tbl">
+      ${linhaTabela("Situação economicamente desfavorecida (34%)", av.situacaoDesfavorecida || "")}
+      ${linhaTabela("Situação de risco (25%)", av.situacaoRisco || "")}
+      ${linhaTabela("Inexistência de retaguarda familiar (16%)", av.inexistenciaRetaguarda || "")}
+      ${linhaTabela("Familiar a frequentar a resposta (11%)", av.familiarFrequentaResposta || "")}
+      ${linhaTabela("Necessidade expressa pelo cliente (9%)", av.necessidadeExpressaCliente || "")}
+      ${linhaTabela("Ligado à freguesia/instituição (5%)", av.ligadoFreguesia || "")}
+      ${linhaTabela("TOTAL", av.total || "")}
+      ${linhaTabela("Candidato selecionado para admissão", simNao(av.selecionado))}
+      ${linhaTabela("Data prevista para admissão", av.dataAdmissaoPrevista || "")}
+      ${linhaTabela("Observações", av.observacoes || "")}
+    </table>`;
+
+    const documentosHTML = (fa.documentosNecessarios || []).length
+      ? `<table class="tbl">${(fa.documentosNecessarios || []).map((d) => linhaTabela(d.documento, (d.entregue ? "✓ Entregue" : "Pendente") + (d.data ? ` (${d.data})` : ""))).join("")}</table>`
+      : `<p class="vazio">Sem documentos registados.</p>`;
+
+    const agregadoHTML = (u.agregadoFamiliar || []).length
+      ? `<table class="tbl"><tr><th>Nome</th><th>Parentesco</th><th>Idade</th><th>Profissão</th></tr>${(u.agregadoFamiliar || []).map((m) => `<tr><td>${m.nome}</td><td>${m.parentesco}</td><td>${m.idade}</td><td>${m.profissao}</td></tr>`).join("")}</table>`
+      : `<p class="vazio">Sem elementos registados.</p>`;
+
+    const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Processo — ${u.name}</title>
+    <style>
+      @page { size: A4; margin: 18mm; }
+      * { box-sizing: border-box; }
+      body { font-family: Arial, sans-serif; color: #2A241C; margin: 0; background: #FAFAF8; }
+      .no-print { position: fixed; top: 16px; right: 16px; z-index: 10; }
+      @media print { .no-print { display: none !important; } body { background: #FFFFFF; } .secao { page-break-inside: avoid; } }
+      .folha { max-width: 760px; margin: 0 auto; padding: 20px 0 60px; }
+      h1 { font-size: 22px; margin: 0 0 4px; }
+      .sub { font-size: 13px; color: #6B6358; margin: 0 0 24px; }
+      .secao { background: #FFFFFF; border: 1px solid #E4DED3; border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; }
+      .secao h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; color: #1F4D2E; margin: 0 0 12px; border-bottom: 2px solid #1F4D2E; padding-bottom: 6px; }
+      table.tbl { width: 100%; border-collapse: collapse; }
+      table.tbl td, table.tbl th { padding: 6px 8px; font-size: 12px; border-bottom: 1px solid #EFEAE2; text-align: left; vertical-align: top; }
+      table.tbl td.lbl, table.tbl th { font-weight: 700; color: #8A6A2E; width: 45%; }
+      table.tbl td.val { color: #2A241C; }
+      .vazio { font-size: 12px; color: #A39B8E; font-style: italic; margin: 0; }
+      .fundamentacao { font-size: 12px; line-height: 1.7; white-space: pre-wrap; }
+    </style></head><body>
+    <button class="no-print" onclick="window.print()" style="background:#2A241C;color:#F5B944;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
+    <div class="folha">
+      <h1>${u.name}</h1>
+      <p class="sub">Processo completo · Associação Oliveirense de Socorros Mútuos · Impresso em ${new Date().toLocaleDateString("pt-PT")}</p>
+
+      <div class="secao"><h2>Identificação</h2><table class="tbl">
+        ${linhaTabela("Nome pelo qual é tratado(a)", u.nomeTratado || "")}
+        ${linhaTabela("Data de nascimento", u.birthDate || "")}
+        ${linhaTabela("Sexo", u.sexo === "masculino" ? "Masculino" : u.sexo === "feminino" ? "Feminino" : "")}
+        ${linhaTabela("Nacionalidade", u.nacionalidade || "")}
+        ${linhaTabela("Grupo sanguíneo", u.grupoSanguineo || "")}
+        ${linhaTabela("Estado civil", u.estadoCivil || "")}
+        ${linhaTabela("Morada", u.morada || "")}
+        ${linhaTabela("Código Postal / Localidade", `${u.codigoPostal || ""} ${u.localidade || ""}`.trim())}
+        ${linhaTabela("Concelho / Distrito", `${u.concelho || ""} / ${u.distrito || ""}`.trim())}
+        ${linhaTabela("Nº CC", u.ccNumber || "")}
+        ${linhaTabela("Validade CC", u.ccValidity || "")}
+        ${linhaTabela("NIF", u.nif || "")}
+        ${linhaTabela("Nº Segurança Social", u.ssNumero || "")}
+        ${linhaTabela("Nº Utente de Saúde", u.numeroUtenteSaude || "")}
+        ${linhaTabela("Centro de Saúde", u.centroSaude || "")}
+        ${linhaTabela("Médico assistente", u.medicoAssistente || "")}
+        ${linhaTabela("Data de inscrição", u.dataInscricao || "")}
+        ${linhaTabela("Nº de inscrição", u.numeroInscricao || "")}
+        ${linhaTabela("Data de admissão", u.entryDate || "")}
+        ${linhaTabela("Quarto", u.room || "")}
+      </table></div>
+
+      <div class="secao"><h2>Contacto Familiar / Pessoa Significativa</h2><table class="tbl">
+        ${linhaTabela("Nome", u.familyContact || "")}
+        ${linhaTabela("Parentesco", u.familyParentesco || "")}
+        ${linhaTabela("Telefone", u.familyPhone || "")}
+        ${linhaTabela("Email", u.familyEmail || "")}
+      </table></div>
+
+      <div class="secao"><h2>Agregado Familiar</h2>${agregadoHTML}</div>
+      <div class="secao"><h2>Avaliação da Funcionalidade</h2>${funcionalidadeHTML}</div>
+      <div class="secao"><h2>Estado de Saúde</h2>${estadoSaudeHTML}</div>
+      <div class="secao"><h2>Relações Sociais</h2>${relacoesSociaisHTML}</div>
+      <div class="secao"><h2>Habitação</h2>${habitacaoHTML}</div>
+      <div class="secao"><h2>Rede de Suporte</h2>${redeSuporteHTML}</div>
+      <div class="secao"><h2>Motivo do Pedido</h2>${motivoPedidoHTML}</div>
+      <div class="secao"><h2>Avaliação de Admissão (Hierarquização)</h2>${avaliacaoHTML}</div>
+      <div class="secao"><h2>Documentos Necessários</h2>${documentosHTML}</div>
+      <div class="secao"><h2>Fundamentação Técnica</h2><p class="fundamentacao">${fa.fundamentacaoTecnica || "Sem dados preenchidos."}</p></div>
+    </div>
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+    w.document.open(); w.document.write(html); w.document.close(); w.focus();
+  };
 
   const handleGeneratePIC = async (u: Utente) => {
     const hoje = new Date().toLocaleDateString("pt-PT");
@@ -2974,17 +3124,17 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                 {/* Agregado Familiar */}
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                   <div style={{ fontWeight: 800, color: "#1F4D2E", fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>👪 Agregado Familiar</div>
-                  {(u.agregadoFamiliar || []).map((membro) => (
-                    <div key={membro.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 0.6fr 1.2fr auto", gap: 8, marginBottom: 8, alignItems: "center" }}>
-                      <input value={membro.nome} placeholder="Nome" onChange={(e) => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).map((m) => m.id === membro.id ? { ...m, nome: e.target.value } : m) })}
+                  {(u.agregadoFamiliar || []).map((membro, idx) => (
+                    <div key={membro.id || idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 0.6fr 1.2fr auto", gap: 8, marginBottom: 8, alignItems: "center" }}>
+                      <input value={membro.nome} placeholder="Nome" onChange={(e) => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).map((m, i) => i === idx ? { ...m, nome: e.target.value } : m) })}
                         style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "6px 8px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
-                      <input value={membro.parentesco} placeholder="Parentesco" onChange={(e) => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).map((m) => m.id === membro.id ? { ...m, parentesco: e.target.value } : m) })}
+                      <input value={membro.parentesco} placeholder="Parentesco" onChange={(e) => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).map((m, i) => i === idx ? { ...m, parentesco: e.target.value } : m) })}
                         style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "6px 8px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
-                      <input value={membro.idade} placeholder="Idade" onChange={(e) => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).map((m) => m.id === membro.id ? { ...m, idade: e.target.value } : m) })}
+                      <input value={membro.idade} placeholder="Idade" onChange={(e) => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).map((m, i) => i === idx ? { ...m, idade: e.target.value } : m) })}
                         style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "6px 8px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
-                      <input value={membro.profissao} placeholder="Profissão" onChange={(e) => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).map((m) => m.id === membro.id ? { ...m, profissao: e.target.value } : m) })}
+                      <input value={membro.profissao} placeholder="Profissão" onChange={(e) => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).map((m, i) => i === idx ? { ...m, profissao: e.target.value } : m) })}
                         style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "6px 8px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }} />
-                      <button onClick={() => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).filter((m) => m.id !== membro.id) })} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC" }}>✕</button>
+                      <button onClick={() => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).filter((_, i) => i !== idx) })} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC" }}>✕</button>
                     </div>
                   ))}
                   <button
@@ -3616,12 +3766,12 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                   {/* Documentos necessários */}
                   <div style={boxStyle}>
                     <div style={boxTitle}>📎 Documentos Necessários</div>
-                    {(fa.documentosNecessarios || []).map((doc) => (
-                      <div key={doc.id} style={{ display: "grid", gridTemplateColumns: "2fr auto 1fr auto", gap: 8, marginBottom: 8, alignItems: "center" }}>
-                        <input value={doc.documento} placeholder="Documento" onChange={(e) => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d) => d.id === doc.id ? { ...d, documento: e.target.value } : d) })} style={{ ...inputStyle, width: "auto" }} />
-                        <button onClick={() => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d) => d.id === doc.id ? { ...d, entregue: !d.entregue } : d) })} style={toggleBtn(doc.entregue)}>{doc.entregue ? "✓ Entregue" : "Pendente"}</button>
-                        <input value={doc.data} placeholder="Data" onChange={(e) => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d) => d.id === doc.id ? { ...d, data: e.target.value } : d) })} style={{ ...inputStyle, width: "auto" }} />
-                        <button onClick={() => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).filter((d) => d.id !== doc.id) })} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC" }}>✕</button>
+                    {(fa.documentosNecessarios || []).map((doc, idx) => (
+                      <div key={doc.id || idx} style={{ display: "grid", gridTemplateColumns: "2fr auto 1fr auto", gap: 8, marginBottom: 8, alignItems: "center" }}>
+                        <input value={doc.documento} placeholder="Documento" onChange={(e) => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d, i) => i === idx ? { ...d, documento: e.target.value } : d) })} style={{ ...inputStyle, width: "auto" }} />
+                        <button onClick={() => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d, i) => i === idx ? { ...d, entregue: !d.entregue } : d) })} style={toggleBtn(doc.entregue)}>{doc.entregue ? "✓ Entregue" : "Pendente"}</button>
+                        <input value={doc.data} placeholder="Data" onChange={(e) => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d, i) => i === idx ? { ...d, data: e.target.value } : d) })} style={{ ...inputStyle, width: "auto" }} />
+                        <button onClick={() => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).filter((_, i) => i !== idx) })} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC" }}>✕</button>
                       </div>
                     ))}
                     <button
@@ -3637,6 +3787,13 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     <div style={boxTitle}>📝 Fundamentação Técnica</div>
                     <textarea rows={8} value={fa.fundamentacaoTecnica || ""} onChange={(e) => updateFicha({ fundamentacaoTecnica: e.target.value })} placeholder="Histórico clínico e social, percurso de vida, contexto familiar..." style={{ ...inputStyle, resize: "vertical" as const }} />
                   </div>
+
+                  <button
+                    onClick={() => handleImprimirProcesso(u)}
+                    style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 12, padding: "14px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
+                  >
+                    🖨️ Imprimir processo completo
+                  </button>
 
                 </div>
               );
