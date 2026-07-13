@@ -4011,7 +4011,7 @@ const TURNO_LABELS: Record<string, string> = {
 function aplicarMascaraData(valorAtual: string, novoValor: string): string {
   // Se o utilizador está a apagar (novo valor mais curto), não interferir
   if (novoValor.length < valorAtual.length) return novoValor;
-  const apenasDigitos = novoValor.replace(/\D/g, "").slice(0, 6);
+  const apenasDigitos = novoValor.replace(/\D/g, "").slice(0, 8); // até 8 dígitos: DD MM AAAA (ano com 2 ou 4 dígitos, à escolha)
   let resultado = apenasDigitos;
   if (apenasDigitos.length > 4) resultado = `${apenasDigitos.slice(0, 2)}-${apenasDigitos.slice(2, 4)}-${apenasDigitos.slice(4)}`;
   else if (apenasDigitos.length > 2) resultado = `${apenasDigitos.slice(0, 2)}-${apenasDigitos.slice(2)}`;
@@ -4148,7 +4148,7 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
                 {linhas.map((linha, idx) => (
                   <div key={linha.id || idx} style={{ display: "grid", gridTemplateColumns: colWidths.join(" "), gap: 4, marginBottom: 5, minWidth: 760 }}>
                     {(["inicio", "fim"] as const).map((f) => (
-                      <input key={f} value={linha[f]} placeholder="DD-MM-AA" maxLength={8} onChange={(e) => updateCardex({ [campo]: linhas.map((l, i) => i === idx ? { ...l, [f]: aplicarMascaraData(linha[f], e.target.value) } : l) })} style={cellInput} />
+                      <input key={f} value={linha[f]} placeholder="DD-MM-AA(AA)" maxLength={10} onChange={(e) => updateCardex({ [campo]: linhas.map((l, i) => i === idx ? { ...l, [f]: aplicarMascaraData(linha[f], e.target.value) } : l) })} style={cellInput} />
                     ))}
                     <input value={linha.medicamento} placeholder="Medicamento e dose" onChange={(e) => updateCardex({ [campo]: linhas.map((l, i) => i === idx ? { ...l, medicamento: e.target.value } : l) })} style={{ ...cellInput, textAlign: "left" as const }} />
                     {(["jj", "pa", "a", "l", "j", "c"] as const).map((f) => (
