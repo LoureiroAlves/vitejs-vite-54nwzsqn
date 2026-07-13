@@ -4127,7 +4127,7 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
             const colHeaders = ["Início", "Fim", "Medicamento e dose", "JJ", "PA", "A", "L", "J", "C", "Indicações", ""];
             const colWidths = ["90px", "90px", "1.6fr", "44px", "44px", "44px", "44px", "44px", "44px", "1.2fr", "32px"];
 
-            const Tabela = ({ linhas, campo }: { linhas: any[]; campo: "esquemaTerapeutico" | "sos" }) => (
+            const renderTabela = (linhas: any[], campo: "esquemaTerapeutico" | "sos") => (
               <div style={{ overflowX: "auto" as const }}>
                 <div style={{ display: "grid", gridTemplateColumns: colWidths.join(" "), gap: 4, marginBottom: 6, minWidth: 760 }}>
                   {colHeaders.map((h, i) => (
@@ -4163,11 +4163,11 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
                 </div>
                 <div style={boxStyle}>
                   <div style={boxTitle}>💊 Esquema Terapêutico</div>
-                  <Tabela linhas={cardex.esquemaTerapeutico || []} campo="esquemaTerapeutico" />
+                  {renderTabela(cardex.esquemaTerapeutico || [], "esquemaTerapeutico")}
                 </div>
                 <div style={boxStyle}>
                   <div style={boxTitle}>🆘 SOS</div>
-                  <Tabela linhas={cardex.sos || []} campo="sos" />
+                  {renderTabela(cardex.sos || [], "sos")}
                 </div>
                 <button onClick={() => handleImprimirCardex(u)} style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 12, padding: "14px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
                   🖨️ Imprimir Cardex
@@ -5578,8 +5578,8 @@ function QuestionarioSatisfacaoPage() {
     );
   }
 
-  const ScaleRow = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
-    <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #F0EDE6" }}>
+  const renderScaleRow = (label: string, value: string, onChange: (v: string) => void, key: string) => (
+    <div key={key} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #F0EDE6" }}>
       <div style={{ fontSize: 13, color: "#2A241C", marginBottom: 8, lineHeight: 1.4 }}>{label}</div>
       <div style={{ display: "flex", gap: 5, flexWrap: "wrap" as const }}>
         {RATING_SCALE.map((opt) => {
@@ -5658,7 +5658,7 @@ function QuestionarioSatisfacaoPage() {
               <div style={{ fontSize: 14, fontWeight: 700, color: "#2A241C", marginBottom: 12, borderBottom: "2px solid #2A241C", paddingBottom: 6 }}>{cat.title}</div>
               {cat.items.map((item, ii) => {
                 const key = `${ci}-${ii}`;
-                return <ScaleRow key={key} label={item} value={ratings[key] || ""} onChange={(v) => setRating(key, v)} />;
+                return renderScaleRow(item, ratings[key] || "", (v) => setRating(key, v), key);
               })}
             </div>
           ))}
@@ -5669,7 +5669,7 @@ function QuestionarioSatisfacaoPage() {
           </div>
           {APRECIACAO_GLOBAL_ITEMS.map((item, ii) => {
             const key = `g-${ii}`;
-            return <ScaleRow key={key} label={item} value={apreciacaoGlobal[key] || ""} onChange={(v) => setApreciacao(key, v)} />;
+            return renderScaleRow(item, apreciacaoGlobal[key] || "", (v) => setApreciacao(key, v), key);
           })}
 
           {/* IV – Sugestões de Melhoria */}
