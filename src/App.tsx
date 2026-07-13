@@ -1741,6 +1741,13 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               entryDate: u.entryDate || u.dataEntrada || undefined,
               familyContact: u.familyContact || u.contactoFamiliar || undefined,
               familyPhone: u.familyPhone || u.telefoneFamiliar || undefined,
+              ccNumber: u.ccNumber || u.numeroCC || u.cc || undefined,
+              ccValidity: u.ccValidity || u.validadeCC || undefined,
+              nif: u.nif || undefined,
+              naturalidade: u.naturalidade || undefined,
+              morada: u.morada || u.address || undefined,
+              nacionalidade: u.nacionalidade || undefined,
+              estadoCivil: u.estadoCivil || u.estado_civil || undefined,
               dailyLogs: initialNote ? [{ date: new Date().toLocaleDateString("pt-PT"), text: initialNote }] : undefined,
             };
           });
