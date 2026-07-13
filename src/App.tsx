@@ -2872,7 +2872,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
                 {/* Dados básicos */}
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>🏠 Dados Gerais</div>
+                  <div style={{ fontWeight: 800, color: "#1F4D2E", fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>🏠 Dados Gerais</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     {[
                       { key: "room", label: "Quarto", placeholder: "Ex: 14 cama 2" },
@@ -2895,7 +2895,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
                 {/* Contacto familiar */}
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>👨‍👩‍👧 Contacto Familiar</div>
+                  <div style={{ fontWeight: 800, color: "#1F4D2E", fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>👨‍👩‍👧 Contacto Familiar</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     {[
                       { key: "familyContact", label: "Nome do familiar", placeholder: "Ex: João Silva (filho)" },
@@ -2914,7 +2914,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
                 {/* Dados do Cartão de Cidadão */}
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>📇 Cartão de Cidadão</div>
+                  <div style={{ fontWeight: 800, color: "#1F4D2E", fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>📇 Cartão de Cidadão</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     {[
                       { key: "ccNumber", label: "Nº do CC", placeholder: "Ex: 12345678 9 ZZ0" },
@@ -2954,7 +2954,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
                 {/* Saúde e Segurança Social */}
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>🩺 Saúde e Segurança Social</div>
+                  <div style={{ fontWeight: 800, color: "#1F4D2E", fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>🩺 Saúde e Segurança Social</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     {[
                       { key: "ssNumero", label: "Nº Segurança Social", placeholder: "Ex: 11223344556" },
@@ -2973,7 +2973,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
                 {/* Agregado Familiar */}
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>👪 Agregado Familiar</div>
+                  <div style={{ fontWeight: 800, color: "#1F4D2E", fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>👪 Agregado Familiar</div>
                   {(u.agregadoFamiliar || []).map((membro) => (
                     <div key={membro.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 0.6fr 1.2fr auto", gap: 8, marginBottom: 8, alignItems: "center" }}>
                       <input value={membro.nome} placeholder="Nome" onChange={(e) => updateUtente(u.id, { agregadoFamiliar: (u.agregadoFamiliar || []).map((m) => m.id === membro.id ? { ...m, nome: e.target.value } : m) })}
@@ -2997,7 +2997,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
                 {/* Documentos */}
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>📎 Documentos — Instituição</div>
+                  <div style={{ fontWeight: 800, color: "#1F4D2E", fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>📎 Documentos — Instituição</div>
                   <div style={{ fontSize: 11, color: "#A39B8E", marginBottom: 8 }}>Apenas visíveis internamente</div>
                   {(u.files || []).map((f, fi) => (
                     <div key={fi} style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F5F0", borderRadius: 8, padding: "8px 12px", marginBottom: 6 }}>
@@ -3413,7 +3413,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               const FUNCIONALIDADE_ITEMS = ["Banho/higiene", "Cuidados de imagem", "Vestir-se", "Ir ao WC", "Alimentação", "Mobilidade", "Tratamento de roupas", "Acompanhamento ao exterior", "Aquisição de bens e serviços", "Toma medicamentosa", "Ocupação do tempo livre", "Comunicação"];
               const NIVEL_LABELS: Record<string, string> = { autonomo: "Autónomo(a)", pontual: "Apoio pontual", permanente: "Apoio permanente" };
               const boxStyle = { background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" };
-              const boxTitle = { fontSize: 11, fontWeight: 700, color: "#3A5A70", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 };
+              const boxTitle = { fontWeight: 800, color: "#1F4D2E", fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 };
               const fieldLabel = { display: "block", fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: "0.06em" };
               const inputStyle = { width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const };
               const toggleBtn = (active: boolean) => ({ border: active ? "1px solid #2A241C" : "1px solid #E4DED3", background: active ? "#2A241C" : "#FAFAF8", color: active ? "#F5B944" : "#6B6358", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" });
