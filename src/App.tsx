@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -1293,11 +1294,100 @@ function loadUtentesData(): any {
   return null;
 }
 
+// Chave estável de cada registo diário (para não se perderem ao juntar)
+function logKey(l: any): string {
+  return l?.id || `${l?.date || ""}|${(l?.text || "").slice(0, 60)}`;
+}
+// Junta dois estados do MESMO utente sem perder registos de ninguém
+function mergeUtente(remote: any, local: any): any {
+  const merged = { ...remote, ...local };
+  const byKey: Record<string, any> = {};
+  (remote?.dailyLogs || []).forEach((l: any) => { byKey[logKey(l)] = l; });
+  (local?.dailyLogs || []).forEach((l: any) => { byKey[logKey(l)] = l; });
+  const logs = Object.values(byKey);
+  logs.sort((a: any, b: any) => {
+    const pa = String(a.date || "").split("/").reverse().join("");
+    const pb = String(b.date || "").split("/").reverse().join("");
+    return pb.localeCompare(pa);
+  });
+  merged.dailyLogs = logs;
+  return merged;
+}
+// Grava UM utente à parte, relendo antes para não apagar o que outro escreveu
+async function saveUtenteRow(u: any): Promise<void> {
+  try {
+    let toSave = u;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/utente?id=eq.${encodeURIComponent(u.id)}&select=data`, {
+      headers: { ...sbHeaders, "Prefer": "return=representation" },
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows?.[0]?.data) toSave = mergeUtente(rows[0].data, u);
+    }
+    await fetch(`${SUPABASE_URL}/rest/v1/utente`, {
+      method: "POST",
+      headers: { ...sbHeaders, "Prefer": "resolution=merge-duplicates" },
+      body: JSON.stringify({ id: u.id, data: toSave, updated_at: new Date().toISOString() }),
+    });
+  } catch (e) {}
+}
+async function deleteUtenteRow(id: string): Promise<void> {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/utente?id=eq.${encodeURIComponent(id)}`, {
+      method: "DELETE", headers: sbHeaders,
+    });
+  } catch (e) {}
+}
+// Lê todos os utentes da tabela nova. Se estiver vazia mas existir o bloco antigo, migra automaticamente (só na primeira vez).
+async function loadUtentesFromDB(): Promise<any[]> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/utente?select=id,data&order=id`, {
+      headers: { ...sbHeaders, "Prefer": "return=representation" },
+    });
+    let list: any[] = [];
+    if (res.ok) {
+      const rows = await res.json();
+      list = (rows || []).map((r: any) => ({ id: r.id, ...(r.data || {}) }));
+    }
+    if (list.length === 0) {
+      const old = await loadFromSupabase("utentes_data");
+      const oldUtentes = old?.utentes || [];
+      if (oldUtentes.length > 0) {
+        for (const u of oldUtentes) {
+          await fetch(`${SUPABASE_URL}/rest/v1/utente`, {
+            method: "POST",
+            headers: { ...sbHeaders, "Prefer": "resolution=merge-duplicates" },
+            body: JSON.stringify({ id: u.id, data: u, updated_at: new Date().toISOString() }),
+          });
+        }
+        list = oldUtentes;
+      }
+    }
+    list.forEach((u) => { if (u?.id) _utenteSavedCache[u.id] = JSON.stringify(u); });
+    try { window.localStorage?.setItem?.(UTENTES_STORAGE_KEY, JSON.stringify({ utentes: list })); } catch (e) {}
+    return list;
+  } catch (e) {
+    return loadUtentesData()?.utentes ?? [];
+  }
+}
+// Memória do que já foi gravado (só envia os utentes que mudaram) + temporizadores
+const _utenteSavedCache: Record<string, string> = {};
+const _utenteSaveTimers: Record<string, any> = {};
 function saveUtentesData(data: any) {
   try {
     window.localStorage?.setItem?.(UTENTES_STORAGE_KEY, JSON.stringify(data));
   } catch (e) {}
-  saveToSupabase("utentes_data", data).catch(() => {});
+  const utentes = (data?.utentes || []) as any[];
+  utentes.forEach((u) => {
+    if (!u?.id) return;
+    const snap = JSON.stringify(u);
+    if (_utenteSavedCache[u.id] !== snap) {
+      _utenteSavedCache[u.id] = snap;
+      if (_utenteSaveTimers[u.id]) clearTimeout(_utenteSaveTimers[u.id]);
+      const toSave = u;
+      _utenteSaveTimers[u.id] = setTimeout(() => saveUtenteRow(toSave), 700);
+    }
+  });
 }
 
 interface Utente {
@@ -1786,6 +1876,7 @@ function handleImprimirCardex(u: Utente) {
 
 function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
+  useEffect(() => { loadUtentesFromDB().then((list) => setUtentes(list as Utente[])); }, []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
   const [utenteTab, setUtenteTab] = useState<"geral" | "registo" | "medicacao" | "cuidados" | "pic" | "admissao">("geral");
   const [importResult, setImportResult] = useState<string | null>(null);
@@ -1942,6 +2033,8 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
   const removeUtente = (id: string) => {
     if (!window.confirm("Remover este utente e todos os seus dados?")) return;
+    deleteUtenteRow(id);
+    delete _utenteSavedCache[id];
     setUtentes((prev) => prev.filter((u) => u.id !== id));
     if (openUtente?.id === id) setOpenUtente(null);
   };
@@ -4093,6 +4186,7 @@ function handleImprimirFolhaRosto(u: Utente) {
 
 function EnfermagemPage({ onBack }: { onBack: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
+  useEffect(() => { loadUtentesFromDB().then((list) => setUtentes(list as Utente[])); }, []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
   const [tab, setTab] = useState<"cardex" | "rosto">("cardex");
   const [search, setSearch] = useState("");
@@ -4313,7 +4407,7 @@ function FamilyPage({ code }: { code: string }) {
 
   useEffect(() => {
     Promise.all([
-      loadFromSupabase("utentes_data"),
+      loadUtentesFromDB().then((l) => ({ utentes: l })),
       loadFromSupabase("ementa_data"),
     ]).then(([utentesRow, ementaRow]) => {
       const utentes = utentesRow?.utentes ?? [];
@@ -5823,7 +5917,7 @@ export default function App() {
     Promise.all([
       loadFromSupabase("escala_data"),
       loadFromSupabase("stock_data"),
-      loadFromSupabase("utentes_data"),
+      loadUtentesFromDB().then((l) => ({ utentes: l })),
     ]).then(([escala, stock, utentesRow]) => {
       if (escala?.app_users?.length) setAppUsersList(escala.app_users);
       if (escala) {
@@ -6187,7 +6281,7 @@ export default function App() {
       const [escala, stock, utentesRow, ementaRow] = await Promise.all([
         loadFromSupabase("escala_data"),
         loadFromSupabase("stock_data"),
-        loadFromSupabase("utentes_data"),
+        loadUtentesFromDB().then((l) => ({ utentes: l })),
         loadFromSupabase("ementa_data"),
       ]);
       const backup = {
@@ -7048,7 +7142,7 @@ export default function App() {
   const handleGerarRelatorioERPI = async () => {
     const anoRef = year;
     // Carregar utentes do Supabase
-    const row = await loadFromSupabase("utentes_data").catch(() => null);
+    const row = { utentes: await loadUtentesFromDB().catch(() => []) };
     const utentesData: Utente[] = row?.utentes ?? [];
     const totalUtentes = utentesData.length;
 
