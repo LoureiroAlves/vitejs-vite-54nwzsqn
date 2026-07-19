@@ -2,6 +2,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -242,16 +243,12 @@ async function saveToSupabase(table: string, data: any): Promise<void> {
 // ---------- Supabase Storage para documentos de utentes ----------
 async function uploadUtenteDoc(utenteId: string, file: File): Promise<string | null> {
   try {
-    const path = `${utenteId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    const rand = Math.random().toString(36).slice(2, 8);
+    const path = `${utenteId}/${Date.now()}_${rand}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const contentType = file.type || (file.name.endsWith(".pdf") ? "application/pdf" : file.name.match(/\.(jpg|jpeg)$/i) ? "image/jpeg" : file.name.endsWith(".png") ? "image/png" : "application/octet-stream");
-    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/utentes-docs/${path}`, {
+    // Upload através da função no servidor (chave secreta) — o site já não escreve direto no Storage
+    const res = await fetch(`/api/api/upload?path=${encodeURIComponent(path)}&contentType=${encodeURIComponent(contentType)}`, {
       method: "POST",
-      headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": contentType,
-        "x-upsert": "true",
-      },
       body: file,
     });
     if (!res.ok) {
@@ -259,7 +256,8 @@ async function uploadUtenteDoc(utenteId: string, file: File): Promise<string | n
       console.error("Upload falhou:", res.status, err);
       return null;
     }
-    return `${SUPABASE_URL}/storage/v1/object/public/utentes-docs/${path}`;
+    // Devolve um link que passa pela função /api/file (gera link temporário assinado)
+    return `/api/api/file?p=${encodeURIComponent(path)}`;
   } catch (e) {
     console.error("uploadUtenteDoc erro:", e);
     return null;
