@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -4188,7 +4189,7 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   useEffect(() => { loadUtentesFromDB().then((list) => setUtentes(list as Utente[])); }, []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
-  const [tab, setTab] = useState<"cardex" | "rosto">("cardex");
+  const [tab, setTab] = useState<"cardex" | "rosto" | "registo">("cardex");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -4198,6 +4199,86 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
   const updateUtente = (id: string, updates: Partial<Utente>) => {
     setUtentes((prev) => prev.map((u) => u.id === id ? { ...u, ...updates } : u));
     if (openUtente?.id === id) setOpenUtente((prev) => prev ? { ...prev, ...updates } : prev);
+  };
+
+  // ---------- Registo diário (partilhado com a página de Utentes) ----------
+  const [newLogText, setNewLogText] = useState("");
+  const todayStr = new Date().toLocaleDateString("pt-PT");
+  const [editingLogIdx, setEditingLogIdx] = useState<number | null>(null);
+  const [editingLogText, setEditingLogText] = useState("");
+  const [unlockedLogs, setUnlockedLogs] = useState<Set<string>>(new Set());
+  const EDIT_PASSWORD = "UTENTES";
+
+  const isLogEditable = (utenteId: string, idx: number, logDate: string) => {
+    if (logDate === todayStr) return true;
+    return unlockedLogs.has(`${utenteId}-${idx}`);
+  };
+
+  const requestUnlock = (utenteId: string, idx: number) => {
+    const pwd = window.prompt("Este registo é de um dia anterior. Introduza a password de autorização para editar:");
+    if (pwd === null) return false;
+    if (pwd === EDIT_PASSWORD) {
+      setUnlockedLogs((prev) => new Set(prev).add(`${utenteId}-${idx}`));
+      return true;
+    }
+    alert("❌ Password incorreta.");
+    return false;
+  };
+
+  const saveEditedLog = (utenteId: string, idx: number) => {
+    setUtentes((prev) => prev.map((uu) => {
+      if (uu.id !== utenteId) return uu;
+      const logs = [...(uu.dailyLogs || [])];
+      logs[idx] = { ...logs[idx], text: editingLogText };
+      const updated = { ...uu, dailyLogs: logs };
+      if (openUtente?.id === utenteId) setOpenUtente(updated);
+      return updated;
+    }));
+    setEditingLogIdx(null);
+    setEditingLogText("");
+  };
+
+  const addDailyLog = (utenteId: string) => {
+    if (!newLogText.trim()) return;
+    setUtentes((prev) => prev.map((u) => {
+      if (u.id !== utenteId) return u;
+      const logs = u.dailyLogs || [];
+      const existingTodayIdx = logs.findIndex((l) => l.date === todayStr);
+      let newLogs;
+      if (existingTodayIdx >= 0) {
+        // Já existe registo de hoje — acrescenta (não substitui)
+        newLogs = [...logs];
+        newLogs[existingTodayIdx] = { ...newLogs[existingTodayIdx], text: newLogs[existingTodayIdx].text + "\n\n" + newLogText.trim() };
+      } else {
+        newLogs = [{ date: todayStr, text: newLogText.trim() }, ...logs];
+      }
+      const updated = { ...u, dailyLogs: newLogs };
+      if (openUtente?.id === utenteId) setOpenUtente(updated);
+      return updated;
+    }));
+    setNewLogText("");
+  };
+
+  const printDailyLog = (utente: Utente, log: { date: string; text: string }) => {
+    const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Registo — ${utente.name} — ${log.date}</title>
+    <style>
+      @page { size: A4; margin: 20mm; }
+      body { font-family: Arial, sans-serif; color: #2A241C; }
+      h1 { font-size: 18px; margin: 0 0 4px; }
+      .sub { font-size: 12px; color: #888; margin: 0 0 20px; }
+      .date-badge { display: inline-block; background: #2A241C; color: #F5B944; border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: bold; margin-bottom: 16px; }
+      .text-box { font-size: 14px; line-height: 1.8; white-space: pre-wrap; border: 1px solid #E4DED3; border-radius: 8px; padding: 18px; }
+    </style></head><body>
+    <h1>Registo do Dia — ${utente.name}</h1>
+    <p class="sub">Associação Oliveirense de Socorros Mútuos · Gerado em ${new Date().toLocaleDateString("pt-PT")}</p>
+    <div class="date-badge">${log.date}</div>
+    <div class="text-box">${log.text.replace(/\n/g, "<br>")}</div>
+    </body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
   };
 
   const filtered = utentes.filter((u) => u.name.toLowerCase().includes(search.toLowerCase()));
@@ -4220,11 +4301,175 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
           </div>
 
           <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-            {([["cardex", "🗂️ Cardex"], ["rosto", "📋 Folha de Rosto"]] as const).map(([key, label]) => (
+            {([["cardex", "🗂️ Cardex"], ["rosto", "📋 Folha de Rosto"], ["registo", "📝 Registo diário"]] as const).map(([key, label]) => (
               <button key={key} onClick={() => setTab(key)} style={{ border: "none", background: tab === key ? "#1F4D2E" : "#FFFFFF", color: tab === key ? "#FFFFFF" : "#6B6358", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>{label}</button>
             ))}
           </div>
 
+            {tab === "registo" && (
+              <div style={{ maxWidth: 700, margin: "0 auto" }}>
+                <div style={{ marginBottom: 16 }}>
+                  <textarea rows={3} value={newLogText} onChange={(e) => setNewLogText(e.target.value)}
+                    placeholder={`Escrever registo de hoje (${todayStr})...`}
+                    style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const, marginBottom: 8 }} />
+                  <button onClick={() => addDailyLog(u.id)} disabled={!newLogText.trim()}
+                    style={{ background: newLogText.trim() ? "#2A241C" : "#E4DED3", color: newLogText.trim() ? "#F5B944" : "#A39B8E", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 700, cursor: newLogText.trim() ? "pointer" : "default", fontFamily: "'Inter', sans-serif" }}>
+                    + Adicionar registo de hoje
+                  </button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+                  {(u.dailyLogs || []).map((log, idx) => {
+                    const editable = isLogEditable(u.id, idx, log.date);
+                    const isEditing = editingLogIdx === idx;
+                    return (
+                      <div key={idx} style={{ background: "#FFFFFF", borderRadius: 12, padding: "14px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70" }}>
+                            {log.date}{log.date === todayStr ? " (hoje)" : ""}
+                            {!editable && <span style={{ marginLeft: 5 }}>🔒</span>}
+                          </span>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            {isEditing ? (
+                              <>
+                                <button onClick={() => saveEditedLog(u.id, idx)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#3B6D11", fontSize: 14, fontWeight: 700 }}>✓</button>
+                                <button onClick={() => { setEditingLogIdx(null); setEditingLogText(""); }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC" }}>✕</button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={() => { if (editable || requestUnlock(u.id, idx)) { setEditingLogIdx(idx); setEditingLogText(log.text); } }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}>✏️</button>
+                                <button onClick={() => printDailyLog(u, log)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8A6A2E", fontSize: 13 }}>🖨️</button>
+                                <button onClick={() => {
+                                  const input = document.createElement("input"); input.type = "file";
+                                  input.onchange = async (ev: Event) => {
+                                    const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
+                                    const url = await uploadUtenteDoc(u.id + "_logs", file);
+                                    if (!url) { alert("❌ Erro ao fazer upload."); return; }
+                                    setUtentes((prev) => prev.map((uu) => {
+                                      if (uu.id !== u.id) return uu;
+                                      const logs = [...(uu.dailyLogs || [])];
+                                      logs[idx] = { ...logs[idx], attachments: [...(logs[idx].attachments || []), { name: file.name, url, type: file.type }] };
+                                      const updated = { ...uu, dailyLogs: logs };
+                                      if (openUtente?.id === u.id) setOpenUtente(updated);
+                                      return updated;
+                                    }));
+                                  };
+                                  document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                                }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#3A5A70", fontSize: 13 }} title="Adicionar foto/documento">📎</button>
+                                <button onClick={() => { if (!editable && !requestUnlock(u.id, idx)) return; if (!window.confirm("Remover este registo?")) return; setUtentes((prev) => prev.map((uu) => { if (uu.id !== u.id) return uu; const updated = { ...uu, dailyLogs: (uu.dailyLogs || []).filter((_, i) => i !== idx) }; if (openUtente?.id === u.id) setOpenUtente(updated); return updated; })); }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", fontSize: 12 }}>🗑️</button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {isEditing
+                          ? <textarea rows={3} value={editingLogText} onChange={(e) => setEditingLogText(e.target.value)} autoFocus style={{ width: "100%", border: "1px solid #B8CCE0", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", resize: "vertical" as const, boxSizing: "border-box" as const }} />
+                          : <div style={{ fontSize: 14, color: "#2A241C", whiteSpace: "pre-wrap" as const, lineHeight: 1.6 }}>{log.text}</div>
+                        }
+                        {/* Fotos do dia */}
+                        <div style={{ marginTop: 8 }}>
+                          {(log.photos || []).length > 0 && (
+                            <>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: "#6B6358", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>📷 Fotos</div>
+                              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+                                {log.photos!.map((photo, pi) => (
+                                  <div key={pi} style={{ position: "relative" as const }}>
+                                    <a href={photo.url} target="_blank" rel="noopener noreferrer">
+                                      <img src={photo.url} alt="" style={{ width: 80, height: 80, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} />
+                                    </a>
+                                    <button onClick={() => {
+                                      setUtentes((prev) => prev.map((uu) => {
+                                        if (uu.id !== u.id) return uu;
+                                        const logs = [...(uu.dailyLogs || [])];
+                                        logs[idx] = { ...logs[idx], photos: (logs[idx].photos || []).filter((_, i) => i !== pi) };
+                                        const updated = { ...uu, dailyLogs: logs };
+                                        if (openUtente?.id === u.id) setOpenUtente(updated);
+                                        return updated;
+                                      }));
+                                    }} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                          <button onClick={async () => {
+                            const input = document.createElement("input"); input.type = "file"; input.accept = "image/*";
+                            input.onchange = async (ev: Event) => {
+                              const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
+                              const url = await uploadUtenteDoc(u.id + "_log_" + log.date.replace(/\//g, "-"), file);
+                              if (!url) { alert("❌ Erro ao fazer upload."); return; }
+                              setUtentes((prev) => prev.map((uu) => {
+                                if (uu.id !== u.id) return uu;
+                                const logs = [...(uu.dailyLogs || [])];
+                                logs[idx] = { ...logs[idx], photos: [...(logs[idx].photos || []), { url, uploadedAt: new Date().toISOString() }] };
+                                const updated = { ...uu, dailyLogs: logs };
+                                if (openUtente?.id === u.id) setOpenUtente(updated);
+                                return updated;
+                              }));
+                            };
+                            document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                          }} style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", color: "#3A5A70", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>
+                            📷 {(log.photos || []).length > 0 ? "+ Adicionar foto" : "Adicionar fotos do dia"}
+                          </button>
+                        </div>
+                        {/* Documentos/anexos */}
+                        {(log.attachments || []).length > 0 && (
+                          <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                            {log.attachments!.map((att, ai) => (
+                              <div key={ai} style={{ position: "relative" as const }}>
+                                {att.type.startsWith("image/")
+                                  ? <a href={att.url} target="_blank" rel="noopener noreferrer">
+                                      <img src={att.url} alt={att.name} style={{ width: 80, height: 80, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} />
+                                    </a>
+                                  : <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, background: "#F7F5F0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#3A5A70", textDecoration: "none" }}>
+                                      📄 {att.name}
+                                    </a>
+                                }
+                                <button onClick={() => {
+                                  setUtentes((prev) => prev.map((uu) => {
+                                    if (uu.id !== u.id) return uu;
+                                    const logs = [...(uu.dailyLogs || [])];
+                                    logs[idx] = { ...logs[idx], attachments: (logs[idx].attachments || []).filter((_, i) => i !== ai) };
+                                    const updated = { ...uu, dailyLogs: logs };
+                                    if (openUtente?.id === u.id) setOpenUtente(updated);
+                                    return updated;
+                                  }));
+                                }} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Documentos da aba Registo */}
+                <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#6B6358", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>📎 Documentos do Registo</div>
+                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8, marginBottom: 10 }}>
+                    {(u.attachmentsRegisto || []).map((att, ai) => (
+                      <div key={ai} style={{ position: "relative" as const }}>
+                        {att.type.startsWith("image/")
+                          ? <a href={att.url} target="_blank" rel="noopener noreferrer"><img src={att.url} alt={att.name} style={{ width: 72, height: 72, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} /></a>
+                          : <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, background: "#F7F5F0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#3A5A70", textDecoration: "none" }}>📄 {att.name}</a>
+                        }
+                        <button onClick={() => updateUtente(u.id, { attachmentsRegisto: (u.attachmentsRegisto || []).filter((_, i) => i !== ai) })} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => {
+                    const input = document.createElement("input"); input.type = "file";
+                    input.onchange = async (ev: Event) => {
+                      const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
+                      const url = await uploadUtenteDoc(u.id + "_registo", file);
+                      if (url) updateUtente(u.id, { attachmentsRegisto: [...(u.attachmentsRegisto || []), { name: file.name, url, type: file.type }] });
+                    };
+                    document.body.appendChild(input); input.click(); document.body.removeChild(input);
+                  }} style={{ background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+                    + Adicionar documento
+                  </button>
+                </div>
+              </div>
+            )}
           {tab === "cardex" && (() => {
             const cardex = u.cardex || { esquemaTerapeutico: [], sos: [] };
             const updateCardex = (patch: any) => updateUtente(u.id, { cardex: { ...cardex, ...patch } });
