@@ -1,9 +1,10 @@
+
 // api/file.js
 // Serve um ficheiro do Storage privado através de um LINK TEMPORÁRIO assinado (1h).
-// Uso: /api/file?p=<caminho>            (lado do pessoal)
-//      /api/file?p=<caminho>&familia=<codigo>   (portal da família — validado)
-// Para ficheiros de família (caminho com "_family/"), o código da família é OBRIGATÓRIO
-// e tem de corresponder ao utente dono do ficheiro.
+// Uso: /api/file?p=<caminho>
+// Segurança (Fase 1): o bucket deixa de ser público/listável e os caminhos têm uma
+// parte aleatória impossível de adivinhar. A autorização por família/utente fica
+// para a Fase 3 (endpoints próprios dos portais).
 export const config = { runtime: "edge" };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://kfbuvbtdsfrkzrcrwifs.supabase.co";
@@ -15,23 +16,7 @@ export default async function handler(req) {
 
   const url = new URL(req.url);
   const path = url.searchParams.get("p");
-  const familia = url.searchParams.get("familia");
   if (!path || path.includes("..")) return new Response("Caminho inválido", { status: 400 });
-
-  // Ficheiros da família: exigem código válido e correspondente ao utente dono
-  const isFamily = path.includes("_family/");
-  if (isFamily) {
-    if (!familia) return new Response("Acesso negado", { status: 403 });
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/utente?select=id,data`,
-      { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } }
-    );
-    const rows = r.ok ? await r.json() : [];
-    const dono = rows.find((x) => x && x.data && x.data.familyCode === familia);
-    if (!dono || !path.startsWith(`${dono.id}_family/`)) {
-      return new Response("Acesso negado", { status: 403 });
-    }
-  }
 
   // Gerar link temporário assinado (válido 1 hora)
   const sign = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/${path}`, {
