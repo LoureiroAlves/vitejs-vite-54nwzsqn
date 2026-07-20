@@ -12,6 +12,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -3783,7 +3784,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       </div>
                     </div>
                     {fa.redeSuporte?.encaminhadoPorOrganizacao && (
-                      <input value={fa.redeSuporte?.qualOrganizacao || ""} onChange={(e) => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), qualOrganizacao: e.target.value } })} placeholder="Qual organização?" style={{ ...inputStyle, marginBottom: 10 }} />
+                      <textarea value={fa.redeSuporte?.qualOrganizacao || ""} onChange={(e) => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), qualOrganizacao: e.target.value } })} placeholder="Qual organização?" rows={2} style={{ ...inputStyle, marginBottom: 10, width: "100%", resize: "vertical" as const, boxSizing: "border-box" as const }} />
                     )}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 12, color: "#2A241C" }}>Necessita de apoio para atividades básicas de vida diária?</span>
