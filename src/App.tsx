@@ -10,6 +10,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -3703,7 +3704,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                           </div>
                         </div>
                         {(fa.estadoSaude as any)?.[key] && (
-                          <input value={(fa.estadoSaude as any)?.[especKey] || ""} onChange={(e) => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), [especKey]: e.target.value } })} placeholder="Especifique..." style={{ ...inputStyle, marginTop: 6 }} />
+                          <textarea value={(fa.estadoSaude as any)?.[especKey] || ""} onChange={(e) => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), [especKey]: e.target.value } })} placeholder="Especifique..." rows={2} style={{ ...inputStyle, marginTop: 6, width: "100%", resize: "vertical" as const, boxSizing: "border-box" as const }} />
                         )}
                       </div>
                     ))}
