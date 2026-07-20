@@ -11,6 +11,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -1322,7 +1323,7 @@ function printDailyLogDay(utente: any, dateStr: string) {
   setTimeout(() => w.print(), 300);
 }
 
-const PRINT_CSS = "@page{size:A4;margin:20mm}body{font-family:Arial,sans-serif;color:#2A241C}h1{font-size:18px;margin:0 0 4px}.sub{font-size:12px;color:#888;margin:0 0 18px}.sec{margin-bottom:16px}.sec h2{font-size:14px;color:#1F4D2E;border-bottom:1px solid #E4DED3;padding-bottom:4px;margin:0 0 8px}table{width:100%;border-collapse:collapse;font-size:13px}td,th{border:1px solid #E4DED3;padding:6px 8px;text-align:left;vertical-align:top}th{background:#F7F5F0}td.k{width:38%;color:#6B6358;font-weight:bold}.txt{font-size:14px;line-height:1.7;white-space:pre-wrap}.vazio{color:#999;font-style:italic}";
+const PRINT_CSS = "@page{size:A4;margin:20mm}body{font-family:Arial,sans-serif;color:#2A241C}h1{font-size:18px;margin:0 0 4px}.sub{font-size:12px;color:#888;margin:0 0 18px}.sec{margin-bottom:16px}.sec h2{font-size:14px;color:#1F4D2E;border-bottom:1px solid #E4DED3;padding-bottom:4px;margin:0 0 8px}table{width:100%;border-collapse:collapse;font-size:13px}td,th{border:1px solid #E4DED3;padding:6px 8px;text-align:left;vertical-align:top;word-break:break-word;overflow-wrap:break-word}th{background:#F7F5F0}td.k{width:38%;color:#6B6358;font-weight:bold}.txt{font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word}.vazio{color:#999;font-style:italic}";
 function _escHtml(s: any) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
 function printUtenteDoc(titulo: string, nome: string, corpo: string) {
   const html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>' + _escHtml(titulo) + '</title><style>' + PRINT_CSS + '</style></head><body><h1>' + _escHtml(titulo) + ' — ' + _escHtml(nome) + '</h1><p class="sub">Associação Oliveirense de Socorros Mútuos · Impresso em ' + new Date().toLocaleDateString("pt-PT") + '</p>' + corpo + '</body></html>';
@@ -2299,10 +2300,10 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
       .sub { font-size: 13px; color: #6B6358; margin: 0 0 24px; }
       .secao { background: #FFFFFF; border: 1px solid #E4DED3; border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; }
       .secao h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; color: #1F4D2E; margin: 0 0 12px; border-bottom: 2px solid #1F4D2E; padding-bottom: 6px; }
-      table.tbl { width: 100%; border-collapse: collapse; }
+      table.tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
       table.tbl td, table.tbl th { padding: 6px 8px; font-size: 12px; border-bottom: 1px solid #EFEAE2; text-align: left; vertical-align: top; }
       table.tbl td.lbl, table.tbl th { font-weight: 700; color: #8A6A2E; width: 45%; }
-      table.tbl td.val { color: #2A241C; }
+      table.tbl td.val { color: #2A241C; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }
       .vazio { font-size: 12px; color: #A39B8E; font-style: italic; margin: 0; }
       .fundamentacao { font-size: 12px; line-height: 1.7; white-space: pre-wrap; }
     </style></head><body>
