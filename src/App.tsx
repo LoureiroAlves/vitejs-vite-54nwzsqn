@@ -13,6 +13,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -4206,7 +4207,7 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
     const updateFolhaRosto = (patch: any) => updateUtente(u.id, { folhaRosto: { ...fr, ...patch } });
 
     return (
-      <div style={{ minHeight: "100vh", padding: "24px 20px 60px" }}>
+      <div style={{ minHeight: "100vh", padding: "24px 20px 60px", animation: "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1) both" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
             <button onClick={() => setOpenUtente(null)} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 10, padding: "8px 14px", cursor: "pointer", color: "#6B6358", fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>← Voltar à lista</button>
