@@ -6,6 +6,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -3014,6 +3015,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               />
             </div>
             <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => handleImprimirProcesso(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Imprimir</button>
               <button onClick={() => handleGetFamilyLink(u)} style={{ background: "#3A5A70", color: "white", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🔗 Família</button>
               <button onClick={() => setOpenUtente(null)} style={{ background: "transparent", border: "1px solid #4A3E30", borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: "#C9C2B5" }}><IconX size={16} /></button>
             </div>
@@ -3812,12 +3814,6 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     <textarea rows={8} value={fa.fundamentacaoTecnica || ""} onChange={(e) => updateFicha({ fundamentacaoTecnica: e.target.value })} placeholder="Histórico clínico e social, percurso de vida, contexto familiar..." style={{ ...inputStyle, resize: "vertical" as const }} />
                   </div>
 
-                  <button
-                    onClick={() => handleImprimirProcesso(u)}
-                    style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 12, padding: "14px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
-                  >
-                    🖨️ Imprimir processo completo
-                  </button>
 
                 </div>
               );
@@ -4147,12 +4143,20 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
             {([["cardex", "🗂️ Cardex"], ["rosto", "📋 Folha de Rosto"], ["registo", "📝 Registo diário"]] as const).map(([key, label]) => (
               <button key={key} onClick={() => setTab(key)} style={{ border: "none", background: tab === key ? "#1F4D2E" : "#FFFFFF", color: tab === key ? "#FFFFFF" : "#6B6358", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>{label}</button>
             ))}
-              <select defaultValue="" onChange={(e) => { const dd = e.target.value; e.currentTarget.value = ""; if (dd) printDailyLogDay(u, dd); }} title="Imprimir registo de um dia" style={{ marginLeft: "auto", border: "1px solid #E4DED3", borderRadius: 10, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", background: "#FFFFFF", color: "#2A241C", cursor: "pointer" }}>
-                <option value="">🖨️ Imprimir dia…</option>
+            {tab === "cardex" && (
+              <button onClick={() => handleImprimirCardex(u)} style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Imprimir Cardex</button>
+            )}
+            {tab === "rosto" && (
+              <button onClick={() => handleImprimirFolhaRosto(u)} style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Imprimir Folha de Rosto</button>
+            )}
+            {tab === "registo" && (
+              <select defaultValue="" onChange={(e) => { const dd = e.target.value; e.currentTarget.value = ""; if (dd) printDailyLogDay(u, dd); }} title="Imprimir registo de um dia" style={{ marginLeft: "auto", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'Inter', sans-serif", cursor: "pointer" }}>
+                <option value="" style={{ color: "#2A241C" }}>🖨️ Imprimir dia…</option>
                 {[...new Set((u.dailyLogs || []).map((l) => l.date))].map((dd) => (
-                  <option key={dd} value={dd}>{dd}</option>
+                  <option key={dd} value={dd} style={{ color: "#2A241C" }}>{dd}</option>
                 ))}
               </select>
+            )}
           </div>
 
             {tab === "registo" && (
@@ -4368,9 +4372,6 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
                   <div style={boxTitle}>🆘 SOS</div>
                   {renderTabela(cardex.sos || [], "sos")}
                 </div>
-                <button onClick={() => handleImprimirCardex(u)} style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 12, padding: "14px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
-                  🖨️ Imprimir Cardex
-                </button>
               </div>
             );
           })()}
@@ -4429,9 +4430,6 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
                 <textarea rows={3} value={fr.outrosDados || ""} onChange={(e) => updateFolhaRosto({ outrosDados: e.target.value })} style={{ ...inputStyle, resize: "vertical" as const }} />
               </div>
 
-              <button onClick={() => handleImprimirFolhaRosto(u)} style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 12, padding: "14px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
-                🖨️ Imprimir Folha de Rosto
-              </button>
             </div>
           )}
         </div>
