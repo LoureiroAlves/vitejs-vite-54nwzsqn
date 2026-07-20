@@ -8,6 +8,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -1317,6 +1318,36 @@ function printDailyLogDay(utente: any, dateStr: string) {
   w.document.open(); w.document.write(html); w.document.close();
   w.focus();
   setTimeout(() => w.print(), 300);
+}
+
+const PRINT_CSS = "@page{size:A4;margin:20mm}body{font-family:Arial,sans-serif;color:#2A241C}h1{font-size:18px;margin:0 0 4px}.sub{font-size:12px;color:#888;margin:0 0 18px}.sec{margin-bottom:16px}.sec h2{font-size:14px;color:#1F4D2E;border-bottom:1px solid #E4DED3;padding-bottom:4px;margin:0 0 8px}table{width:100%;border-collapse:collapse;font-size:13px}td,th{border:1px solid #E4DED3;padding:6px 8px;text-align:left;vertical-align:top}th{background:#F7F5F0}td.k{width:38%;color:#6B6358;font-weight:bold}.txt{font-size:14px;line-height:1.7;white-space:pre-wrap}.vazio{color:#999;font-style:italic}";
+function _escHtml(s: any) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+function printUtenteDoc(titulo: string, nome: string, corpo: string) {
+  const html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>' + _escHtml(titulo) + '</title><style>' + PRINT_CSS + '</style></head><body><h1>' + _escHtml(titulo) + ' — ' + _escHtml(nome) + '</h1><p class="sub">Associação Oliveirense de Socorros Mútuos · Impresso em ' + new Date().toLocaleDateString("pt-PT") + '</p>' + corpo + '</body></html>';
+  const w = window.open("", "_blank");
+  if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+  w.document.open(); w.document.write(html); w.document.close(); w.focus();
+  setTimeout(() => w.print(), 300);
+}
+function printGeral(u: any) {
+  const row = (l: any, v: any) => '<tr><td class="k">' + _escHtml(l) + '</td><td>' + (_escHtml(v) || "—") + '</td></tr>';
+  const sec = (t: any, arr: any[]) => '<div class="sec"><h2>' + t + '</h2><table>' + arr.map((p: any) => row(p[0], p[1])).join("") + '</table></div>';
+  const ident = [["Quarto", u.room],["Data de entrada", u.entryDate],["Data de nascimento", u.birthDate],["Nome pelo qual é tratado(a)", u.nomeTratado],["Sexo", u.sexo],["Grupo sanguíneo", u.grupoSanguineo],["Estado civil", u.estadoCivil],["Naturalidade", u.naturalidade],["Nacionalidade", u.nacionalidade]];
+  const docs = [["Nº do CC", u.ccNumber],["Validade do CC", u.ccValidity],["NIF", u.nif],["Nº Segurança Social", u.ssNumero],["Nº Utente de Saúde", u.numeroUtenteSaude],["Centro de Saúde", u.centroSaude],["Médico assistente", u.medicoAssistente],["Data de inscrição", u.dataInscricao],["Nº de inscrição", u.numeroInscricao]];
+  const morada = [["Código Postal", u.codigoPostal],["Localidade", u.localidade],["Concelho", u.concelho],["Distrito", u.distrito]];
+  const familia = [["Nome do familiar", u.familyContact],["Parentesco", u.familyParentesco],["Telefone", u.familyPhone],["Email", u.familyEmail]];
+  printUtenteDoc("Dados Gerais", u.name, sec("Identificação", ident) + sec("Documentos e Saúde", docs) + sec("Morada", morada) + sec("Contacto Familiar", familia));
+}
+function printMedicacao(u: any) {
+  const meds = (u.medications || []) as any[];
+  const rows = meds.map((m: any) => '<tr><td>' + _escHtml(m.name) + '</td><td>' + (_escHtml(m.administration) || "—") + '</td><td>' + (_escHtml(m.note) || "—") + '</td></tr>').join("");
+  const table = meds.length ? '<table><thead><tr><th>Medicamento</th><th>Administração</th><th>Nota</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<p class="vazio">Sem medicação registada.</p>';
+  const notas = u.medicationNotes ? '<div class="sec"><h2>Notas gerais</h2><p class="txt">' + _escHtml(u.medicationNotes).replace(/\n/g, "<br>") + '</p></div>' : "";
+  printUtenteDoc("Medicação", u.name, '<div class="sec"><h2>Medicação</h2>' + table + '</div>' + notas);
+}
+function printCuidados(u: any) {
+  const bloco = (t: any, v: any) => '<div class="sec"><h2>' + t + '</h2><p class="txt">' + (_escHtml(v).replace(/\n/g, "<br>") || "—") + '</p></div>';
+  printUtenteDoc("Cuidados", u.name, bloco("Cuidados de Higiene", u.hygieneNotes) + bloco("Alimentação", u.feedingNotes) + bloco("Outros", u.otherNotes));
 }
 
 function logKey(l: any): string {
@@ -3016,7 +3047,11 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               />
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => handleImprimirProcesso(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Imprimir</button>
+              {utenteTab === "geral" && (<button onClick={() => printGeral(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Geral</button>)}
+              {utenteTab === "registo" && (<select defaultValue="" onChange={(e) => { const dd = e.target.value; e.currentTarget.value = ""; if (dd) printDailyLogDay(u, dd); }} title="Imprimir registo de um dia" style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif", cursor: "pointer" }}><option value="">🖨️ Dia…</option>{[...new Set((u.dailyLogs || []).map((l) => l.date))].map((dd) => (<option key={dd} value={dd}>{dd}</option>))}</select>)}
+              {utenteTab === "medicacao" && (<button onClick={() => printMedicacao(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Medicação</button>)}
+              {utenteTab === "cuidados" && (<button onClick={() => printCuidados(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Cuidados</button>)}
+              {utenteTab === "admissao" && (<button onClick={() => handleImprimirProcesso(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Ficha</button>)}
               <button onClick={() => handleGetFamilyLink(u)} style={{ background: "#3A5A70", color: "white", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🔗 Família</button>
               <button onClick={() => setOpenUtente(null)} style={{ background: "transparent", border: "1px solid #4A3E30", borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: "#C9C2B5" }}><IconX size={16} /></button>
             </div>
