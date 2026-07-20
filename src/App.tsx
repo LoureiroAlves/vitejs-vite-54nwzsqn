@@ -1403,7 +1403,7 @@ interface Utente {
   notes?: string;
   photo?: string;
   familyCode?: string;
-  dailyLogs?: { date: string; text: string; author?: string; attachments?: { name: string; url: string; type: string }[]; photos?: { url: string; uploadedAt: string }[] }[];
+  dailyLogs?: { id?: string; date: string; time?: string; text: string; author?: string; attachments?: { name: string; url: string; type: string }[]; photos?: { url: string; uploadedAt: string }[] }[];
   files?: { name: string; type: string; data: string; url?: string; uploadedAt: string }[];
   // Dados do Cartão de Cidadão
   ccNumber?: string;
