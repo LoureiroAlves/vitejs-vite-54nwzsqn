@@ -3,6 +3,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -1295,6 +1296,7 @@ function loadUtentesData(): any {
 }
 
 // Chave estável de cada registo diário (para não se perderem ao juntar)
+let _appCurrentUserName = "";
 function logKey(l: any): string {
   return l?.id || `${l?.date || ""}|${(l?.text || "").slice(0, 60)}`;
 }
@@ -2627,19 +2629,16 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
   const addDailyLog = (utenteId: string) => {
     if (!newLogText.trim()) return;
+    const nova = {
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      date: todayStr,
+      time: new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" }),
+      author: _appCurrentUserName || "",
+      text: newLogText.trim(),
+    };
     setUtentes((prev) => prev.map((u) => {
       if (u.id !== utenteId) return u;
-      const logs = u.dailyLogs || [];
-      const existingTodayIdx = logs.findIndex((l) => l.date === todayStr);
-      let newLogs;
-      if (existingTodayIdx >= 0) {
-        // Já existe registo de hoje — acrescenta (não substitui)
-        newLogs = [...logs];
-        newLogs[existingTodayIdx] = { ...newLogs[existingTodayIdx], text: newLogs[existingTodayIdx].text + "\n\n" + newLogText.trim() };
-      } else {
-        newLogs = [{ date: todayStr, text: newLogText.trim() }, ...logs];
-      }
-      const updated = { ...u, dailyLogs: newLogs };
+      const updated = { ...u, dailyLogs: [nova, ...(u.dailyLogs || [])] };
       if (openUtente?.id === utenteId) setOpenUtente(updated);
       return updated;
     }));
@@ -3273,7 +3272,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       <div key={idx} style={{ background: "#FFFFFF", borderRadius: 12, padding: "14px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70" }}>
-                            {log.date}{log.date === todayStr ? " (hoje)" : ""}
+                            {log.date}{log.time ? " · " + log.time : ""}{log.date === todayStr ? " (hoje)" : ""}{log.author ? " — " + log.author : ""}
                             {!editable && <span style={{ marginLeft: 5 }}>🔒</span>}
                           </span>
                           <div style={{ display: "flex", gap: 6 }}>
@@ -4067,19 +4066,16 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
 
   const addDailyLog = (utenteId: string) => {
     if (!newLogText.trim()) return;
+    const nova = {
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      date: todayStr,
+      time: new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" }),
+      author: _appCurrentUserName || "",
+      text: newLogText.trim(),
+    };
     setUtentes((prev) => prev.map((u) => {
       if (u.id !== utenteId) return u;
-      const logs = u.dailyLogs || [];
-      const existingTodayIdx = logs.findIndex((l) => l.date === todayStr);
-      let newLogs;
-      if (existingTodayIdx >= 0) {
-        // Já existe registo de hoje — acrescenta (não substitui)
-        newLogs = [...logs];
-        newLogs[existingTodayIdx] = { ...newLogs[existingTodayIdx], text: newLogs[existingTodayIdx].text + "\n\n" + newLogText.trim() };
-      } else {
-        newLogs = [{ date: todayStr, text: newLogText.trim() }, ...logs];
-      }
-      const updated = { ...u, dailyLogs: newLogs };
+      const updated = { ...u, dailyLogs: [nova, ...(u.dailyLogs || [])] };
       if (openUtente?.id === utenteId) setOpenUtente(updated);
       return updated;
     }));
@@ -4152,7 +4148,7 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
                       <div key={idx} style={{ background: "#FFFFFF", borderRadius: 12, padding: "14px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: "#3A5A70" }}>
-                            {log.date}{log.date === todayStr ? " (hoje)" : ""}
+                            {log.date}{log.time ? " · " + log.time : ""}{log.date === todayStr ? " (hoje)" : ""}{log.author ? " — " + log.author : ""}
                             {!editable && <span style={{ marginLeft: 5 }}>🔒</span>}
                           </span>
                           <div style={{ display: "flex", gap: 6 }}>
@@ -5899,6 +5895,7 @@ export default function App() {
     : null;
 
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  _appCurrentUserName = currentUser?.username || "";
   const [appUsersList, setAppUsersList] = useState<AppUser[]>(DEFAULT_APP_USERS);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [changePassCurrent, setChangePassCurrent] = useState("");
