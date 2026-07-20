@@ -4,6 +4,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -1297,6 +1298,24 @@ function loadUtentesData(): any {
 
 // Chave estável de cada registo diário (para não se perderem ao juntar)
 let _appCurrentUserName = "";
+function printDailyLogDay(utente: any, dateStr: string) {
+  const esc = (s: any) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const logs = ((utente.dailyLogs || []) as any[]).filter((l) => l.date === dateStr);
+  logs.sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")));
+  const itens = logs.map((l) =>
+    '<div class="nota"><div class="cab"><span class="hora">' + esc(l.time) + '</span>' +
+    (l.author ? '<span class="autor">' + esc(l.author) + '</span>' : '') +
+    '</div><div class="texto">' + esc(l.text).replace(/\n/g, "<br>") + '</div></div>'
+  ).join("");
+  const body = itens || '<div class="vazio">Sem registos neste dia.</div>';
+  const html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Registo</title><style>@page{size:A4;margin:20mm}body{font-family:Arial,sans-serif;color:#2A241C}h1{font-size:18px;margin:0 0 4px}.sub{font-size:12px;color:#888;margin:0 0 16px}.badge{display:inline-block;background:#2A241C;color:#F5B944;border-radius:20px;padding:6px 16px;font-size:13px;font-weight:bold;margin-bottom:16px}.nota{border:1px solid #E4DED3;border-radius:8px;padding:12px 14px;margin-bottom:10px}.cab{font-size:12px;color:#3A5A70;font-weight:bold;margin-bottom:6px}.hora{background:#EEF3F7;border-radius:10px;padding:2px 8px;margin-right:8px}.autor{color:#6B6358}.texto{font-size:14px;line-height:1.7;white-space:pre-wrap}.vazio{color:#999;font-style:italic}</style></head><body><h1>Registo Diário — ' + esc(utente.name) + '</h1><p class="sub">Associação Oliveirense de Socorros Mútuos · Impresso em ' + new Date().toLocaleDateString("pt-PT") + '</p><div class="badge">' + esc(dateStr) + '</div>' + body + '</body></html>';
+  const w = window.open("", "_blank");
+  if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 300);
+}
+
 function logKey(l: any): string {
   return l?.id || `${l?.date || ""}|${(l?.text || "").slice(0, 60)}`;
 }
@@ -4139,6 +4158,15 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
                     style={{ background: newLogText.trim() ? "#2A241C" : "#E4DED3", color: newLogText.trim() ? "#F5B944" : "#A39B8E", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 700, cursor: newLogText.trim() ? "pointer" : "default", fontFamily: "'Inter', sans-serif" }}>
                     + Adicionar registo de hoje
                   </button>
+                </div>
+                <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
+                  <span style={{ fontSize: 12, color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>🖨️ Imprimir registo de um dia:</span>
+                  <select defaultValue="" onChange={(e) => { const dd = e.target.value; e.currentTarget.value = ""; if (dd) printDailyLogDay(u, dd); }} style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", background: "#FFFFFF", color: "#2A241C", cursor: "pointer" }}>
+                    <option value="">Escolher dia…</option>
+                    {[...new Set((u.dailyLogs || []).map((l) => l.date))].map((dd) => (
+                      <option key={dd} value={dd}>{dd}</option>
+                    ))}
+                  </select>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
                   {(u.dailyLogs || []).map((log, idx) => {
