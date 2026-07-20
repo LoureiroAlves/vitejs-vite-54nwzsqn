@@ -9,6 +9,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -1350,6 +1351,28 @@ function printCuidados(u: any) {
   printUtenteDoc("Cuidados", u.name, bloco("Cuidados de Higiene", u.hygieneNotes) + bloco("Alimentação", u.feedingNotes) + bloco("Outros", u.otherNotes));
 }
 
+const UTENTE_PRINT_FIELDS: { key: string; label: string; get: (u: any) => string }[] = [
+  { key: "name", label: "Nome", get: (u) => u.name || "—" },
+  { key: "nomeTratado", label: "Nome tratado", get: (u) => u.nomeTratado || "—" },
+  { key: "birthDate", label: "Data de nascimento", get: (u) => u.birthDate || "—" },
+  { key: "room", label: "Quarto", get: (u) => u.room || "—" },
+  { key: "entryDate", label: "Data de entrada", get: (u) => u.entryDate || "—" },
+  { key: "sexo", label: "Sexo", get: (u) => u.sexo || "—" },
+  { key: "grupoSanguineo", label: "Grupo sanguíneo", get: (u) => u.grupoSanguineo || "—" },
+  { key: "estadoCivil", label: "Estado civil", get: (u) => u.estadoCivil || "—" },
+  { key: "familyContact", label: "Contacto familiar", get: (u) => (u.familyContact || "—") + (u.familyPhone ? " / " + u.familyPhone : "") },
+  { key: "familyParentesco", label: "Parentesco", get: (u) => u.familyParentesco || "—" },
+  { key: "ccNumber", label: "Nº do CC", get: (u) => u.ccNumber || "—" },
+  { key: "nif", label: "NIF", get: (u) => u.nif || "—" },
+  { key: "ssNumero", label: "Nº Seg. Social", get: (u) => u.ssNumero || "—" },
+  { key: "numeroUtenteSaude", label: "Nº Utente Saúde", get: (u) => u.numeroUtenteSaude || "—" },
+  { key: "centroSaude", label: "Centro de Saúde", get: (u) => u.centroSaude || "—" },
+  { key: "medicoAssistente", label: "Médico assistente", get: (u) => u.medicoAssistente || "—" },
+  { key: "localidade", label: "Localidade", get: (u) => u.localidade || "—" },
+  { key: "numeroInscricao", label: "Nº inscrição", get: (u) => u.numeroInscricao || "—" },
+  { key: "ultimaObs", label: "Última observação", get: (u) => (u.dailyLogs && u.dailyLogs[0] && u.dailyLogs[0].text) || "—" },
+  { key: "numDocs", label: "Nº documentos", get: (u) => String((u.files && u.files.length) || 0) },
+];
 function logKey(l: any): string {
   return l?.id || `${l?.date || ""}|${(l?.text || "").slice(0, 60)}`;
 }
@@ -1936,6 +1959,8 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   const [utenteTab, setUtenteTab] = useState<"geral" | "registo" | "medicacao" | "cuidados" | "pic" | "admissao">("geral");
   const [importResult, setImportResult] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [printColsOpen, setPrintColsOpen] = useState(false);
+  const [printCols, setPrintCols] = useState<Record<string, boolean>>({ name: true, birthDate: true, room: true, entryDate: true, familyContact: true, ultimaObs: true, numDocs: true });
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState("");
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
@@ -1967,22 +1992,12 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   };
 
   const exportPDFUtentes = () => {
-    const rows = utentes.map((u) => `
-      <tr>
-        <td>${u.name}</td><td>${u.birthDate || "—"}</td><td>${u.room || "—"}</td>
-        <td>${u.entryDate || "—"}</td>
-        <td>${u.familyContact || "—"}${u.familyPhone ? ` / ${u.familyPhone}` : ""}</td>
-        <td>${u.dailyLogs?.[0]?.text || "—"}</td><td style="text-align:center">${u.files?.length ?? 0}</td>
-      </tr>`).join("");
-    const html = `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Lista de Utentes</title>
-    <style>@page{size:A4 landscape;margin:12mm}body{font-family:Arial,sans-serif;font-size:11px}
-    h1{font-size:16px;margin:0 0 4px}p{font-size:11px;color:#888;margin:0 0 12px}
-    table{width:100%;border-collapse:collapse}th{background:#2A241C;color:#fff;padding:7px 8px;text-align:left;font-size:10px}
-    td{padding:6px 8px;border-bottom:1px solid #E4DED3;font-size:10px}tr:nth-child(even){background:#FAFAF8}
-    </style></head><body>
-    <h1>Lista de Utentes</h1><p>${new Date().toLocaleDateString("pt-PT")} — ${utentes.length} utente(s)</p>
-    <table><thead><tr><th>Nome</th><th>Data Nasc.</th><th>Quarto</th><th>Data Entrada</th><th>Contacto Familiar</th><th>Observações</th><th>Docs</th></tr></thead>
-    <tbody>${rows}</tbody></table></body></html>`;
+    const active = UTENTE_PRINT_FIELDS.filter((f) => printCols[f.key]);
+    const cols = active.length ? active : UTENTE_PRINT_FIELDS.filter((f) => f.key === "name");
+    const head = cols.map((f) => "<th>" + _escHtml(f.label) + "</th>").join("");
+    const rows = utentes.map((u) => "<tr>" + cols.map((f) => "<td>" + _escHtml(f.get(u)) + "</td>").join("") + "</tr>").join("");
+    const css = "@page{size:A4 landscape;margin:12mm}body{font-family:Arial,sans-serif;font-size:11px}h1{font-size:16px;margin:0 0 4px}p{font-size:11px;color:#888;margin:0 0 12px}table{width:100%;border-collapse:collapse}th{background:#2A241C;color:#fff;padding:7px 8px;text-align:left;font-size:10px}td{padding:6px 8px;border-bottom:1px solid #E4DED3;font-size:10px}tr:nth-child(even){background:#FAFAF8}";
+    const html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Lista de Utentes</title><style>' + css + '</style></head><body><h1>Lista de Utentes</h1><p>' + new Date().toLocaleDateString("pt-PT") + ' — ' + utentes.length + ' utente(s)</p><table><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table></body></html>';
     const w = window.open("", "_blank");
     if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
     w.document.open(); w.document.write(html); w.document.close();
@@ -2747,11 +2762,31 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
             <IconFileSpreadsheet size={16} />
           </button>
           <button style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "7px 10px", cursor: "pointer", display: "flex", alignItems: "center", color: "#6B6358" }}
-            onClick={exportPDFUtentes} onMouseEnter={(e) => showTip(e, "Imprimir / Guardar PDF")} onMouseLeave={hideTip}>
+            onClick={() => setPrintColsOpen(true)} onMouseEnter={(e) => showTip(e, "Imprimir / Guardar PDF")} onMouseLeave={hideTip}>
             <IconPrinter size={16} />
           </button>
         </div>
       </header>
+      {printColsOpen && (
+        <div onClick={() => setPrintColsOpen(false)} style={{ position: "fixed" as const, inset: 0, zIndex: 200, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 14, padding: 20, maxWidth: 460, width: "100%", maxHeight: "80vh", overflowY: "auto" as const, boxShadow: "0 8px 30px rgba(0,0,0,0.2)" }}>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: "#2A241C", marginBottom: 4 }}>🖨️ Imprimir listagem de utentes</div>
+            <div style={{ fontSize: 12, color: "#8A6A2E", marginBottom: 14 }}>Escolhe que dados aparecem na listagem de cada utente.</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+              {UTENTE_PRINT_FIELDS.map((f) => (
+                <label key={f.key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#2A241C", cursor: "pointer", background: "#F7F5F0", borderRadius: 8, padding: "7px 10px" }}>
+                  <input type="checkbox" checked={!!printCols[f.key]} onChange={(e) => setPrintCols((prev) => ({ ...prev, [f.key]: e.target.checked }))} />
+                  {f.label}
+                </label>
+              ))}
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button onClick={() => setPrintColsOpen(false)} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "9px 16px", fontSize: 13, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
+              <button onClick={() => { setPrintColsOpen(false); exportPDFUtentes(); }} style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Imprimir</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{ display: "flex", gap: 10, maxWidth: 1300, margin: "0 auto 12px", alignItems: "center", flexWrap: "wrap" as const }}>
         <input
           value={search}
