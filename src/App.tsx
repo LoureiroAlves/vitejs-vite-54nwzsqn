@@ -5,6 +5,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -4146,6 +4147,12 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
             {([["cardex", "🗂️ Cardex"], ["rosto", "📋 Folha de Rosto"], ["registo", "📝 Registo diário"]] as const).map(([key, label]) => (
               <button key={key} onClick={() => setTab(key)} style={{ border: "none", background: tab === key ? "#1F4D2E" : "#FFFFFF", color: tab === key ? "#FFFFFF" : "#6B6358", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>{label}</button>
             ))}
+              <select defaultValue="" onChange={(e) => { const dd = e.target.value; e.currentTarget.value = ""; if (dd) printDailyLogDay(u, dd); }} title="Imprimir registo de um dia" style={{ marginLeft: "auto", border: "1px solid #E4DED3", borderRadius: 10, padding: "9px 12px", fontSize: 13, fontFamily: "'Inter', sans-serif", background: "#FFFFFF", color: "#2A241C", cursor: "pointer" }}>
+                <option value="">🖨️ Imprimir dia…</option>
+                {[...new Set((u.dailyLogs || []).map((l) => l.date))].map((dd) => (
+                  <option key={dd} value={dd}>{dd}</option>
+                ))}
+              </select>
           </div>
 
             {tab === "registo" && (
@@ -4158,15 +4165,6 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
                     style={{ background: newLogText.trim() ? "#2A241C" : "#E4DED3", color: newLogText.trim() ? "#F5B944" : "#A39B8E", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 700, cursor: newLogText.trim() ? "pointer" : "default", fontFamily: "'Inter', sans-serif" }}>
                     + Adicionar registo de hoje
                   </button>
-                </div>
-                <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
-                  <span style={{ fontSize: 12, color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>🖨️ Imprimir registo de um dia:</span>
-                  <select defaultValue="" onChange={(e) => { const dd = e.target.value; e.currentTarget.value = ""; if (dd) printDailyLogDay(u, dd); }} style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", background: "#FFFFFF", color: "#2A241C", cursor: "pointer" }}>
-                    <option value="">Escolher dia…</option>
-                    {[...new Set((u.dailyLogs || []).map((l) => l.date))].map((dd) => (
-                      <option key={dd} value={dd}>{dd}</option>
-                    ))}
-                  </select>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
                   {(u.dailyLogs || []).map((log, idx) => {
