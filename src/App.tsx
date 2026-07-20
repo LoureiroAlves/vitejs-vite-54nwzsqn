@@ -7,6 +7,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -3605,7 +3606,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                         <span style={{ fontSize: 12, color: "#2A241C", flex: "1 1 160px" }}>{item}</span>
                         <div style={{ display: "flex", gap: 6 }}>
                           {(["autonomo", "pontual", "permanente"] as const).map((nivel) => (
-                            <button key={nivel} onClick={() => updateFicha({ funcionalidade: { ...(fa.funcionalidade || {}), [item]: nivel } })} style={toggleBtn(fa.funcionalidade?.[item] === nivel)}>
+                            <button key={nivel} onClick={() => updateFicha({ funcionalidade: { ...(fa.funcionalidade || {}), [item]: ((fa.funcionalidade as any)?.[item] === nivel ? undefined : nivel) } })} style={toggleBtn(fa.funcionalidade?.[item] === nivel)}>
                               {NIVEL_LABELS[nivel]}
                             </button>
                           ))}
@@ -3627,8 +3628,8 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                           <span style={{ fontSize: 12, color: "#2A241C" }}>{label}</span>
                           <div style={{ display: "flex", gap: 6 }}>
-                            <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), [key]: true } })} style={toggleBtn((fa.estadoSaude as any)?.[key] === true)}>Sim</button>
-                            <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), [key]: false } })} style={toggleBtn((fa.estadoSaude as any)?.[key] === false)}>Não</button>
+                            <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), [key]: ((fa.estadoSaude as any)?.[key] === true ? undefined : true) } })} style={toggleBtn((fa.estadoSaude as any)?.[key] === true)}>Sim</button>
+                            <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), [key]: ((fa.estadoSaude as any)?.[key] === false ? undefined : false) } })} style={toggleBtn((fa.estadoSaude as any)?.[key] === false)}>Não</button>
                           </div>
                         </div>
                         {(fa.estadoSaude as any)?.[key] && (
@@ -3639,15 +3640,15 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                       <span style={{ fontSize: 12, color: "#2A241C" }}>Medicação diária</span>
                       <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), medicacaoDiaria: true } })} style={toggleBtn(fa.estadoSaude?.medicacaoDiaria === true)}>Sim</button>
-                        <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), medicacaoDiaria: false } })} style={toggleBtn(fa.estadoSaude?.medicacaoDiaria === false)}>Não</button>
+                        <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), medicacaoDiaria: ((fa.estadoSaude as any)?.medicacaoDiaria === true ? undefined : true) } })} style={toggleBtn(fa.estadoSaude?.medicacaoDiaria === true)}>Sim</button>
+                        <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), medicacaoDiaria: ((fa.estadoSaude as any)?.medicacaoDiaria === false ? undefined : false) } })} style={toggleBtn(fa.estadoSaude?.medicacaoDiaria === false)}>Não</button>
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
                       <span style={{ fontSize: 12, color: "#2A241C" }}>Controlo de sinais vitais frequente</span>
                       <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), controloSinaisVitais: true } })} style={toggleBtn(fa.estadoSaude?.controloSinaisVitais === true)}>Sim</button>
-                        <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), controloSinaisVitais: false } })} style={toggleBtn(fa.estadoSaude?.controloSinaisVitais === false)}>Não</button>
+                        <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), controloSinaisVitais: ((fa.estadoSaude as any)?.controloSinaisVitais === true ? undefined : true) } })} style={toggleBtn(fa.estadoSaude?.controloSinaisVitais === true)}>Sim</button>
+                        <button onClick={() => updateFicha({ estadoSaude: { ...(fa.estadoSaude || {}), controloSinaisVitais: ((fa.estadoSaude as any)?.controloSinaisVitais === false ? undefined : false) } })} style={toggleBtn(fa.estadoSaude?.controloSinaisVitais === false)}>Não</button>
                       </div>
                     </div>
                   </div>
@@ -3665,8 +3666,8 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "5px 0" }}>
                         <span style={{ fontSize: 12, color: "#2A241C" }}>{label}</span>
                         <div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => updateFicha({ relacoesSociais: { ...(fa.relacoesSociais || {}), [key]: true } })} style={toggleBtn((fa.relacoesSociais as any)?.[key] === true)}>Sim</button>
-                          <button onClick={() => updateFicha({ relacoesSociais: { ...(fa.relacoesSociais || {}), [key]: false } })} style={toggleBtn((fa.relacoesSociais as any)?.[key] === false)}>Não</button>
+                          <button onClick={() => updateFicha({ relacoesSociais: { ...(fa.relacoesSociais || {}), [key]: ((fa.relacoesSociais as any)?.[key] === true ? undefined : true) } })} style={toggleBtn((fa.relacoesSociais as any)?.[key] === true)}>Sim</button>
+                          <button onClick={() => updateFicha({ relacoesSociais: { ...(fa.relacoesSociais || {}), [key]: ((fa.relacoesSociais as any)?.[key] === false ? undefined : false) } })} style={toggleBtn((fa.relacoesSociais as any)?.[key] === false)}>Não</button>
                         </div>
                       </div>
                     ))}
@@ -3683,7 +3684,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       <label style={fieldLabel}>Tipo de habitação</label>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
                         {["Vivenda", "Apartamento", "Parte de casa", "Quarto", "Barraca", "Outra"].map((tipo) => (
-                          <button key={tipo} onClick={() => updateFicha({ habitacao: { ...(fa.habitacao || {}), tipo } })} style={toggleBtn(fa.habitacao?.tipo === tipo)}>{tipo}</button>
+                          <button key={tipo} onClick={() => updateFicha({ habitacao: { ...(fa.habitacao || {}), tipo: ((fa.habitacao as any)?.tipo === tipo ? undefined : tipo) } })} style={toggleBtn(fa.habitacao?.tipo === tipo)}>{tipo}</button>
                         ))}
                       </div>
                     </div>
@@ -3691,22 +3692,22 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       <label style={fieldLabel}>Propriedade</label>
                       <div style={{ display: "flex", gap: 6 }}>
                         {["Própria", "Alugada"].map((prop) => (
-                          <button key={prop} onClick={() => updateFicha({ habitacao: { ...(fa.habitacao || {}), propriedade: prop } })} style={toggleBtn(fa.habitacao?.propriedade === prop)}>{prop}</button>
+                          <button key={prop} onClick={() => updateFicha({ habitacao: { ...(fa.habitacao || {}), propriedade: ((fa.habitacao as any)?.propriedade === prop ? undefined : prop) } })} style={toggleBtn(fa.habitacao?.propriedade === prop)}>{prop}</button>
                         ))}
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
                       <span style={{ fontSize: 12, color: "#2A241C" }}>Beneficia de RSI?</span>
                       <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => updateFicha({ habitacao: { ...(fa.habitacao || {}), beneficiaRSI: true } })} style={toggleBtn(fa.habitacao?.beneficiaRSI === true)}>Sim</button>
-                        <button onClick={() => updateFicha({ habitacao: { ...(fa.habitacao || {}), beneficiaRSI: false } })} style={toggleBtn(fa.habitacao?.beneficiaRSI === false)}>Não</button>
+                        <button onClick={() => updateFicha({ habitacao: { ...(fa.habitacao || {}), beneficiaRSI: ((fa.habitacao as any)?.beneficiaRSI === true ? undefined : true) } })} style={toggleBtn(fa.habitacao?.beneficiaRSI === true)}>Sim</button>
+                        <button onClick={() => updateFicha({ habitacao: { ...(fa.habitacao || {}), beneficiaRSI: ((fa.habitacao as any)?.beneficiaRSI === false ? undefined : false) } })} style={toggleBtn(fa.habitacao?.beneficiaRSI === false)}>Não</button>
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
                       <span style={{ fontSize: 12, color: "#2A241C" }}>Foi encaminhado(a) por outra organização?</span>
                       <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), encaminhadoPorOrganizacao: true } })} style={toggleBtn(fa.redeSuporte?.encaminhadoPorOrganizacao === true)}>Sim</button>
-                        <button onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), encaminhadoPorOrganizacao: false } })} style={toggleBtn(fa.redeSuporte?.encaminhadoPorOrganizacao === false)}>Não</button>
+                        <button onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), encaminhadoPorOrganizacao: ((fa.redeSuporte as any)?.encaminhadoPorOrganizacao === true ? undefined : true) } })} style={toggleBtn(fa.redeSuporte?.encaminhadoPorOrganizacao === true)}>Sim</button>
+                        <button onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), encaminhadoPorOrganizacao: ((fa.redeSuporte as any)?.encaminhadoPorOrganizacao === false ? undefined : false) } })} style={toggleBtn(fa.redeSuporte?.encaminhadoPorOrganizacao === false)}>Não</button>
                       </div>
                     </div>
                     {fa.redeSuporte?.encaminhadoPorOrganizacao && (
@@ -3715,15 +3716,15 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 12, color: "#2A241C" }}>Necessita de apoio para atividades básicas de vida diária?</span>
                       <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), necessitaApoioABVD: true } })} style={toggleBtn(fa.redeSuporte?.necessitaApoioABVD === true)}>Sim</button>
-                        <button onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), necessitaApoioABVD: false } })} style={toggleBtn(fa.redeSuporte?.necessitaApoioABVD === false)}>Não</button>
+                        <button onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), necessitaApoioABVD: ((fa.redeSuporte as any)?.necessitaApoioABVD === true ? undefined : true) } })} style={toggleBtn(fa.redeSuporte?.necessitaApoioABVD === true)}>Sim</button>
+                        <button onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), necessitaApoioABVD: ((fa.redeSuporte as any)?.necessitaApoioABVD === false ? undefined : false) } })} style={toggleBtn(fa.redeSuporte?.necessitaApoioABVD === false)}>Não</button>
                       </div>
                     </div>
                     <div>
                       <label style={fieldLabel}>Tipo de apoio atual</label>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
                         {["Diário e permanente", "Diário e pontual", "Pontual", "Inexistente"].map((tipo) => (
-                          <button key={tipo} onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), tipoApoio: tipo } })} style={toggleBtn(fa.redeSuporte?.tipoApoio === tipo)}>{tipo}</button>
+                          <button key={tipo} onClick={() => updateFicha({ redeSuporte: { ...(fa.redeSuporte || {}), tipoApoio: ((fa.redeSuporte as any)?.tipoApoio === tipo ? undefined : tipo) } })} style={toggleBtn(fa.redeSuporte?.tipoApoio === tipo)}>{tipo}</button>
                         ))}
                       </div>
                     </div>
@@ -3736,7 +3737,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       <label style={fieldLabel}>Resposta solicitada</label>
                       <div style={{ display: "flex", gap: 6 }}>
                         {["Temporária", "Permanente"].map((r) => (
-                          <button key={r} onClick={() => updateFicha({ motivoPedido: { ...(fa.motivoPedido || {}), respostaSolicitada: r } })} style={toggleBtn(fa.motivoPedido?.respostaSolicitada === r)}>{r}</button>
+                          <button key={r} onClick={() => updateFicha({ motivoPedido: { ...(fa.motivoPedido || {}), respostaSolicitada: ((fa.motivoPedido as any)?.respostaSolicitada === r ? undefined : r) } })} style={toggleBtn(fa.motivoPedido?.respostaSolicitada === r)}>{r}</button>
                         ))}
                       </div>
                     </div>
@@ -3744,7 +3745,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       <label style={fieldLabel}>Recetividade</label>
                       <div style={{ display: "flex", gap: 6 }}>
                         {["Por opção", "Contrariado"].map((r) => (
-                          <button key={r} onClick={() => updateFicha({ motivoPedido: { ...(fa.motivoPedido || {}), recetividade: r } })} style={toggleBtn(fa.motivoPedido?.recetividade === r)}>{r}</button>
+                          <button key={r} onClick={() => updateFicha({ motivoPedido: { ...(fa.motivoPedido || {}), recetividade: ((fa.motivoPedido as any)?.recetividade === r ? undefined : r) } })} style={toggleBtn(fa.motivoPedido?.recetividade === r)}>{r}</button>
                         ))}
                       </div>
                     </div>
@@ -3781,8 +3782,8 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
                       <span style={{ fontSize: 12, color: "#2A241C" }}>Candidato(a) selecionado(a) para admissão?</span>
                       <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => updateFicha({ avaliacaoAdmissao: { ...(fa.avaliacaoAdmissao || {}), selecionado: true } })} style={toggleBtn(fa.avaliacaoAdmissao?.selecionado === true)}>Sim</button>
-                        <button onClick={() => updateFicha({ avaliacaoAdmissao: { ...(fa.avaliacaoAdmissao || {}), selecionado: false } })} style={toggleBtn(fa.avaliacaoAdmissao?.selecionado === false)}>Não</button>
+                        <button onClick={() => updateFicha({ avaliacaoAdmissao: { ...(fa.avaliacaoAdmissao || {}), selecionado: ((fa.avaliacaoAdmissao as any)?.selecionado === true ? undefined : true) } })} style={toggleBtn(fa.avaliacaoAdmissao?.selecionado === true)}>Sim</button>
+                        <button onClick={() => updateFicha({ avaliacaoAdmissao: { ...(fa.avaliacaoAdmissao || {}), selecionado: ((fa.avaliacaoAdmissao as any)?.selecionado === false ? undefined : false) } })} style={toggleBtn(fa.avaliacaoAdmissao?.selecionado === false)}>Não</button>
                       </div>
                     </div>
                     <label style={fieldLabel}>Observações</label>
