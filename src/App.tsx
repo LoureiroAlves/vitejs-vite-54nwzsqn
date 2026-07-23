@@ -14,6 +14,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -6530,6 +6531,13 @@ export default function App() {
       for (const tabela of tabelas) {
         if (dados[tabela]) {
           await saveToSupabase(tabela, dados[tabela]);
+        }
+      }
+      // Restaurar os utentes para a tabela nova "utente" (a que a app lê realmente)
+      const utentesRestore = (dados.utentes_data && (dados.utentes_data.utentes || (dados.utentes_data.data && dados.utentes_data.data.utentes))) || [];
+      if (Array.isArray(utentesRestore)) {
+        for (const u of utentesRestore) {
+          if (u && u.id) await saveUtenteRow(u);
         }
       }
       setRestoreState("done");
