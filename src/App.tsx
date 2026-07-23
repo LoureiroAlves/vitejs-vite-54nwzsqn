@@ -1134,10 +1134,10 @@ function StockPage({ onBack }: { onBack: () => void }) {
                               }
                               if (e.key === "Escape") setInlineMove(null);
                             }}
-                            style={{ flex: 1, border: "1px solid #E4DED3", borderRadius: 7, padding: "6px 8px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", colorScheme: "light" as const, boxSizing: "border-box" as const }}
+                            style={{ flex: 1, minWidth: 0, width: 0, border: "1px solid #E4DED3", borderRadius: 7, padding: "6px 8px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", colorScheme: "light" as const, boxSizing: "border-box" as const }}
                           />
                           <button
-                            style={{ background: "#2A241C", color: "#F5B944", border: "1px solid #2A241C", borderRadius: 7, padding: "0 14px", cursor: "pointer", fontSize: 16, fontWeight: 700, display: "inline-flex" as const, alignItems: "center", justifyContent: "center", lineHeight: 1, boxSizing: "border-box" as const }}
+                            style={{ background: "#2A241C", color: "#F5B944", border: "1px solid #2A241C", borderRadius: 7, padding: "0 11px", cursor: "pointer", fontSize: 16, fontWeight: 700, display: "inline-flex" as const, alignItems: "center", justifyContent: "center", lineHeight: 1, boxSizing: "border-box" as const }}
                             onClick={() => {
                               const qty = Number(inlineMove.qty);
                               if (!qty) return;
@@ -1150,7 +1150,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
                             }}
                           >✓</button>
                           <button
-                            style={{ background: "transparent", color: "#A39B8E", border: "1px solid #E4DED3", borderRadius: 7, padding: "0 14px", cursor: "pointer", fontSize: 16, display: "inline-flex" as const, alignItems: "center", justifyContent: "center", lineHeight: 1, boxSizing: "border-box" as const }}
+                            style={{ background: "transparent", color: "#A39B8E", border: "1px solid #E4DED3", borderRadius: 7, padding: "0 11px", cursor: "pointer", fontSize: 16, display: "inline-flex" as const, alignItems: "center", justifyContent: "center", lineHeight: 1, boxSizing: "border-box" as const }}
                             onClick={() => setInlineMove(null)}
                           >✕</button>
                         </div>
@@ -10432,3 +10432,4 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
   },
 };
+
