@@ -1345,6 +1345,48 @@ function printDailyLogMonth(utente: any, monthKey: string) {
   w.document.open(); w.document.write(html); w.document.close();
   w.focus(); setTimeout(() => w.print(), 300);
 }
+function PrintRegistoButton({ u, btnStyle }: { u: any; btnStyle: any }) {
+  const [open, setOpen] = useState(false);
+  const [mes, setMes] = useState("");
+  const [dia, setDia] = useState("");
+  const logs = (u.dailyLogs || []) as any[];
+  const meses = [...new Set(logs.map((l) => String(l.date || "").slice(3)))].filter(Boolean);
+  const dias = mes ? [...new Set(logs.filter((l) => String(l.date || "").slice(3) === mes).map((l) => l.date))] : [];
+  const close = () => { setOpen(false); setMes(""); setDia(""); };
+  const selStyle = { width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 10px", fontSize: 14, fontFamily: "'Inter', sans-serif", background: "#FFFFFF", color: "#2A241C", cursor: "pointer", marginTop: 6, boxSizing: "border-box" as const };
+  return (
+    <>
+      <button onClick={() => setOpen(true)} style={btnStyle}>🖨️ Imprimir</button>
+      {open && (
+        <div onClick={close} style={{ position: "fixed" as const, inset: 0, zIndex: 300, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 14, padding: 22, maxWidth: 380, width: "100%", boxShadow: "0 8px 30px rgba(0,0,0,0.2)" }}>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: "#2A241C" }}>🖨️ Imprimir registo diário</div>
+            <div style={{ fontSize: 12, color: "#8A6A2E", marginBottom: 14 }}>{u.name}</div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6358" }}>1. Escolhe o mês
+              <select value={mes} onChange={(e) => { setMes(e.target.value); setDia(""); }} style={selStyle}>
+                <option value="">— Mês —</option>
+                {meses.map((m) => (<option key={m} value={m}>{m}</option>))}
+              </select>
+            </label>
+            {mes && (
+              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6358", marginTop: 12 }}>2. Escolhe o dia (opcional)
+                <select value={dia} onChange={(e) => setDia(e.target.value)} style={selStyle}>
+                  <option value="">— Dia —</option>
+                  {dias.map((d) => (<option key={d} value={d}>{d}</option>))}
+                </select>
+              </label>
+            )}
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, marginTop: 18 }}>
+              <button disabled={!dia} onClick={() => { printDailyLogDay(u, dia); close(); }} style={{ background: dia ? "#2A241C" : "#EFEAE2", color: dia ? "#F5B944" : "#A39B8E", border: "none", borderRadius: 8, padding: "11px 0", fontSize: 14, fontWeight: 700, cursor: dia ? "pointer" : "default", fontFamily: "'Inter', sans-serif" }}>🖨️ Imprimir dia selecionado</button>
+              <button disabled={!mes} onClick={() => { printDailyLogMonth(u, mes); close(); }} style={{ background: mes ? "#1F4D2E" : "#EFEAE2", color: mes ? "#FFFFFF" : "#A39B8E", border: "none", borderRadius: 8, padding: "11px 0", fontSize: 14, fontWeight: 700, cursor: mes ? "pointer" : "default", fontFamily: "'Inter', sans-serif" }}>🖨️ Imprimir mês completo</button>
+              <button onClick={close} style={{ background: "transparent", color: "#6B6358", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 0", fontSize: 13, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 const PRINT_CSS = "@page{size:A4;margin:20mm}body{font-family:Arial,sans-serif;color:#2A241C}h1{font-size:18px;margin:0 0 4px}.sub{font-size:12px;color:#888;margin:0 0 18px}.sec{margin-bottom:16px}.sec h2{font-size:14px;color:#1F4D2E;border-bottom:1px solid #E4DED3;padding-bottom:4px;margin:0 0 8px}table{width:100%;border-collapse:collapse;font-size:13px}td,th{border:1px solid #E4DED3;padding:6px 8px;text-align:left;vertical-align:top;word-break:break-word;overflow-wrap:break-word}th{background:#F7F5F0}td.k{width:38%;color:#6B6358;font-weight:bold}.txt{font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word}.vazio{color:#999;font-style:italic}";
 function _escHtml(s: any) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
 function printUtenteDoc(titulo: string, nome: string, corpo: string) {
@@ -3116,7 +3158,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               {utenteTab === "geral" && (<button onClick={() => printGeral(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Geral</button>)}
-              {utenteTab === "registo" && (<select defaultValue="" onChange={(e) => { const v = e.target.value; e.currentTarget.value = ""; if (!v) return; if (v.split("/").length === 3) printDailyLogDay(u, v); else printDailyLogMonth(u, v); }} title="Imprimir registo por dia ou por mês" style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif", cursor: "pointer" }}><option value="">🖨️ Imprimir…</option><optgroup label="Por dia">{[...new Set((u.dailyLogs || []).map((l) => l.date))].map((dd) => (<option key={dd} value={dd}>{dd}</option>))}</optgroup><optgroup label="Por mês">{[...new Set((u.dailyLogs || []).map((l) => String(l.date || "").slice(3)))].filter(Boolean).map((mm) => (<option key={mm} value={mm}>{mm}</option>))}</optgroup></select>)}
+              {utenteTab === "registo" && <PrintRegistoButton u={u} btnStyle={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }} />}
               {utenteTab === "medicacao" && (<button onClick={() => printMedicacao(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Medicação</button>)}
               {utenteTab === "cuidados" && (<button onClick={() => printCuidados(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Cuidados</button>)}
               {utenteTab === "admissao" && (<button onClick={() => handleImprimirProcesso(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Ficha</button>)}
@@ -4266,7 +4308,7 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
               <button onClick={() => handleImprimirFolhaRosto(u)} style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Imprimir Folha de Rosto</button>
             )}
             {tab === "registo" && (
-              <select defaultValue="" onChange={(e) => { const v = e.target.value; e.currentTarget.value = ""; if (!v) return; if (v.split("/").length === 3) printDailyLogDay(u, v); else printDailyLogMonth(u, v); }} title="Imprimir registo por dia ou por mês" style={{ marginLeft: "auto", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'Inter', sans-serif", cursor: "pointer" }}><option value="" style={{ color: "#2A241C" }}>🖨️ Imprimir…</option><optgroup label="Por dia">{[...new Set((u.dailyLogs || []).map((l) => l.date))].map((dd) => (<option key={dd} value={dd} style={{ color: "#2A241C" }}>{dd}</option>))}</optgroup><optgroup label="Por mês">{[...new Set((u.dailyLogs || []).map((l) => String(l.date || "").slice(3)))].filter(Boolean).map((mm) => (<option key={mm} value={mm} style={{ color: "#2A241C" }}>{mm}</option>))}</optgroup></select>
+              <PrintRegistoButton u={u} btnStyle={{ marginLeft: "auto", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }} />
             )}
           </div>
 
