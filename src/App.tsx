@@ -17,7 +17,9 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
 const IconPlus = ({ size = 16, ...props }) => (
@@ -1357,7 +1359,7 @@ function PrintRegistoButton({ u, btnStyle }: { u: any; btnStyle: any }) {
   return (
     <>
       <button onClick={() => setOpen(true)} style={btnStyle}>🖨️ Imprimir</button>
-      {open && (
+      {open && createPortal((
         <div onClick={close} style={{ position: "fixed" as const, inset: 0, zIndex: 300, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 14, padding: 22, maxWidth: 380, width: "100%", boxShadow: "0 8px 30px rgba(0,0,0,0.2)" }}>
             <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: "#2A241C" }}>🖨️ Imprimir registo diário</div>
@@ -1383,7 +1385,7 @@ function PrintRegistoButton({ u, btnStyle }: { u: any; btnStyle: any }) {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
     </>
   );
 }
