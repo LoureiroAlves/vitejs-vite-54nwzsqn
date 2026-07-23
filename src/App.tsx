@@ -24,6 +24,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -6271,9 +6272,9 @@ export default function App() {
   // Carregar do Supabase ao iniciar (sincronização em background)
   const [initialSyncComplete, setInitialSyncComplete] = useState(false);
   useEffect(() => {
-    syncFromSupabase();
-    // Marcar sincronização inicial como completa após terminar (sucesso ou erro)
-  }, []);
+    // Etapa 5: só sincroniza depois do login (usa a chave pessoal, não a pública)
+    if (currentUser) syncFromSupabase();
+  }, [currentUser]);
 
   // Terminar o "arrastar para copiar" quando o botão do rato é solto em qualquer sítio da página
   useEffect(() => {
