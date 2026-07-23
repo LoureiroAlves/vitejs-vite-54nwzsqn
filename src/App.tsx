@@ -16,6 +16,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // ---------- Ícones SVG simples (sem dependências externas) ----------
@@ -1327,6 +1328,23 @@ function printDailyLogDay(utente: any, dateStr: string) {
   setTimeout(() => w.print(), 300);
 }
 
+function printDailyLogMonth(utente: any, monthKey: string) {
+  const esc = (s: any) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const all = ((utente.dailyLogs || []) as any[]).filter((l) => String(l.date || "").slice(3) === monthKey);
+  all.sort((a, b) => (String(a.date||"").split("/").reverse().join("") + String(a.time||"")).localeCompare(String(b.date||"").split("/").reverse().join("") + String(b.time||"")));
+  const itens = all.map((l) =>
+    '<div class="nota"><div class="cab"><span class="hora">' + esc(l.date) + ' ' + esc(l.time) + '</span>' +
+    (l.author ? '<span class="autor">' + esc(l.author) + '</span>' : '') +
+    '</div><div class="texto">' + esc(l.text).replace(/\n/g, "<br>") + '</div></div>'
+  ).join("");
+  const body = itens || '<div class="vazio">Sem registos neste mês.</div>';
+  const css = "@page{size:A4;margin:20mm}body{font-family:Arial,sans-serif;color:#2A241C}h1{font-size:18px;margin:0 0 4px}.sub{font-size:12px;color:#888;margin:0 0 16px}.badge{display:inline-block;background:#2A241C;color:#F5B944;border-radius:20px;padding:6px 16px;font-size:13px;font-weight:bold;margin-bottom:16px}.nota{border:1px solid #E4DED3;border-radius:8px;padding:12px 14px;margin-bottom:10px}.cab{font-size:12px;color:#3A5A70;font-weight:bold;margin-bottom:6px}.hora{background:#EEF3F7;border-radius:10px;padding:2px 8px;margin-right:8px}.autor{color:#6B6358}.texto{font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-word}.vazio{color:#999;font-style:italic}";
+  const html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Registo</title><style>' + css + '</style></head><body><h1>Registo Diário — ' + esc(utente.name) + '</h1><p class="sub">Associação Oliveirense de Socorros Mútuos · Impresso em ' + new Date().toLocaleDateString("pt-PT") + '</p><div class="badge">Mês ' + esc(monthKey) + '</div>' + body + '</body></html>';
+  const w = window.open("", "_blank");
+  if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+  w.focus(); setTimeout(() => w.print(), 300);
+}
 const PRINT_CSS = "@page{size:A4;margin:20mm}body{font-family:Arial,sans-serif;color:#2A241C}h1{font-size:18px;margin:0 0 4px}.sub{font-size:12px;color:#888;margin:0 0 18px}.sec{margin-bottom:16px}.sec h2{font-size:14px;color:#1F4D2E;border-bottom:1px solid #E4DED3;padding-bottom:4px;margin:0 0 8px}table{width:100%;border-collapse:collapse;font-size:13px}td,th{border:1px solid #E4DED3;padding:6px 8px;text-align:left;vertical-align:top;word-break:break-word;overflow-wrap:break-word}th{background:#F7F5F0}td.k{width:38%;color:#6B6358;font-weight:bold}.txt{font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word}.vazio{color:#999;font-style:italic}";
 function _escHtml(s: any) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
 function printUtenteDoc(titulo: string, nome: string, corpo: string) {
@@ -1962,8 +1980,10 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   useEffect(() => { loadUtentesFromDB().then((list) => setUtentes(list as Utente[])); }, []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
+  const [logsShown, setLogsShown] = useState(30);
   const _listScroll = useRef(0);
   useEffect(() => {
+    if (openUtente) setLogsShown(30);
     const el = document.querySelector(".page-enter") as HTMLElement | null;
     if (!el) return;
     if (openUtente) { _listScroll.current = el.scrollTop; el.scrollTop = 0; }
@@ -3096,7 +3116,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               {utenteTab === "geral" && (<button onClick={() => printGeral(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Geral</button>)}
-              {utenteTab === "registo" && (<select defaultValue="" onChange={(e) => { const dd = e.target.value; e.currentTarget.value = ""; if (dd) printDailyLogDay(u, dd); }} title="Imprimir registo de um dia" style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif", cursor: "pointer" }}><option value="">🖨️ Dia…</option>{[...new Set((u.dailyLogs || []).map((l) => l.date))].map((dd) => (<option key={dd} value={dd}>{dd}</option>))}</select>)}
+              {utenteTab === "registo" && (<select defaultValue="" onChange={(e) => { const v = e.target.value; e.currentTarget.value = ""; if (!v) return; if (v.split("/").length === 3) printDailyLogDay(u, v); else printDailyLogMonth(u, v); }} title="Imprimir registo por dia ou por mês" style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif", cursor: "pointer" }}><option value="">🖨️ Imprimir…</option><optgroup label="Por dia">{[...new Set((u.dailyLogs || []).map((l) => l.date))].map((dd) => (<option key={dd} value={dd}>{dd}</option>))}</optgroup><optgroup label="Por mês">{[...new Set((u.dailyLogs || []).map((l) => String(l.date || "").slice(3)))].filter(Boolean).map((mm) => (<option key={mm} value={mm}>{mm}</option>))}</optgroup></select>)}
               {utenteTab === "medicacao" && (<button onClick={() => printMedicacao(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Medicação</button>)}
               {utenteTab === "cuidados" && (<button onClick={() => printCuidados(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Cuidados</button>)}
               {utenteTab === "admissao" && (<button onClick={() => handleImprimirProcesso(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Ficha</button>)}
@@ -3371,7 +3391,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                   </button>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
-                  {(u.dailyLogs || []).map((log, idx) => {
+                  {(u.dailyLogs || []).slice(0, logsShown).map((log, idx) => {
                     const editable = isLogEditable(u.id, idx, log.date);
                     const isEditing = editingLogIdx === idx;
                     return (
@@ -3493,6 +3513,9 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       </div>
                     );
                   })}
+                  {(u.dailyLogs || []).length > logsShown && (
+                    <button onClick={() => setLogsShown((n) => n + 30)} style={{ marginTop: 4, background: "#F7F5F0", color: "#6B6358", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", width: "100%" }}>Ver mais registos ({(u.dailyLogs || []).length - logsShown} mais antigos)</button>
+                  )}
                 </div>
 
                 {/* Documentos da aba Registo */}
@@ -4115,8 +4138,10 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   useEffect(() => { loadUtentesFromDB().then((list) => setUtentes(list as Utente[])); }, []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
+  const [logsShown, setLogsShown] = useState(30);
   const _listScroll = useRef(0);
   useEffect(() => {
+    if (openUtente) setLogsShown(30);
     const el = document.querySelector(".page-enter") as HTMLElement | null;
     if (!el) return;
     if (openUtente) { _listScroll.current = el.scrollTop; el.scrollTop = 0; }
@@ -4241,12 +4266,7 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
               <button onClick={() => handleImprimirFolhaRosto(u)} style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Imprimir Folha de Rosto</button>
             )}
             {tab === "registo" && (
-              <select defaultValue="" onChange={(e) => { const dd = e.target.value; e.currentTarget.value = ""; if (dd) printDailyLogDay(u, dd); }} title="Imprimir registo de um dia" style={{ marginLeft: "auto", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'Inter', sans-serif", cursor: "pointer" }}>
-                <option value="" style={{ color: "#2A241C" }}>🖨️ Imprimir dia…</option>
-                {[...new Set((u.dailyLogs || []).map((l) => l.date))].map((dd) => (
-                  <option key={dd} value={dd} style={{ color: "#2A241C" }}>{dd}</option>
-                ))}
-              </select>
+              <select defaultValue="" onChange={(e) => { const v = e.target.value; e.currentTarget.value = ""; if (!v) return; if (v.split("/").length === 3) printDailyLogDay(u, v); else printDailyLogMonth(u, v); }} title="Imprimir registo por dia ou por mês" style={{ marginLeft: "auto", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'Inter', sans-serif", cursor: "pointer" }}><option value="" style={{ color: "#2A241C" }}>🖨️ Imprimir…</option><optgroup label="Por dia">{[...new Set((u.dailyLogs || []).map((l) => l.date))].map((dd) => (<option key={dd} value={dd} style={{ color: "#2A241C" }}>{dd}</option>))}</optgroup><optgroup label="Por mês">{[...new Set((u.dailyLogs || []).map((l) => String(l.date || "").slice(3)))].filter(Boolean).map((mm) => (<option key={mm} value={mm} style={{ color: "#2A241C" }}>{mm}</option>))}</optgroup></select>
             )}
           </div>
 
@@ -4262,7 +4282,7 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
                   </button>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
-                  {(u.dailyLogs || []).map((log, idx) => {
+                  {(u.dailyLogs || []).slice(0, logsShown).map((log, idx) => {
                     const editable = isLogEditable(u.id, idx, log.date);
                     const isEditing = editingLogIdx === idx;
                     return (
@@ -4384,6 +4404,9 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
                       </div>
                     );
                   })}
+                  {(u.dailyLogs || []).length > logsShown && (
+                    <button onClick={() => setLogsShown((n) => n + 30)} style={{ marginTop: 4, background: "#F7F5F0", color: "#6B6358", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", width: "100%" }}>Ver mais registos ({(u.dailyLogs || []).length - logsShown} mais antigos)</button>
+                  )}
                 </div>
 
                 {/* Documentos da aba Registo */}
