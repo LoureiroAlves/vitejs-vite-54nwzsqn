@@ -20,6 +20,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -5388,6 +5389,49 @@ function canAccessPage(user: AppUser | null, page: "utentes" | "schedule" | "sto
 }
 
 export let _authSession: any = null;
+let _authRefreshTimer: any = null;
+let _authListenerReady = false;
+function applyAuthTok(session: any) {
+  if (!session || !session.access_token) return;
+  _authSession = session;
+  if (!session.expires_at) session.expires_at = Math.floor(Date.now() / 1000) + (session.expires_in || 3600);
+  (sbHeaders as any).Authorization = "Bearer " + session.access_token;
+  if (_authRefreshTimer) clearInterval(_authRefreshTimer);
+  _authRefreshTimer = setInterval(function () { ensureFreshTok(); }, 600000);
+  if (!_authListenerReady) {
+    _authListenerReady = true;
+    try {
+      document.addEventListener("visibilitychange", function () { if (!document.hidden) ensureFreshTok(); });
+      window.addEventListener("focus", function () { ensureFreshTok(); });
+    } catch (e) {}
+  }
+}
+async function refreshAuthTok(): Promise<boolean> {
+  var rt = _authSession && _authSession.refresh_token;
+  if (!rt) return false;
+  try {
+    var res = await fetch(SUPABASE_URL + "/auth/v1/token?grant_type=refresh_token", {
+      method: "POST",
+      headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: rt }),
+    });
+    var data = await res.json();
+    if (res.ok && data.access_token) { applyAuthTok(data); return true; }
+  } catch (e) {}
+  (sbHeaders as any).Authorization = "Bearer " + SUPABASE_KEY;
+  return false;
+}
+async function ensureFreshTok(): Promise<void> {
+  if (!_authSession) return;
+  var now = Math.floor(Date.now() / 1000);
+  var exp = _authSession.expires_at || 0;
+  if (exp - now < 900) await refreshAuthTok();
+}
+function clearAuthTok() {
+  _authSession = null;
+  if (_authRefreshTimer) { clearInterval(_authRefreshTimer); _authRefreshTimer = null; }
+  (sbHeaders as any).Authorization = "Bearer " + SUPABASE_KEY;
+}
 const ROLE_BY_EMAIL: Record<string, AppRole> = {
   "fernandopoalves@gmail.com": "admin",
   "sonialoureiro.quintadosavos@gmail.com": "admin",
@@ -5415,7 +5459,7 @@ function LoginScreen({ onLogin }: { users: AppUser[]; onLogin: (user: AppUser) =
         setError("Email ou password incorretos.");
         return;
       }
-      _authSession = data;
+      applyAuthTok(data);
       const em = String(data.user?.email || username).trim().toLowerCase();
       const role = ROLE_BY_EMAIL[em] || "admin";
       const nome = DISPLAY_BY_EMAIL[em] || em;
@@ -8542,7 +8586,7 @@ export default function App() {
               Alterar password
             </button>
             <button
-              onClick={() => setCurrentUser(null)}
+              onClick={() => { clearAuthTok(); setCurrentUser(null); }}
               style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#FFFFFF", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
               title="Terminar sessão"
             >
