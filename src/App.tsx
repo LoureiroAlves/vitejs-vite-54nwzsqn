@@ -25,6 +25,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -1319,6 +1320,7 @@ function loadUtentesData(): any {
 
 // Chave estável de cada registo diário (para não se perderem ao juntar)
 let _appCurrentUserName = "";
+let _appCurrentUserRole = "";
 function printDailyLogDay(utente: any, dateStr: string) {
   const esc = (s: any) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
   const logs = ((utente.dailyLogs || []) as any[]).filter((l) => l.date === dateStr);
@@ -2028,6 +2030,10 @@ function handleImprimirCardex(u: Utente) {
 }
 
 function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI: () => void }) {
+  const _role = _appCurrentUserRole;
+  const utReadOnlyAll = _role === "enfermagem";
+  const utSoRegisto = _role === "colaboradoras";
+  const utAdmin = !utReadOnlyAll && !utSoRegisto;
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   useEffect(() => { loadUtentesFromDB().then((list) => setUtentes(list as Utente[])); }, []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
@@ -2089,6 +2095,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   };
 
   const handleImportUtenteJSON = () => {
+    if (!utAdmin) return;
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".json";
@@ -2177,6 +2184,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   };
 
   const addUtente = () => {
+    if (!utAdmin) return;
     const trimmed = newName.trim();
     if (!trimmed) return;
     const utente: Utente = { id: Date.now().toString(), name: trimmed };
@@ -2186,6 +2194,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   };
 
   const removeUtente = (id: string) => {
+    if (!utAdmin) return;
     if (!window.confirm("Remover este utente e todos os seus dados?")) return;
     deleteUtenteRow(id);
     delete _utenteSavedCache[id];
@@ -2245,6 +2254,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   };
 
   const confirmDeparture = (utenteId: string) => {
+    if (utReadOnlyAll) return;
     const pending = pendingOuting[utenteId];
     if (!pending) return;
     if (pending.reason === "outro" && !pending.customText.trim()) return;
@@ -2264,6 +2274,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   };
 
   const confirmArrival = (utenteId: string) => {
+    if (utReadOnlyAll) return;
     const u = utentes.find((x) => x.id === utenteId);
     if (!u?.currentOuting) return;
     const now = new Date();
@@ -2637,6 +2648,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
   const [uploadingEmenta, setUploadingEmenta] = useState(false);
   const handleUploadEmenta = () => {
+    if (!utAdmin) return;
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*,.pdf";
@@ -2663,6 +2675,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   };
 
   const handleRemoveEmenta = () => {
+    if (!utAdmin) return;
     if (!window.confirm("Remover a ementa atual? As famílias deixarão de a ver até carregar uma nova.")) return;
     saveToSupabase("ementa_data", { ementa: null }).then(() => {
       alert("✅ Ementa removida.");
@@ -2904,7 +2917,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
           🗑️
         </button>
         <button
-          onClick={onGerarERPI}
+          onClick={() => { if (utAdmin) onGerarERPI(); }}
           style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#F0E8F5", color: "#7B3FA0", border: "1px solid #D4B8E8", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
           onMouseEnter={(e) => showTip(e, "Gerar Relatório de Actividade ERPI")}
           onMouseLeave={hideTip}
@@ -3104,7 +3117,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
       )}
 
       {/* Painel lateral da ficha do utente */}
-      {openUtente && (() => { const u = openUtente; return (
+      {openUtente && (() => { const u = openUtente; const utBloq = utReadOnlyAll || (utSoRegisto && utenteTab !== "registo"); return (
         <div style={{ position: "fixed" as const, inset: 0, zIndex: 60, background: "#F0F4F8", display: "flex", flexDirection: "column" as const, animation: "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1) both" }}>
 
           {/* Header */}
@@ -3195,6 +3208,8 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
           {/* Conteúdo do separador activo */}
           <div style={{ flex: 1, overflowY: "auto" as const, padding: 20 }}>
+            {utBloq && (<div style={{ maxWidth: 800, margin: "0 auto 12px", background: "#FFF8E8", border: "1px solid #E8D28A", borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: 700, color: "#8A6A2E", textAlign: "center" as const }}>👁️ Modo de leitura — este separador não pode ser editado com o seu tipo de acesso.</div>)}
+            <div style={utBloq ? { pointerEvents: "none" as const, opacity: 0.96 } : undefined}>
 
             {/* ── GERAL ── */}
             {utenteTab === "geral" && (
@@ -3978,6 +3993,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
             })()}
 
             {/* ── CARDEX (Esquema Terapêutico) ── */}
+            </div>
           </div>
         </div>
       ); })()}
@@ -5352,7 +5368,7 @@ function QuickSearchPanel({ target, schedule, onClose }: {
 // "admin" tem acesso a tudo. No futuro podemos adicionar perfis
 // restritos com role: "stock" | "utentes" | "colaboradores",
 // cada um só com acesso à respetiva página.
-type AppRole = "admin" | "stock" | "utentes" | "colaboradores";
+type AppRole = "admin" | "stock" | "utentes" | "colaboradores" | "enfermagem" | "colaboradoras";
 interface AppUser { username: string; password: string; role: AppRole; }
 
 // As passwords nunca são guardadas em texto simples — só o resultado
@@ -5382,6 +5398,8 @@ const DEFAULT_APP_USERS: AppUser[] = [
 function canAccessPage(user: AppUser | null, page: "utentes" | "schedule" | "stock" | "sugestoes" | "enfermagem"): boolean {
   if (!user) return false;
   if (user.role === "admin") return true;
+  if (user.role === "enfermagem") return page === "enfermagem" || page === "utentes";
+  if (user.role === "colaboradoras") return page === "utentes";
   if (page === "sugestoes") return false;
   if (page === "enfermagem") return user.role === "utentes";
   if (user.role === "colaboradores") return page === "schedule";
@@ -6137,6 +6155,7 @@ export default function App() {
 
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   _appCurrentUserName = currentUser?.username || "";
+  _appCurrentUserRole = currentUser?.role || "";
   const [appUsersList, setAppUsersList] = useState<AppUser[]>(DEFAULT_APP_USERS);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [changePassCurrent, setChangePassCurrent] = useState("");
