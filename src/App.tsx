@@ -26,6 +26,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -5453,10 +5454,12 @@ function clearAuthTok() {
 const ROLE_BY_EMAIL: Record<string, AppRole> = {
   "fernandopoalves@gmail.com": "admin",
   "sonialoureiro.quintadosavos@gmail.com": "admin",
+  "enf.quintadosavos@outlook.pt": "enfermagem",
 };
 const DISPLAY_BY_EMAIL: Record<string, string> = {
   "fernandopoalves@gmail.com": "Administrador",
   "sonialoureiro.quintadosavos@gmail.com": "Sónia Loureiro",
+  "enf.quintadosavos@outlook.pt": "Enfermagem",
 };
 function LoginScreen({ onLogin }: { users: AppUser[]; onLogin: (user: AppUser) => void }) {
   const [username, setUsername] = useState("");
