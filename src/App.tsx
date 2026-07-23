@@ -21,6 +21,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -4659,32 +4660,28 @@ function FamilyPage({ code }: { code: string }) {
   }, []);
 
   useEffect(() => {
-    Promise.all([
-      loadUtentesFromDB().then((l) => ({ utentes: l })),
-      loadFromSupabase("ementa_data"),
-    ]).then(([utentesRow, ementaRow]) => {
-      const utentes = utentesRow?.utentes ?? [];
-      const found = utentes.find((u: any) => u.familyCode === code);
-      setUtente(found || "not_found");
-      if (ementaRow?.ementa?.url) setEmenta(ementaRow.ementa);
-      // Definir mês inicial como o mês do registo mais recente, se existir
-      if (found?.dailyLogs?.length) {
-        const parseDate = (d: string) => {
-          const [day, mo, yr] = d.split("/").map(Number);
-          return new Date(yr, mo - 1, day);
-        };
-        const mostRecent = found.dailyLogs.reduce((latest: Date, log: any) => {
-          const d = parseDate(log.date);
-          return d > latest ? d : latest;
-        }, parseDate(found.dailyLogs[0].date));
-        setYear(mostRecent.getFullYear());
-        setMonth(mostRecent.getMonth());
-      }
-      setLoading(false);
-    }).catch(() => {
-      setUtente("not_found");
-      setLoading(false);
-    });
+    fetch("/api/api/familia?code=" + encodeURIComponent(code))
+      .then((r) => r.json())
+      .then((data: any) => {
+        const found = data && data.utente ? data.utente : null;
+        if (!found || data.notFound) { setUtente("not_found"); setLoading(false); return; }
+        setUtente(found);
+        if (data.ementa && data.ementa.url) setEmenta(data.ementa);
+        if (found.dailyLogs && found.dailyLogs.length) {
+          const parseDate = (d: string) => {
+            const [day, mo, yr] = d.split("/").map(Number);
+            return new Date(yr, mo - 1, day);
+          };
+          const mostRecent = found.dailyLogs.reduce((latest: Date, log: any) => {
+            const dd = parseDate(log.date);
+            return dd > latest ? dd : latest;
+          }, parseDate(found.dailyLogs[0].date));
+          setYear(mostRecent.getFullYear());
+          setMonth(mostRecent.getMonth());
+        }
+        setLoading(false);
+      })
+      .catch(() => { setUtente("not_found"); setLoading(false); });
   }, [code]);
 
   if (loading) {
