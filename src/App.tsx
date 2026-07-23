@@ -28,6 +28,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -5457,12 +5458,14 @@ const ROLE_BY_EMAIL: Record<string, AppRole> = {
   "sonialoureiro.quintadosavos@gmail.com": "admin",
   "enf.quintadosavos@outlook.pt": "enfermagem",
   "colaboradores.quintadosavos@outlook.pt": "colaboradoras",
+  "colaboradore.quintadosavos@outlook.pt": "colaboradoras",
 };
 const DISPLAY_BY_EMAIL: Record<string, string> = {
   "fernandopoalves@gmail.com": "Administrador",
   "sonialoureiro.quintadosavos@gmail.com": "Sónia Loureiro",
   "enf.quintadosavos@outlook.pt": "Enfermagem",
   "colaboradores.quintadosavos@outlook.pt": "Colaboradoras",
+  "colaboradore.quintadosavos@outlook.pt": "Colaboradoras",
 };
 function LoginScreen({ onLogin }: { users: AppUser[]; onLogin: (user: AppUser) => void }) {
   const [username, setUsername] = useState("");
@@ -5485,7 +5488,8 @@ function LoginScreen({ onLogin }: { users: AppUser[]; onLogin: (user: AppUser) =
       }
       applyAuthTok(data);
       const em = String(data.user?.email || username).trim().toLowerCase();
-      const role = ROLE_BY_EMAIL[em] || "admin";
+      const role = ROLE_BY_EMAIL[em];
+      if (!role) { setError("Esta conta ainda não tem permissões atribuídas. Contacte o administrador."); return; }
       const nome = DISPLAY_BY_EMAIL[em] || em;
       onLogin({ username: nome, password: "", role });
     } catch (err) {
