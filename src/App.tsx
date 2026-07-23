@@ -23,6 +23,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -6571,7 +6572,9 @@ export default function App() {
     let code = employeeProfiles[name]?.colaboradorCode;
     if (!code) {
       code = generateColaboradorCode();
-      setEmployeeProfiles((prev) => ({ ...prev, [name]: { ...(prev[name] || {}), colaboradorCode: code } }));
+      const _profs = { ...employeeProfiles, [name]: { ...(employeeProfiles[name] || {}), colaboradorCode: code } };
+      setEmployeeProfiles(_profs);
+      saveToSupabase("escala_data", { employee_profiles: _profs }).catch(() => {});
     }
     const link = `${window.location.origin}${window.location.pathname}?colaborador=${code}`;
     setColaboradorLinkModal({ name, link });
