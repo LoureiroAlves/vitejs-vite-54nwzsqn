@@ -18,6 +18,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -5385,6 +5386,15 @@ function canAccessPage(user: AppUser | null, page: "utentes" | "schedule" | "sto
   return user.role === page;
 }
 
+let _authSession: any = null;
+const ROLE_BY_EMAIL: Record<string, AppRole> = {
+  "fernandopoalves@gmail.com": "admin",
+  "sonialoureiro.quintadosavos@gmail.com": "admin",
+};
+const DISPLAY_BY_EMAIL: Record<string, string> = {
+  "fernandopoalves@gmail.com": "Administrador",
+  "sonialoureiro.quintadosavos@gmail.com": "Sónia Loureiro",
+};
 function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: AppUser) => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -5392,14 +5402,25 @@ function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: App
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const trimmed = username.trim().toLowerCase();
-    const candidate = users.find((u) => u.username.trim().toLowerCase() === trimmed);
-    const ok = candidate ? await verifyPassword(password, candidate.password) : false;
-    if (candidate && ok) {
-      setError("");
-      onLogin(candidate);
-    } else {
-      setError("Nome de utilizador ou password incorretos.");
+    setError("");
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: "POST",
+        headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ email: username.trim(), password }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.access_token) {
+        setError("Email ou password incorretos.");
+        return;
+      }
+      _authSession = data;
+      const em = String(data.user?.email || username).trim().toLowerCase();
+      const role = ROLE_BY_EMAIL[em] || "admin";
+      const nome = DISPLAY_BY_EMAIL[em] || em;
+      onLogin({ username: nome, password: "", role });
+    } catch (err) {
+      setError("Não foi possível ligar. Verifica a tua ligação à internet.");
     }
   };
 
@@ -5420,12 +5441,12 @@ function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: App
           Inicia sessão para continuar
         </p>
         <form onSubmit={handleSubmit}>
-          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 5 }}>Nome de utilizador</label>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 5 }}>Email</label>
           <input
             autoFocus
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="O teu nome"
+            placeholder="email@exemplo.pt"
             style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const, marginBottom: 14, colorScheme: "light" as const }}
           />
           <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 5 }}>Password</label>
