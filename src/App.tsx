@@ -19,6 +19,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -5386,7 +5387,7 @@ function canAccessPage(user: AppUser | null, page: "utentes" | "schedule" | "sto
   return user.role === page;
 }
 
-let _authSession: any = null;
+export let _authSession: any = null;
 const ROLE_BY_EMAIL: Record<string, AppRole> = {
   "fernandopoalves@gmail.com": "admin",
   "sonialoureiro.quintadosavos@gmail.com": "admin",
@@ -5395,7 +5396,7 @@ const DISPLAY_BY_EMAIL: Record<string, string> = {
   "fernandopoalves@gmail.com": "Administrador",
   "sonialoureiro.quintadosavos@gmail.com": "Sónia Loureiro",
 };
-function LoginScreen({ users, onLogin }: { users: AppUser[]; onLogin: (user: AppUser) => void }) {
+function LoginScreen({ onLogin }: { users: AppUser[]; onLogin: (user: AppUser) => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
