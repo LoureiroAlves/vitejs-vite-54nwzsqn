@@ -1960,6 +1960,13 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   useEffect(() => { loadUtentesFromDB().then((list) => setUtentes(list as Utente[])); }, []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
+  const _listScroll = useRef(0);
+  useEffect(() => {
+    const el = document.querySelector(".page-enter") as HTMLElement | null;
+    if (!el) return;
+    if (openUtente) { _listScroll.current = el.scrollTop; el.scrollTop = 0; }
+    else { el.scrollTop = _listScroll.current; }
+  }, [openUtente]);
   const [utenteTab, setUtenteTab] = useState<"geral" | "registo" | "medicacao" | "cuidados" | "pic" | "admissao">("geral");
   const [importResult, setImportResult] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -4106,6 +4113,13 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   useEffect(() => { loadUtentesFromDB().then((list) => setUtentes(list as Utente[])); }, []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
+  const _listScroll = useRef(0);
+  useEffect(() => {
+    const el = document.querySelector(".page-enter") as HTMLElement | null;
+    if (!el) return;
+    if (openUtente) { _listScroll.current = el.scrollTop; el.scrollTop = 0; }
+    else { el.scrollTop = _listScroll.current; }
+  }, [openUtente]);
   const [tab, setTab] = useState<"cardex" | "rosto" | "registo">("cardex");
   const [search, setSearch] = useState("");
 
