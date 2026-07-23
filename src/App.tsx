@@ -22,6 +22,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -5529,20 +5530,15 @@ function ColaboradorSchedulePage({ code }: { code: string }) {
   }, []);
 
   useEffect(() => {
-    loadFromSupabase("escala_data").then((escala) => {
-      const profiles = escala?.employee_profiles || {};
-      const found = Object.keys(profiles).find((name) => profiles[name]?.colaboradorCode === code);
-      if (!found) {
-        setNotFound(true);
-      } else {
-        setEmployeeName(found);
-        setSchedule(escala?.schedule || {});
-      }
-      setLoading(false);
-    }).catch(() => {
-      setNotFound(true);
-      setLoading(false);
-    });
+    fetch("/api/api/portais?tipo=colaborador&code=" + encodeURIComponent(code))
+      .then((r) => r.json())
+      .then((data: any) => {
+        if (!data || data.notFound || !data.employeeName) { setNotFound(true); setLoading(false); return; }
+        setEmployeeName(data.employeeName);
+        setSchedule(data.schedule || {});
+        setLoading(false);
+      })
+      .catch(() => { setNotFound(true); setLoading(false); });
   }, [code]);
 
   if (loading) {
@@ -5673,12 +5669,15 @@ function MapaGeralPage() {
   }, []);
 
   useEffect(() => {
-    loadFromSupabase("escala_data").then((escala) => {
-      setEmployees(escala?.employees || []);
-      setRvEmployees(escala?.rv_employees || []);
-      setSchedule(escala?.schedule || {});
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    fetch("/api/api/portais?tipo=mapageral")
+      .then((r) => r.json())
+      .then((data: any) => {
+        setEmployees(data?.employees || []);
+        setRvEmployees(data?.rv_employees || []);
+        setSchedule(data?.schedule || {});
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   if (loading) {
@@ -5965,23 +5964,18 @@ function QuestionarioSatisfacaoPage() {
     }
     setError("");
     setSubmitting(true);
-    loadFromSupabase("escala_data").then((escala) => {
-      const current = escala?.satisfaction_responses || [];
-      const novaResposta = {
-        id: Date.now().toString() + Math.random().toString(36).slice(2),
-        submittedAt: new Date().toISOString(),
-        idade,
-        sexo,
-        ratings,
-        apreciacaoGlobal,
-        sugestaoMelhoria: sugestaoMelhoria.trim(),
-      };
-      return saveToSupabase("escala_data", { satisfaction_responses: [...current, novaResposta] });
-    }).then(() => {
-      setSubmitted(true);
-    }).catch(() => {
-      setError("Não foi possível enviar a resposta. Verifique a ligação à internet e tente novamente.");
-    }).finally(() => setSubmitting(false));
+    fetch("/api/api/portais?tipo=questionario", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idade, sexo, ratings, apreciacaoGlobal, sugestaoMelhoria: sugestaoMelhoria.trim() }),
+    })
+      .then((r) => r.json())
+      .then((data: any) => {
+        if (data && data.ok) setSubmitted(true);
+        else setError("Não foi possível enviar a resposta. Verifique a ligação à internet e tente novamente.");
+      })
+      .catch(() => { setError("Não foi possível enviar a resposta. Verifique a ligação à internet e tente novamente."); })
+      .finally(() => setSubmitting(false));
   };
 
   if (submitted) {
