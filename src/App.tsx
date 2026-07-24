@@ -5464,8 +5464,8 @@ const DISPLAY_BY_EMAIL: Record<string, string> = {
   "fernandopoalves@gmail.com": "Administrador",
   "sonialoureiro.quintadosavos@gmail.com": "Sónia Loureiro",
   "enf.quintadosavos@outlook.pt": "Enfermagem",
-  "colaboradores.quintadosavos@outlook.pt": "Colaboradoras",
-  "colaboradore.quintadosavos@outlook.pt": "Colaboradoras",
+  "colaboradores.quintadosavos@outlook.pt": "Colaboradores",
+  "colaboradore.quintadosavos@outlook.pt": "Colaboradores",
 };
 function LoginScreen({ onLogin }: { users: AppUser[]; onLogin: (user: AppUser) => void }) {
   const [username, setUsername] = useState("");
