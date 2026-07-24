@@ -31,6 +31,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -301,7 +302,10 @@ async function uploadUtenteDoc(utenteId: string, file: File): Promise<string | n
       if (_c && _c.size > 0) { file = new File([_c], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" }); }
     }
     const rand = Math.random().toString(36).slice(2, 8);
-    const path = `${utenteId}/${Date.now()}_${rand}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    const _pp = utenteId.split("_");
+    const _uid = _pp.shift();
+    const _ctx = _pp.length ? _pp.join("_") + "_" : "";
+    const path = `${_uid}/${_ctx}${Date.now()}_${rand}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const contentType = file.type || (file.name.endsWith(".pdf") ? "application/pdf" : file.name.match(/\.(jpg|jpeg)$/i) ? "image/jpeg" : file.name.endsWith(".png") ? "image/png" : "application/octet-stream");
     // Upload através da função no servidor (chave secreta) — o site já não escreve direto no Storage
     const res = await fetch(`/api/api/upload?path=${encodeURIComponent(path)}&contentType=${encodeURIComponent(contentType)}`, {
@@ -2067,6 +2071,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   const utReadOnlyAll = _role === "enfermagem";
   const utSoRegisto = _role === "colaboradoras";
   const utAdmin = !utReadOnlyAll && !utSoRegisto;
+  const utSuperAdmin = utAdmin && String((_authSession && _authSession.user && _authSession.user.email) || "").trim().toLowerCase() === "fernandopoalves@gmail.com";
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   useEffect(() => { loadUtentesFromDB().then((list) => setUtentes(list as Utente[])); }, []);
   const [openUtente, setOpenUtente] = useState<Utente | null>(null);
@@ -2220,14 +2225,16 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
     if (!utAdmin) return;
     const trimmed = newName.trim();
     if (!trimmed) return;
-    const utente: Utente = { id: Date.now().toString(), name: trimmed };
+    let _nid = "";
+    do { _nid = String(Math.floor(10000 + Math.random() * 90000)); } while (utentes.some((x) => x.id === _nid));
+    const utente: Utente = { id: _nid, name: trimmed };
     setUtentes((prev) => [...prev, utente]);
     setNewName("");
     setShowAdd(false);
   };
 
   const removeUtente = (id: string) => {
-    if (!utAdmin) return;
+    if (!utSuperAdmin) { alert("Só o administrador principal pode apagar utentes."); return; }
     if (!window.confirm("Remover este utente e todos os seus dados?")) return;
     deleteUtenteRow(id);
     delete _utenteSavedCache[id];
@@ -3217,7 +3224,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               {utenteTab === "medicacao" && (<button onClick={() => printMedicacao(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Medicação</button>)}
               {utenteTab === "cuidados" && (<button onClick={() => printCuidados(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Cuidados</button>)}
               {utenteTab === "admissao" && (<button onClick={() => handleImprimirProcesso(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Ficha</button>)}
-              <button onClick={() => handleGetFamilyLink(u)} style={{ background: "#3A5A70", color: "white", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🔗 Família</button>
+              {utSuperAdmin && (<button onClick={() => { if (!window.confirm("Apagar TODOS os ficheiros (fotos e documentos) do utente " + u.name + "? Não pode ser desfeito. Os registos em texto mantêm-se.")) return; const _tok = (_authSession && _authSession.access_token) || ""; fetch("/api/api/delete-utente-files?id=" + encodeURIComponent(u.id), { method: "POST", headers: { Authorization: "Bearer " + _tok } }).then((r) => r.json()).then((d) => { alert(d && d.ok ? ("✅ " + d.apagados + " ficheiro(s) apagado(s).") : ("❌ Não foi possível: " + ((d && d.error) || ""))); }).catch(() => alert("❌ Erro de ligação.")); }} style={{ background: "#C2554A", color: "white", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }} title="Apagar ficheiros deste utente">🗑️ Ficheiros</button>)}<button onClick={() => handleGetFamilyLink(u)} style={{ background: "#3A5A70", color: "white", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🔗 Família</button>
               <button onClick={() => setOpenUtente(null)} style={{ background: "transparent", border: "1px solid #4A3E30", borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: "#C9C2B5" }}><IconX size={16} /></button>
             </div>
           </div>
@@ -3251,7 +3258,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
                 {/* Dados básicos */}
                 <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <div style={{ fontWeight: 800, color: "#1F4D2E", fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>🏠 Dados Gerais</div>
+                  <div style={{ fontWeight: 800, color: "#1F4D2E", fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>🏠 Dados Gerais</div><div style={{ fontSize: 11, color: "#8A6A2E", marginBottom: 8, marginTop: -4 }}>Nº de utente (pasta de ficheiros): <strong>{u.id}</strong></div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     {[
                       { key: "room", label: "Quarto", placeholder: "Ex: 14 cama 2" },
