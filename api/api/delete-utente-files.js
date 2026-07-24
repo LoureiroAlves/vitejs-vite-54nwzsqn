@@ -1,3 +1,4 @@
+
 // api/delete-utente-files.js
 // Apaga TODOS os ficheiros de um utente no Storage (a pasta <id>/).
 // Segurança: só funciona se quem chama tiver uma sessão válida (login).
@@ -26,6 +27,10 @@ export default async function handler(req) {
     headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${token}` },
   });
   if (!userRes.ok) return json({ error: "sessao invalida" }, 401);
+  const user = await userRes.json();
+  const email = String(user && user.email ? user.email : "").trim().toLowerCase();
+  // Só o administrador principal pode apagar ficheiros de utentes
+  if (email !== "fernandopoalves@gmail.com") return json({ error: "sem permissao" }, 403);
 
   // 2) Id do utente (nome da pasta)
   const url = new URL(req.url);
