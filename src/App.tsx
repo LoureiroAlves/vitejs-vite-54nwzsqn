@@ -32,6 +32,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -1644,7 +1645,7 @@ interface Utente {
       familiarFrequentaResposta?: string; necessidadeExpressaCliente?: string; ligadoFreguesia?: string;
       total?: string; selecionado?: boolean; dataAdmissaoPrevista?: string; observacoes?: string;
     };
-    documentosNecessarios?: { id: string; documento: string; entregue: boolean; data: string }[];
+    documentosNecessarios?: { id: string; documento: string; entregue: boolean; data: string; url?: string }[];
     fundamentacaoTecnica?: string;
   };
   // Cardex — folha de esquema terapêutico (medicação detalhada por horário)
@@ -4006,11 +4007,11 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                   <div style={boxStyle}>
                     <div style={boxTitle}>📎 Documentos Necessários</div>
                     {(fa.documentosNecessarios || []).map((doc, idx) => (
-                      <div key={doc.id || idx} style={{ display: "grid", gridTemplateColumns: "2fr auto 1fr auto", gap: 8, marginBottom: 8, alignItems: "center" }}>
+                      <div key={doc.id || idx} style={{ display: "grid", gridTemplateColumns: "2fr auto 1fr auto auto", gap: 8, marginBottom: 8, alignItems: "center" }}>
                         <input value={doc.documento} placeholder="Documento" onChange={(e) => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d, i) => i === idx ? { ...d, documento: e.target.value } : d) })} style={{ ...inputStyle, width: "auto" }} />
                         <button onClick={() => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d, i) => i === idx ? { ...d, entregue: !d.entregue } : d) })} style={toggleBtn(doc.entregue)}>{doc.entregue ? "✓ Entregue" : "Pendente"}</button>
                         <input value={doc.data} placeholder="Data" onChange={(e) => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d, i) => i === idx ? { ...d, data: e.target.value } : d) })} style={{ ...inputStyle, width: "auto" }} />
-                        <button onClick={() => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).filter((_, i) => i !== idx) })} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC" }}>✕</button>
+                        {doc.url ? (<a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#3A5A70", textDecoration: "none", fontWeight: 700, whiteSpace: "nowrap" as const }}>📄 Ver</a>) : (<button onClick={() => { const input = document.createElement("input"); input.type = "file"; input.onchange = async (ev: Event) => { const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return; const url = await uploadUtenteDoc(u.id + "_admissao", file); if (url) updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d, i) => i === idx ? { ...d, url } : d) }); }; document.body.appendChild(input); input.click(); document.body.removeChild(input); }} style={{ border: "1px solid #B8CCE0", background: "#E8EEF5", color: "#3A5A70", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}>📎 Anexar</button>)}<button onClick={() => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).filter((_, i) => i !== idx) })} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC" }}>✕</button>
                       </div>
                     ))}
                     <button
