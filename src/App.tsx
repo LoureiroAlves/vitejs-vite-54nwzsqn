@@ -29,6 +29,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -8602,13 +8603,7 @@ export default function App() {
             >
               📥 Restaurar backup
             </button>
-            <button
-              onClick={() => setShowChangePassword(true)}
-              style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#FFFFFF", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
-              title="Alterar a tua password"
-            >
-              Alterar password
-            </button>
+            
             <button
               onClick={() => { clearAuthTok(); setCurrentUser(null); }}
               style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#FFFFFF", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
