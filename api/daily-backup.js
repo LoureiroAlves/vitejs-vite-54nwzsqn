@@ -1,4 +1,5 @@
 
+
 // Backup automático diário — corre sozinho todos os dias, via Vercel Cron,
 // vai buscar os dados ao Supabase e envia por email (via Resend).
 // Não precisa do teu computador ligado nem do browser aberto.
@@ -7,7 +8,9 @@
 export default async function handler(req, res) {
   // Segurança simples: só aceita pedidos com o segredo certo (o Vercel Cron envia-o)
   const authHeader = req.headers["authorization"];
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const isVercelCron = !!req.headers["x-vercel-cron-schedule"] || String(req.headers["user-agent"] || "").includes("vercel-cron");
+  const secretOk = process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`;
+  if (!secretOk && !isVercelCron) {
     return res.status(401).json({ error: "Não autorizado" });
   }
 
