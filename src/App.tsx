@@ -33,6 +33,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -328,12 +329,13 @@ async function uploadUtenteDoc(utenteId: string, file: File): Promise<string | n
 
 async function deleteUtenteDoc(url: string): Promise<void> {
   try {
-    const path = url.split("/utentes-docs/")[1];
-    if (!path) return;
-    await fetch(`${SUPABASE_URL}/storage/v1/object/utentes-docs/${path}`, {
-      method: "DELETE",
-      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` },
-    });
+    let p = "";
+    const m = url.match(/[?&]p=([^&]+)/);
+    if (m) p = decodeURIComponent(m[1]);
+    else if (url.includes("/utentes-docs/")) p = url.split("/utentes-docs/")[1];
+    if (!p) return;
+    const _tok = (_authSession && _authSession.access_token) || "";
+    await fetch("/api/api/delete-file?p=" + encodeURIComponent(p), { method: "POST", headers: { Authorization: "Bearer " + _tok } });
   } catch (e) {}
 }
 
@@ -3454,7 +3456,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                           ? <a href={f.url} target="_blank" rel="noopener noreferrer"><img src={f.url} alt={f.name} style={{ width: 72, height: 72, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} /></a>
                           : <a href={f.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, background: "#F7F5F0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#3A5A70", textDecoration: "none" }}>📄 {f.name}</a>
                         }
-                        <button onClick={() => updateUtente(u.id, { filesFamily: (u.filesFamily || []).filter((_, i) => i !== fi) })} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                        <button onClick={() => { if (f.url) deleteUtenteDoc(f.url); updateUtente(u.id, { filesFamily: (u.filesFamily || []).filter((_, i) => i !== fi) }); }} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                       </div>
                     ))}
                   </div>
@@ -3635,7 +3637,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                           ? <a href={att.url} target="_blank" rel="noopener noreferrer"><img src={att.url} alt={att.name} style={{ width: 72, height: 72, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} /></a>
                           : <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, background: "#F7F5F0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#3A5A70", textDecoration: "none" }}>📄 {att.name}</a>
                         }
-                        <button onClick={() => updateUtente(u.id, { attachmentsRegisto: (u.attachmentsRegisto || []).filter((_, i) => i !== ai) })} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                        <button onClick={() => { if (att.url) deleteUtenteDoc(att.url); updateUtente(u.id, { attachmentsRegisto: (u.attachmentsRegisto || []).filter((_, i) => i !== ai) }); }} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                       </div>
                     ))}
                   </div>
@@ -3714,7 +3716,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                           ? <a href={att.url} target="_blank" rel="noopener noreferrer"><img src={att.url} alt={att.name} style={{ width: 72, height: 72, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} /></a>
                           : <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, background: "#F7F5F0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#3A5A70", textDecoration: "none" }}>📄 {att.name}</a>
                         }
-                        <button onClick={() => updateUtente(u.id, { attachmentsMed: (u.attachmentsMed || []).filter((_, i) => i !== ai) })} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                        <button onClick={() => { if (att.url) deleteUtenteDoc(att.url); updateUtente(u.id, { attachmentsMed: (u.attachmentsMed || []).filter((_, i) => i !== ai) }); }} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                       </div>
                     ))}
                   </div>
@@ -3758,7 +3760,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                           ? <a href={att.url} target="_blank" rel="noopener noreferrer"><img src={att.url} alt={att.name} style={{ width: 72, height: 72, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} /></a>
                           : <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, background: "#F7F5F0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#3A5A70", textDecoration: "none" }}>📄 {att.name}</a>
                         }
-                        <button onClick={() => updateUtente(u.id, { attachmentsCuidados: (u.attachmentsCuidados || []).filter((_, i) => i !== ai) })} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                        <button onClick={() => { if (att.url) deleteUtenteDoc(att.url); updateUtente(u.id, { attachmentsCuidados: (u.attachmentsCuidados || []).filter((_, i) => i !== ai) }); }} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                       </div>
                     ))}
                   </div>
@@ -4011,7 +4013,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                         <input value={doc.documento} placeholder="Documento" onChange={(e) => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d, i) => i === idx ? { ...d, documento: e.target.value } : d) })} style={{ ...inputStyle, width: "auto" }} />
                         <button onClick={() => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d, i) => i === idx ? { ...d, entregue: !d.entregue } : d) })} style={toggleBtn(doc.entregue)}>{doc.entregue ? "✓ Entregue" : "Pendente"}</button>
                         <input value={doc.data} placeholder="Data" onChange={(e) => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d, i) => i === idx ? { ...d, data: e.target.value } : d) })} style={{ ...inputStyle, width: "auto" }} />
-                        {doc.url ? (<a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#3A5A70", textDecoration: "none", fontWeight: 700, whiteSpace: "nowrap" as const }}>📄 Ver</a>) : (<button onClick={() => { const input = document.createElement("input"); input.type = "file"; input.onchange = async (ev: Event) => { const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return; const url = await uploadUtenteDoc(u.id + "_admissao", file); if (url) updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d, i) => i === idx ? { ...d, url } : d) }); }; document.body.appendChild(input); input.click(); document.body.removeChild(input); }} style={{ border: "1px solid #B8CCE0", background: "#E8EEF5", color: "#3A5A70", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}>📎 Anexar</button>)}<button onClick={() => updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).filter((_, i) => i !== idx) })} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC" }}>✕</button>
+                        {doc.url ? (<a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#3A5A70", textDecoration: "none", fontWeight: 700, whiteSpace: "nowrap" as const }}>📄 Ver</a>) : (<button onClick={() => { const input = document.createElement("input"); input.type = "file"; input.onchange = async (ev: Event) => { const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return; const url = await uploadUtenteDoc(u.id + "_admissao", file); if (url) updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).map((d, i) => i === idx ? { ...d, url } : d) }); }; document.body.appendChild(input); input.click(); document.body.removeChild(input); }} style={{ border: "1px solid #B8CCE0", background: "#E8EEF5", color: "#3A5A70", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}>📎 Anexar</button>)}<button onClick={() => { if (doc.url) deleteUtenteDoc(doc.url); updateFicha({ documentosNecessarios: (fa.documentosNecessarios || []).filter((_, i) => i !== idx) }); }} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC" }}>✕</button>
                       </div>
                     ))}
                     <button
@@ -4527,7 +4529,7 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
                           ? <a href={att.url} target="_blank" rel="noopener noreferrer"><img src={att.url} alt={att.name} style={{ width: 72, height: 72, objectFit: "cover" as const, borderRadius: 8, border: "1px solid #E4DED3" }} /></a>
                           : <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, background: "#F7F5F0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#3A5A70", textDecoration: "none" }}>📄 {att.name}</a>
                         }
-                        <button onClick={() => updateUtente(u.id, { attachmentsRegisto: (u.attachmentsRegisto || []).filter((_, i) => i !== ai) })} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                        <button onClick={() => { if (att.url) deleteUtenteDoc(att.url); updateUtente(u.id, { attachmentsRegisto: (u.attachmentsRegisto || []).filter((_, i) => i !== ai) }); }} style={{ position: "absolute" as const, top: -6, right: -6, background: "#C2554A", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                       </div>
                     ))}
                   </div>
