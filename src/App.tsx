@@ -34,6 +34,7 @@
 
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -304,6 +305,7 @@ async function uploadUtenteDoc(utenteId: string, file: File): Promise<string | n
       if (_c && _c.size > 0) { file = new File([_c], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" }); }
     }
     const rand = Math.random().toString(36).slice(2, 8);
+    if (file.size > 5 * 1024 * 1024) { alert("⚠️ Este ficheiro tem " + (file.size / 1048576).toFixed(1) + " MB — é grande e vai ocupar bastante espaço. Para documentos, é melhor tirar uma FOTO em vez de digitalizar para PDF (fica muito mais leve). Vou carregá-lo à mesma."); }
     const _pp = utenteId.split("_");
     const _uid = _pp.shift();
     const _ctx = _pp.length ? _pp.join("_") + "_" : "";
@@ -10624,3 +10626,5 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
 };
 
+
+              
