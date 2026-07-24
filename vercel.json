@@ -1,3 +1,4 @@
+
 {
   "headers": [
     {
@@ -19,6 +20,14 @@
     }
   ],
   "crons": [
+    {
+      "path": "/api/daily-backup",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/daily-backup",
+      "schedule": "0 14 * * *"
+    },
     {
       "path": "/api/daily-backup",
       "schedule": "0 22 * * *"
