@@ -4333,18 +4333,18 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
   const filtrados = utentes.filter((u) => u.name.toLowerCase().includes(search.toLowerCase()));
   const verSaida = (sheet && sheet.mode === "ver" && sheet.saidaId) ? (saidasDe(selUtente).find((s) => s.id === sheet.saidaId) || null) : null;
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif", background: "#EFE7D4", minHeight: "100vh", color: "#2A241C" }}>
-      <div style={{ background: "#2A241C", padding: "16px 20px", display: "flex", alignItems: "center", gap: 13 }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#EFE7D4", minHeight: "100vh", color: "#2A241C", width: "100%", maxWidth: "100vw", overflowX: "hidden", boxSizing: "border-box" as const }}>
+      <div style={{ background: "#2A241C", padding: "13px 14px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const, rowGap: 10 }}>
         <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, border: "1px solid #4A3E30", background: "transparent", borderRadius: 9, padding: "7px 12px", cursor: "pointer", color: "#C9C2B5", fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>← Voltar</button>
         <div style={{ width: 38, height: 38, borderRadius: 11, background: "#3A332A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19 }}>🚪</div>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: "1 1 170px", minWidth: 0 }}>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: "#FFF" }}>Saídas de Utentes</div>
           <div style={{ fontSize: 12, color: "#B7AE9D" }}>Calendário de saídas e regressos</div>
         </div>
-        <button onClick={abrirNovoVazio} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>+ Registar saída</button>
+        <button onClick={abrirNovoVazio} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const, flex: "0 0 auto" }}>+ Registar saída</button>
       </div>
-      <div style={{ maxWidth: 820, margin: "0 auto", padding: "18px 16px 70px" }}>
-        <div style={{ background: "#FFF", border: "1px solid #EAE3D5", borderRadius: 14, padding: "14px 16px", display: "flex", flexWrap: "wrap" as const, gap: 12, alignItems: "flex-end", marginBottom: 14 }}>
+      <div style={{ maxWidth: 820, margin: "0 auto", padding: "18px 14px 80px", width: "100%", boxSizing: "border-box" as const }}>
+        <div style={{ background: "#FFF", border: "1px solid #EAE3D5", borderRadius: 14, padding: "12px 13px", display: "flex", flexWrap: "wrap" as const, gap: 10, alignItems: "flex-end", marginBottom: 14, boxSizing: "border-box" as const }}>
           <div style={{ position: "relative" as const, flex: 1, minWidth: 220 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 4 }}>Utente</div>
             <button onClick={() => setPickOpen(!pickOpen)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, border: "1px solid #E4DED3", borderRadius: 10, padding: "8px 12px", background: "#FAF7F0", cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
@@ -4368,7 +4368,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
               </div>
             ) : null}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flex: "1 1 auto", justifyContent: "center" }}>
             <button onClick={goPrev} style={{ border: "1px solid #E4DED3", background: "#F7F5F0", borderRadius: 9, padding: "8px 12px", cursor: "pointer", color: "#6B6358", fontWeight: 700 }}>‹</button>
             <div style={{ fontSize: 15, fontWeight: 800, minWidth: 128, textAlign: "center" as const }}>{MONTH_NAMES[month]} {year}</div>
             <button onClick={goNext} style={{ border: "1px solid #E4DED3", background: "#F7F5F0", borderRadius: 9, padding: "8px 12px", cursor: "pointer", color: "#6B6358", fontWeight: 700 }}>›</button>
