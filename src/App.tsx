@@ -1681,6 +1681,7 @@ interface Utente {
   // Saídas (consultas, família, etc.)
   currentOuting?: { reason: "consulta" | "familia" | "outro"; details?: string; expectedReturn?: string; departedAt: string } | null;
   outingsHistory?: { id: string; reason: "consulta" | "familia" | "outro"; details?: string; expectedReturn?: string; departedAt: string; returnedAt?: string }[];
+  saidas?: Saida[];
 }
 
 const SATISFACTION_QUESTIONNAIRE = [
@@ -4246,6 +4247,231 @@ function handleImprimirFolhaRosto(u: Utente) {
   w.document.open(); w.document.write(html); w.document.close(); w.focus();
 }
 
+interface Saida {
+  id: string; tipo: string; inicio: string; fim?: string; regressoAuto: boolean; regressado?: boolean; dataRegresso?: string; notas?: string;
+}
+const SAIDA_TIPOS_BASE: { id: string; label: string; cor: string; corTexto: string }[] = [
+  { id: "familiares", label: "Saída com familiares", cor: "#E8B14A", corTexto: "#5A3E0A" },
+  { id: "ferias", label: "Férias com familiares", cor: "#2BA3A3", corTexto: "#FFFFFF" },
+  { id: "consulta", label: "Consulta ou tratamento médico", cor: "#5B8DBE", corTexto: "#FFFFFF" },
+  { id: "internamento", label: "Internamento hospitalar", cor: "#C2554A", corTexto: "#FFFFFF" },
+  { id: "pessoal", label: "Assunto pessoal", cor: "#8C7BC2", corTexto: "#FFFFFF" },
+  { id: "outro", label: "Outro", cor: "#8A8278", corTexto: "#FFFFFF" },
+];
+const SAIDA_PALETA: string[] = ["#E8B14A", "#2BA3A3", "#5B8DBE", "#C2554A", "#8C7BC2", "#8A8278", "#6FA86F", "#D4537E", "#B08A4E", "#3A8A8A", "#C97B3C", "#E07A3A"];
+const _SNL = String.fromCharCode(10);
+function _saidaDnum(d?: string): number {
+  if (!d) return 0;
+  const p = String(d).split("/");
+  if (p.length !== 3) return 0;
+  return parseInt(p[2], 10) * 10000 + parseInt(p[1], 10) * 100 + parseInt(p[0], 10);
+}
+function _printSaidas(nomeUtente: string, subtitulo: string, linhas: { tipoLabel: string; cor: string; inicio: string; fim: string; estado: string; notas: string }[]) {
+  const esc = (s: any) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const rows = linhas.map((l) => "<tr><td style='border-left:6px solid " + l.cor + ";font-weight:bold'>" + esc(l.tipoLabel) + "</td><td>" + esc(l.inicio) + "</td><td>" + esc(l.fim) + "</td><td>" + esc(l.estado) + "</td><td>" + esc(l.notas).split(_SNL).join("<br>") + "</td></tr>").join("");
+  const corpo = linhas.length ? "<table><thead><tr><th>Tipo de saída</th><th>Saída</th><th>Regresso</th><th>Estado</th><th>Notas</th></tr></thead><tbody>" + rows + "</tbody></table>" : "<p class='vazio'>Sem saídas neste período.</p>";
+  const css = "@page{size:A4;margin:18mm}body{font-family:Arial,sans-serif;color:#2A241C}h1{font-size:18px;margin:0 0 4px}.sub{font-size:12px;color:#888;margin:0 0 16px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#2A241C;color:#fff;padding:7px 8px;text-align:left}td{padding:7px 8px;border-bottom:1px solid #E4DED3;vertical-align:top;word-break:break-word}.vazio{color:#999;font-style:italic}";
+  const html = "<!DOCTYPE html><html lang='pt'><head><meta charset='UTF-8'><title>Saidas</title><style>" + css + "</style></head><body><h1>Saídas — " + esc(nomeUtente) + "</h1><p class='sub'>Associação Oliveirense de Socorros Mútuos · " + esc(subtitulo) + " · Impresso em " + new Date().toLocaleDateString("pt-PT") + "</p>" + corpo + "</body></html>";
+  const w = window.open("", "_blank");
+  if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+  w.document.open(); w.document.write(html); w.document.close(); w.focus();
+  setTimeout(() => w.print(), 300);
+}
+function SaidasPage({ onBack }: { onBack: () => void }) {
+  const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
+  useEffect(() => { loadUtentesFromDB().then((l) => setUtentes(l as Utente[])); }, []);
+  useEffect(() => { saveUtentesData({ utentes }); }, [utentes]);
+  const [tiposCustom, setTiposCustom] = useState<{ id: string; label: string; cor: string; corTexto: string }[]>([]);
+  useEffect(() => { loadFromSupabase("escala_data").then((e: any) => { if (e && Array.isArray(e.saida_tipos)) setTiposCustom(e.saida_tipos); }).catch(() => {}); }, []);
+  const tipos = [...SAIDA_TIPOS_BASE, ...tiposCustom];
+  const tipoById = (id: string) => tipos.find((t) => t.id === id) || SAIDA_TIPOS_BASE[5];
+  const today = new Date();
+  const todayNum = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+  const todayStr = today.toLocaleDateString("pt-PT");
+  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
+  const [selId, setSelId] = useState<string | null>(null);
+  const [pickOpen, setPickOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  useEffect(() => { if (!selId && utentes.length) setSelId(utentes[0].id); }, [utentes, selId]);
+  const selUtente = utentes.find((u) => u.id === selId) || null;
+  const [sheet, setSheet] = useState<{ mode: "ver" | "novo" | "editar"; saidaId?: string } | null>(null);
+  const [fTipo, setFTipo] = useState("familiares");
+  const [fInicio, setFInicio] = useState("");
+  const [fFim, setFFim] = useState("");
+  const [fAuto, setFAuto] = useState(true);
+  const [fNotas, setFNotas] = useState("");
+  const [addTipo, setAddTipo] = useState(false);
+  const [novoNome, setNovoNome] = useState("");
+  const [novoCor, setNovoCor] = useState(SAIDA_PALETA[0]);
+  const [dragY, setDragY] = useState(0);
+  const dragStart = useRef<number | null>(null);
+  const mask = (v: string) => { const d = v.replace(/[^0-9]/g, "").slice(0, 8); if (d.length > 4) return d.slice(0, 2) + "/" + d.slice(2, 4) + "/" + d.slice(4); if (d.length > 2) return d.slice(0, 2) + "/" + d.slice(2); return d; };
+  const saidasDe = (u: Utente | null): Saida[] => ((u && (u as any).saidas) ? (u as any).saidas : []);
+  const updateSaidas = (fn: (prev: Saida[]) => Saida[]) => { if (!selId) return; setUtentes((prev) => prev.map((u) => u.id === selId ? ({ ...u, saidas: fn(saidasDe(u)) } as Utente) : u)); };
+  const appendLog = (texto: string) => { if (!selId) return; setUtentes((prev) => prev.map((u) => { if (u.id !== selId) return u; const nova = { id: Date.now().toString() + Math.random().toString(36).slice(2), date: todayStr, time: new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" }), author: _appCurrentUserName || "", text: texto }; return { ...u, dailyLogs: [nova, ...(u.dailyLogs || [])] }; })); };
+  const effEnd = (s: Saida): number => s.regressado && s.dataRegresso ? _saidaDnum(s.dataRegresso) : (s.fim ? _saidaDnum(s.fim) : todayNum);
+  const saidaNoDia = (u: Utente | null, dnum: number): Saida | null => { const arr = saidasDe(u); for (let i = 0; i < arr.length; i++) { const s = arr[i]; const start = _saidaDnum(s.inicio); if (start && dnum >= start && dnum <= effEnd(s)) return s; } return null; };
+  const numDays = new Date(year, month + 1, 0).getDate();
+  const firstDow = new Date(year, month, 1).getDay();
+  const goPrev = () => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); };
+  const goNext = () => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); };
+  const estadoTexto = (s: Saida): string => { if (s.regressado && s.dataRegresso) return "Regressou a " + s.dataRegresso; if (s.fim && s.regressoAuto) return "Regresso automático a " + s.fim; if (s.fim) return "Regresso previsto " + s.fim; return "Fora (sem data de regresso)"; };
+  const abrirDia = (d: number) => { const dnum = year * 10000 + (month + 1) * 100 + d; const s = saidaNoDia(selUtente, dnum); if (s) { setDragY(0); setSheet({ mode: "ver", saidaId: s.id }); } else { const dd = new Date(year, month, d); setFTipo("familiares"); setFInicio(dd.toLocaleDateString("pt-PT")); setFFim(""); setFAuto(true); setFNotas(""); setDragY(0); setSheet({ mode: "novo" }); } };
+  const abrirNovoVazio = () => { setFTipo("familiares"); setFInicio(todayStr); setFFim(""); setFAuto(true); setFNotas(""); setDragY(0); setSheet({ mode: "novo" }); };
+  const guardarNova = () => { if (!selId) { alert("Escolha primeiro um utente."); return; } if (!fInicio.trim()) { alert("Indique a data de saída (DD/MM/AAAA)."); return; } const nova: Saida = { id: Date.now().toString() + Math.random().toString(36).slice(2), tipo: fTipo, inicio: fInicio.trim(), fim: fFim.trim() || undefined, regressoAuto: fAuto && !!fFim.trim(), notas: fNotas.trim() || undefined }; updateSaidas((prev) => [...prev, nova]); appendLog("📋 SAÍDA DO UTENTE" + _SNL + "🚪 " + tipoById(fTipo).label + " — saída a " + nova.inicio + (nova.fim ? (" · regresso previsto " + nova.fim) : "") + (nova.notas ? (_SNL + nova.notas) : "")); setSheet(null); };
+  const guardarEdicao = () => { if (!sheet || !sheet.saidaId) return; const id = sheet.saidaId; updateSaidas((prev) => prev.map((s) => s.id === id ? { ...s, tipo: fTipo, inicio: fInicio.trim(), fim: fFim.trim() || undefined, regressoAuto: fAuto && !!fFim.trim(), notas: fNotas.trim() || undefined } : s)); setSheet({ mode: "ver", saidaId: id }); };
+  const apagarSaida = (id: string) => { if (!window.confirm("Apagar esta saída?")) return; updateSaidas((prev) => prev.filter((s) => s.id !== id)); setSheet(null); };
+  const confirmarRegresso = (s: Saida) => { updateSaidas((prev) => prev.map((x) => x.id === s.id ? { ...x, regressado: true, dataRegresso: todayStr } : x)); appendLog("📋 SAÍDA DO UTENTE" + _SNL + "🏠 Regresso a " + todayStr + " (" + tipoById(s.tipo).label + ")"); setSheet(null); };
+  const adicionarTipo = () => { const nome = novoNome.trim(); if (!nome) return; const id = "c" + Date.now().toString(36); const novos = [...tiposCustom, { id, label: nome, cor: novoCor, corTexto: "#FFFFFF" }]; setTiposCustom(novos); saveToSupabase("escala_data", { saida_tipos: novos }).catch(() => {}); setNovoNome(""); setAddTipo(false); };
+  const linhaDe = (s: Saida) => ({ tipoLabel: tipoById(s.tipo).label, cor: tipoById(s.tipo).cor, inicio: s.inicio, fim: s.fim || s.dataRegresso || "—", estado: estadoTexto(s), notas: s.notas || "" });
+  const imprimirMes = () => { if (!selUtente) return; const ms = year * 10000 + (month + 1) * 100 + 1; const me = year * 10000 + (month + 1) * 100 + numDays; const linhas = saidasDe(selUtente).filter((s) => { const st = _saidaDnum(s.inicio); return st && st <= me && effEnd(s) >= ms; }).sort((a, b) => _saidaDnum(a.inicio) - _saidaDnum(b.inicio)).map(linhaDe); _printSaidas(selUtente.name, MONTH_NAMES[month] + " " + year, linhas); };
+  const imprimirHoje = () => { if (!selUtente) return; const linhas = saidasDe(selUtente).filter((s) => { const st = _saidaDnum(s.inicio); return st && todayNum >= st && todayNum <= effEnd(s); }).map(linhaDe); _printSaidas(selUtente.name, "Dia " + todayStr, linhas); };
+  const imprimirUma = (s: Saida) => { if (!selUtente) return; _printSaidas(selUtente.name, tipoById(s.tipo).label, [linhaDe(s)]); };
+  const inputStyle = { width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 11px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const };
+  const WD = ["D", "S", "T", "Q", "Q", "S", "S"];
+  const filtrados = utentes.filter((u) => u.name.toLowerCase().includes(search.toLowerCase()));
+  const verSaida = (sheet && sheet.mode === "ver" && sheet.saidaId) ? (saidasDe(selUtente).find((s) => s.id === sheet.saidaId) || null) : null;
+  return (
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#EFE7D4", minHeight: "100vh", color: "#2A241C" }}>
+      <div style={{ background: "#2A241C", padding: "16px 20px", display: "flex", alignItems: "center", gap: 13 }}>
+        <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, border: "1px solid #4A3E30", background: "transparent", borderRadius: 9, padding: "7px 12px", cursor: "pointer", color: "#C9C2B5", fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>← Voltar</button>
+        <div style={{ width: 38, height: 38, borderRadius: 11, background: "#3A332A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19 }}>🚪</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: "#FFF" }}>Saídas de Utentes</div>
+          <div style={{ fontSize: 12, color: "#B7AE9D" }}>Calendário de saídas e regressos</div>
+        </div>
+        <button onClick={abrirNovoVazio} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>+ Registar saída</button>
+      </div>
+      <div style={{ maxWidth: 820, margin: "0 auto", padding: "18px 16px 70px" }}>
+        <div style={{ background: "#FFF", border: "1px solid #EAE3D5", borderRadius: 14, padding: "14px 16px", display: "flex", flexWrap: "wrap" as const, gap: 12, alignItems: "flex-end", marginBottom: 14 }}>
+          <div style={{ position: "relative" as const, flex: 1, minWidth: 220 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 4 }}>Utente</div>
+            <button onClick={() => setPickOpen(!pickOpen)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, border: "1px solid #E4DED3", borderRadius: 10, padding: "8px 12px", background: "#FAF7F0", cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
+              <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, overflow: "hidden", flexShrink: 0 }}>{selUtente && selUtente.photo ? <img src={selUtente.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" as const }} /> : (selUtente ? selUtente.name.slice(0, 2).toUpperCase() : "—")}</div>
+              <div style={{ flex: 1, textAlign: "left" as const }}>
+                <div style={{ fontSize: 14, fontWeight: 700 }}>{selUtente ? selUtente.name : "Escolher utente"}</div>
+                <div style={{ fontSize: 11, color: "#A39B8E" }}>{selUtente ? ("Nº " + selUtente.id + (selUtente.room ? (" · Quarto " + selUtente.room) : "")) : ""}</div>
+              </div>
+              <span style={{ color: "#A39B8E" }}>▾</span>
+            </button>
+            {pickOpen ? (
+              <div style={{ position: "absolute" as const, top: "100%", left: 0, right: 0, zIndex: 20, marginTop: 6, background: "#FFF", border: "1px solid #E4DED3", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", maxHeight: 280, overflowY: "auto" as const }}>
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar..." style={{ width: "100%", border: "none", borderBottom: "1px solid #EFEAE2", padding: "10px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "'Inter', sans-serif", background: "#FFF", color: "#2A241C" }} />
+                {filtrados.map((u) => (
+                  <button key={u.id} onClick={() => { setSelId(u.id); setPickOpen(false); setSearch(""); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", border: "none", borderBottom: "1px solid #F4F0E8", background: u.id === selId ? "#FAF7F0" : "#FFF", cursor: "pointer", textAlign: "left" as const }}>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, overflow: "hidden", flexShrink: 0 }}>{u.photo ? <img src={u.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" as const }} /> : u.name.slice(0, 2).toUpperCase()}</div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#2A241C" }}>{u.name}</span>
+                  </button>
+                ))}
+                {filtrados.length === 0 ? <div style={{ padding: 14, fontSize: 13, color: "#A39B8E", textAlign: "center" as const }}>Nenhum utente.</div> : null}
+              </div>
+            ) : null}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button onClick={goPrev} style={{ border: "1px solid #E4DED3", background: "#F7F5F0", borderRadius: 9, padding: "8px 12px", cursor: "pointer", color: "#6B6358", fontWeight: 700 }}>‹</button>
+            <div style={{ fontSize: 15, fontWeight: 800, minWidth: 128, textAlign: "center" as const }}>{MONTH_NAMES[month]} {year}</div>
+            <button onClick={goNext} style={{ border: "1px solid #E4DED3", background: "#F7F5F0", borderRadius: 9, padding: "8px 12px", cursor: "pointer", color: "#6B6358", fontWeight: 700 }}>›</button>
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={imprimirHoje} style={{ border: "none", background: "#2A241C", color: "#F5B944", borderRadius: 9, padding: "9px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨 Dia</button>
+            <button onClick={imprimirMes} style={{ border: "none", background: "#1F4D2E", color: "#FFF", borderRadius: 9, padding: "9px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨 Mês</button>
+          </div>
+        </div>
+        <div style={{ background: "#FFF", border: "1px solid #EAE3D5", borderRadius: 14, padding: "14px 16px 18px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 8 }}>
+            {WD.map((d, i) => <div key={i} style={{ textAlign: "center" as const, fontSize: 11, fontWeight: 700, color: "#A39B8E" }}>{d}</div>)}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
+            {Array.from({ length: firstDow }, (_, i) => <div key={"e" + i} />)}
+            {Array.from({ length: numDays }, (_, i) => i + 1).map((d) => {
+              const dnum = year * 10000 + (month + 1) * 100 + d;
+              const s = saidaNoDia(selUtente, dnum);
+              const t = s ? tipoById(s.tipo) : null;
+              const isToday = dnum === todayNum;
+              return (<button key={d} onClick={() => abrirDia(d)} style={{ minHeight: 54, border: "1px solid " + (t ? t.cor : "#EAE3D5"), borderRadius: 10, background: t ? t.cor : "#FBF8F1", color: t ? t.corTexto : "#2A241C", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", boxShadow: isToday ? "0 0 0 2px #2A241C inset" : "none" }}>{d}</button>);
+            })}
+          </div>
+        </div>
+        <div style={{ background: "#FFF", border: "1px solid #EAE3D5", borderRadius: 14, padding: "14px 16px", marginTop: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 11 }}>Tipos de saída</div>
+          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: "12px 20px", alignItems: "center" }}>
+            {tipos.map((t) => (<span key={t.id} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12, fontWeight: 600, color: "#4A443B" }}><span style={{ width: 13, height: 13, borderRadius: 4, background: t.cor, flex: "none" }} />{t.label}</span>))}
+            {addTipo ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
+                <input value={novoNome} onChange={(e) => setNovoNome(e.target.value)} placeholder="Nome do tipo" style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "5px 9px", fontSize: 12, outline: "none", fontFamily: "'Inter', sans-serif", background: "#FAFAF8", color: "#2A241C", width: 140 }} />
+                {SAIDA_PALETA.map((c) => <button key={c} onClick={() => setNovoCor(c)} style={{ width: 20, height: 20, borderRadius: 5, background: c, border: novoCor === c ? "2px solid #2A241C" : "1px solid #D8D1C4", cursor: "pointer", padding: 0 }} />)}
+                <button onClick={adicionarTipo} style={{ border: "none", background: "#2A241C", color: "#F5B944", borderRadius: 7, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>OK</button>
+                <button onClick={() => { setAddTipo(false); setNovoNome(""); }} style={{ border: "1px solid #E4DED3", background: "#FFF", color: "#6B6358", borderRadius: 7, padding: "5px 10px", fontSize: 12, cursor: "pointer" }}>✕</button>
+              </span>
+            ) : (
+              <button onClick={() => setAddTipo(true)} style={{ display: "inline-flex", alignItems: "center", gap: 5, border: "1px dashed #C7BEA8", background: "#FFF", color: "#6B6358", borderRadius: 8, padding: "4px 11px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>+ adicionar tipo</button>
+            )}
+          </div>
+        </div>
+      </div>
+      {sheet ? (
+        <div onClick={() => setSheet(null)} style={{ position: "fixed" as const, inset: 0, zIndex: 300, background: "rgba(26,22,16,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 440, animation: "slideUp 0.3s cubic-bezier(0.32,0.72,0,1) both" }}>
+            <div style={{ background: "#FFF", borderRadius: "22px 22px 0 0", boxShadow: "0 -10px 40px rgba(0,0,0,0.3)", transform: "translateY(" + dragY + "px)", transition: "transform 0.18s ease", maxHeight: "88vh", overflowY: "auto" as const }}>
+              <div onTouchStart={(e) => { dragStart.current = e.touches[0].clientY; }} onTouchMove={(e) => { if (dragStart.current != null) setDragY(Math.max(0, e.touches[0].clientY - dragStart.current)); }} onTouchEnd={() => { if (dragY > 90) setSheet(null); else setDragY(0); dragStart.current = null; }} style={{ padding: "10px 0 2px", textAlign: "center" as const, cursor: "grab" }}>
+                <div style={{ width: 42, height: 5, borderRadius: 999, background: "#D8D1C4", margin: "0 auto" }} />
+              </div>
+              {verSaida ? (() => { const t = tipoById(verSaida.tipo); const ongoing = !verSaida.regressado && (!verSaida.fim || !verSaida.regressoAuto); return (
+                <div>
+                  <div style={{ background: t.cor, margin: "6px 12px 0", borderRadius: 14, padding: "13px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div><div style={{ fontSize: 15, fontWeight: 800, color: t.corTexto }}>{t.label}</div><div style={{ fontSize: 12, color: t.corTexto, opacity: 0.85 }}>{selUtente ? selUtente.name : ""} · Nº {selUtente ? selUtente.id : ""}</div></div>
+                    <button onClick={() => setSheet(null)} style={{ color: t.corTexto, background: "rgba(255,255,255,0.18)", border: "none", borderRadius: 8, width: 30, height: 30, fontSize: 17, cursor: "pointer" }}>✕</button>
+                  </div>
+                  <div style={{ padding: "14px 16px 22px" }}>
+                    <div style={{ display: "flex", gap: 10, marginBottom: 11 }}>
+                      <div style={{ flex: 1, background: "#F7F5F0", borderRadius: 10, padding: "9px 11px" }}><div style={{ fontSize: 10, color: "#A39B8E", fontWeight: 700, textTransform: "uppercase" as const }}>Saída</div><div style={{ fontSize: 14, fontWeight: 700 }}>{verSaida.inicio}</div></div>
+                      <div style={{ flex: 1, background: "#F7F5F0", borderRadius: 10, padding: "9px 11px" }}><div style={{ fontSize: 10, color: "#A39B8E", fontWeight: 700, textTransform: "uppercase" as const }}>Regresso</div><div style={{ fontSize: 14, fontWeight: 700 }}>{verSaida.dataRegresso || verSaida.fim || "—"}</div></div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: verSaida.regressado ? "#EEF3F7" : (verSaida.regressoAuto && verSaida.fim ? "#E8F0E8" : "#FFF8E8"), border: "1px solid " + (verSaida.regressado ? "#B8CCE0" : (verSaida.regressoAuto && verSaida.fim ? "#B7D4B0" : "#E8D28A")), borderRadius: 10, padding: "8px 11px", marginBottom: 12 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: verSaida.regressado ? "#3A5A70" : (verSaida.regressoAuto && verSaida.fim ? "#2E6B2E" : "#8A6A2E") }}>{estadoTexto(verSaida)}</span>
+                    </div>
+                    {verSaida.notas ? (<div><div style={{ fontSize: 10, color: "#A39B8E", fontWeight: 700, textTransform: "uppercase" as const, marginBottom: 4 }}>Notas</div><div style={{ fontSize: 13, color: "#2A241C", background: "#FAF7F0", border: "1px solid #EFEAE2", borderRadius: 10, padding: "9px 11px", lineHeight: 1.5, marginBottom: 14, whiteSpace: "pre-wrap" as const }}>{verSaida.notas}</div></div>) : null}
+                    {ongoing ? (<button onClick={() => confirmarRegresso(verSaida)} style={{ width: "100%", background: "#1F4D2E", color: "#FFF", border: "none", borderRadius: 10, padding: "11px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", marginBottom: 10 }}>✓ Confirmar regresso (hoje)</button>) : null}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => { setFTipo(verSaida.tipo); setFInicio(verSaida.inicio); setFFim(verSaida.fim || ""); setFAuto(verSaida.regressoAuto); setFNotas(verSaida.notas || ""); setSheet({ mode: "editar", saidaId: verSaida.id }); }} style={{ flex: 1, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Editar</button>
+                      <button onClick={() => apagarSaida(verSaida.id)} style={{ background: "#FFF0EE", color: "#C2554A", border: "1px solid #F2C4BC", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Apagar</button>
+                      <button onClick={() => imprimirUma(verSaida)} style={{ background: "#F7F5F0", color: "#6B6358", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 13px", fontSize: 13, cursor: "pointer" }}>🖨</button>
+                    </div>
+                  </div>
+                </div>
+              ); })() : null}
+              {sheet && (sheet.mode === "novo" || sheet.mode === "editar") ? (
+                <div style={{ padding: "8px 18px 24px" }}>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 17, fontWeight: 700, margin: "4px 0 14px" }}>{sheet.mode === "editar" ? "Editar saída" : "Registar saída"}{selUtente ? (" — " + selUtente.name) : ""}</div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6358", marginBottom: 6 }}>Tipo de saída</label>
+                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 7, marginBottom: 14 }}>
+                    {tipos.map((t) => (<button key={t.id} onClick={() => setFTipo(t.id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: fTipo === t.id ? "2px solid #2A241C" : "1px solid #E4DED3", background: fTipo === t.id ? "#FAF7F0" : "#FFF", borderRadius: 9, padding: "6px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", color: "#2A241C" }}><span style={{ width: 11, height: 11, borderRadius: 3, background: t.cor }} />{t.label}</button>))}
+                  </div>
+                  <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+                    <div style={{ flex: 1 }}><label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6358", marginBottom: 6 }}>Data de saída</label><input value={fInicio} onChange={(e) => setFInicio(mask(e.target.value))} placeholder="DD/MM/AAAA" style={inputStyle} /></div>
+                    <div style={{ flex: 1 }}><label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6358", marginBottom: 6 }}>Regresso (se souber)</label><input value={fFim} onChange={(e) => setFFim(mask(e.target.value))} placeholder="DD/MM/AAAA" style={inputStyle} /></div>
+                  </div>
+                  <button onClick={() => setFAuto(!fAuto)} disabled={!fFim.trim()} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid " + (fAuto && fFim.trim() ? "#B7D4B0" : "#E4DED3"), background: fAuto && fFim.trim() ? "#E8F0E8" : "#FAF7F0", borderRadius: 10, padding: "10px 13px", cursor: fFim.trim() ? "pointer" : "default", marginBottom: 14, fontFamily: "'Inter', sans-serif" }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: fFim.trim() ? "#2A241C" : "#A39B8E", textAlign: "left" as const }}>Regresso automático na data de fim<br /><span style={{ fontSize: 11, color: "#A39B8E", fontWeight: 400 }}>{fFim.trim() ? "Volta sozinho, sem dar entrada à mão." : "Preencha o regresso para ativar."}</span></span>
+                    <span style={{ width: 42, height: 24, borderRadius: 999, background: fAuto && fFim.trim() ? "#1F4D2E" : "#D8D1C4", position: "relative" as const, flexShrink: 0 }}><span style={{ position: "absolute" as const, top: 2, left: fAuto && fFim.trim() ? 20 : 2, width: 20, height: 20, borderRadius: "50%", background: "#FFF", transition: "left 0.15s" }} /></span>
+                  </button>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6358", marginBottom: 6 }}>Notas (opcional)</label>
+                  <textarea value={fNotas} onChange={(e) => setFNotas(e.target.value)} rows={3} placeholder="Ex: foi com a filha, leva a medicação..." style={{ ...inputStyle, resize: "vertical" as const, marginBottom: 16 }} />
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={sheet.mode === "editar" ? guardarEdicao : guardarNova} style={{ flex: 1, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>{sheet.mode === "editar" ? "Guardar alterações" : "Guardar saída"}</button>
+                    <button onClick={() => setSheet(null)} style={{ background: "transparent", color: "#6B6358", border: "1px solid #E4DED3", borderRadius: 10, padding: "12px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function EnfermagemPage({ onBack }: { onBack: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   useEffect(() => { loadUtentesFromDB().then((list) => setUtentes(list as Utente[])); }, []);
@@ -5413,7 +5639,7 @@ function QuickSearchPanel({ target, schedule, onClose }: {
 // "admin" tem acesso a tudo. No futuro podemos adicionar perfis
 // restritos com role: "stock" | "utentes" | "colaboradores",
 // cada um só com acesso à respetiva página.
-type AppRole = "admin" | "stock" | "utentes" | "colaboradores" | "enfermagem" | "colaboradoras";
+type AppRole = "admin" | "stock" | "utentes" | "colaboradores" | "enfermagem" | "colaboradoras" | "saidas";
 interface AppUser { username: string; password: string; role: AppRole; }
 
 // As passwords nunca são guardadas em texto simples — só o resultado
@@ -5440,11 +5666,12 @@ const DEFAULT_APP_USERS: AppUser[] = [
   { username: "Admin", password: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", role: "admin" },
 ];
 
-function canAccessPage(user: AppUser | null, page: "utentes" | "schedule" | "stock" | "sugestoes" | "enfermagem"): boolean {
+function canAccessPage(user: AppUser | null, page: "utentes" | "schedule" | "stock" | "sugestoes" | "enfermagem" | "saidas"): boolean {
   if (!user) return false;
   if (user.role === "admin") return true;
   if (user.role === "enfermagem") return page === "enfermagem" || page === "utentes";
   if (user.role === "colaboradoras") return page === "utentes";
+  if (user.role === "saidas") return page === "saidas";
   if (page === "sugestoes") return false;
   if (page === "enfermagem") return user.role === "utentes";
   if (user.role === "colaboradores") return page === "schedule";
@@ -6215,7 +6442,7 @@ export default function App() {
   const [changePassConfirm, setChangePassConfirm] = useState("");
 
   const today = new Date();
-  const [activePage, setActivePage] = useState<"home" | "schedule" | "stock" | "utentes" | "sugestoes" | "enfermagem">("home");
+  const [activePage, setActivePage] = useState<"home" | "schedule" | "stock" | "utentes" | "sugestoes" | "enfermagem" | "saidas">("home");
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
@@ -8312,6 +8539,7 @@ export default function App() {
   const isSchedulePage = (activePage as string) === "schedule";
   const isSugestoesPage = (activePage as string) === "sugestoes";
   const isEnfermagemPage = (activePage as string) === "enfermagem";
+  const isSaidasPage = (activePage as string) === "saidas";
 
   // Dia de hoje neste mês/ano (null se estamos a ver outro mês)
   const todayDay = today.getFullYear() === year && today.getMonth() === month
@@ -8986,6 +9214,20 @@ export default function App() {
               </button>
               )}
 
+              {canAccessPage(currentUser, "saidas") && (
+              <button onClick={() => setActivePage("saidas")} className="home-btn"
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 16, minHeight: 190, width: 190, flex: "0 0 190px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(43,163,163,0.5)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
+                <div style={{ width: 59, height: 59, borderRadius: 18, background: "#E1F5EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 26 }}>🚪</span>
+                </div>
+                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                  Saídas
+                </div>
+                <div style={{ width: 40, height: 4, borderRadius: 2, background: "#2BA3A3" }} />
+              </button>
+              )}
               {canAccessPage(currentUser, "enfermagem") && (
               <button onClick={() => setActivePage("enfermagem")} className="home-btn"
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 16, minHeight: 190, width: 190, flex: "0 0 190px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
@@ -9035,6 +9277,11 @@ export default function App() {
         </div>
       )}
 
+      {isSaidasPage && (
+        <div className="page-enter" style={{ background: "#EFE7D4" }}>
+          <SaidasPage key={"saidas-" + syncDone} onBack={() => navigateHome()} />
+        </div>
+      )}
       {isEnfermagemPage && (
         <div className="page-enter" style={{ background: "#E8F0E8" }}>
           <EnfermagemPage key={`enfermagem-${syncDone}`} onBack={() => navigateHome()} />
