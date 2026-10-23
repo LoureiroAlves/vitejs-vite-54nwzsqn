@@ -4132,6 +4132,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
   const [month, setMonth] = useState(today.getMonth());
   const [selId, setSelId] = useState<string | null>(null);
   const [pickOpen, setPickOpen] = useState(false);
+  const [geralMenu, setGeralMenu] = useState(false);
   const [search, setSearch] = useState("");
   useEffect(() => { if (!selId && utentes.length) setSelId(utentes[0].id); }, [utentes, selId]);
   const selUtente = utentes.find((u) => u.id === selId) || null;
@@ -4173,18 +4174,27 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
   const imprimirMes = () => { if (!selUtente) return; const ms = year * 10000 + (month + 1) * 100 + 1; const me = year * 10000 + (month + 1) * 100 + numDays; const linhas = saidasDe(selUtente).filter((s) => { const st = _saidaDnum(s.inicio); return st && st <= me && effEnd(s) >= ms; }).sort((a, b) => _saidaDnum(a.inicio) - _saidaDnum(b.inicio)).map(linhaDe); _printSaidas(selUtente.name, MONTH_NAMES[month] + " " + year, linhas); };
   const imprimirHoje = () => { if (!selUtente) return; const linhas = saidasDe(selUtente).filter((s) => { const st = _saidaDnum(s.inicio); return st && todayNum >= st && todayNum <= effEnd(s); }).map(linhaDe); _printSaidas(selUtente.name, "Dia " + todayStr, linhas); };
   const imprimirUma = (s: Saida) => { if (!selUtente) return; _printSaidas(selUtente.name, tipoById(s.tipo).label, [linhaDe(s)]); };
-  const imprimirGeral = () => {
-    const ms = year * 10000 + (month + 1) * 100 + 1;
-    const me = year * 10000 + (month + 1) * 100 + numDays;
+  const imprimirGeral = (periodo: "dia" | "semana" | "mes") => {
+    setGeralMenu(false);
+    const dnD = (dd: Date) => dd.getFullYear() * 10000 + (dd.getMonth() + 1) * 100 + dd.getDate();
+    let ps = 0, pe = 0, sub = "";
+    if (periodo === "dia") { ps = todayNum; pe = todayNum; sub = "Dia " + todayStr; }
+    else if (periodo === "semana") {
+      const b = new Date(); const dw = (b.getDay() + 6) % 7;
+      const mon = new Date(b); mon.setDate(b.getDate() - dw);
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+      ps = dnD(mon); pe = dnD(sun);
+      sub = "Semana de " + mon.toLocaleDateString("pt-PT") + " a " + sun.toLocaleDateString("pt-PT");
+    } else { ps = year * 10000 + (month + 1) * 100 + 1; pe = year * 10000 + (month + 1) * 100 + numDays; sub = MONTH_NAMES[month] + " " + year; }
     const linhas: { utente: string; tipoLabel: string; cor: string; inicio: string; fim: string; estado: string }[] = [];
     utentes.forEach((u) => {
       saidasDe(u).forEach((s) => {
         const st = _saidaDnum(s.inicio);
-        if (st && st <= me && effEnd(s) >= ms) { const d = linhaDe(s); linhas.push({ utente: u.name, tipoLabel: d.tipoLabel, cor: d.cor, inicio: d.inicio, fim: d.fim, estado: d.estado }); }
+        if (st && st <= pe && effEnd(s) >= ps) { const d = linhaDe(s); linhas.push({ utente: u.name, tipoLabel: d.tipoLabel, cor: d.cor, inicio: d.inicio, fim: d.fim, estado: d.estado }); }
       });
     });
     linhas.sort((a, b) => (_saidaDnum(a.inicio.split(" ")[0]) - _saidaDnum(b.inicio.split(" ")[0])) || a.utente.localeCompare(b.utente));
-    _printSaidasGeral(MONTH_NAMES[month] + " " + year, linhas);
+    _printSaidasGeral(sub, linhas);
   };
   const inputStyle = { width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 11px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const };
   const WD = ["D", "S", "T", "Q", "Q", "S", "S"];
@@ -4233,7 +4243,17 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
           </div>
           <div style={{ display: "flex", gap: 6 }}>
             <button onClick={imprimirHoje} style={{ border: "none", background: "#2E6B2E", color: "#FFFFFF", borderRadius: 9, padding: "9px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨 Dia</button>
-            <button onClick={imprimirMes} style={{ border: "none", background: "#1F4D2E", color: "#FFF", borderRadius: 9, padding: "9px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨 Mês</button><button onClick={imprimirGeral} style={{ border: "none", background: "#3A5A70", color: "#FFF", borderRadius: 9, padding: "9px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨 Geral</button>
+            <button onClick={imprimirMes} style={{ border: "none", background: "#1F4D2E", color: "#FFF", borderRadius: 9, padding: "9px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨 Mês</button><div style={{ position: "relative" as const }}>
+              <button onClick={() => setGeralMenu((v) => !v)} style={{ border: "none", background: "#3A5A70", color: "#FFF", borderRadius: 9, padding: "9px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨 Geral ▾</button>
+              {geralMenu ? (<>
+                <div onClick={() => setGeralMenu(false)} style={{ position: "fixed" as const, inset: 0, zIndex: 40 }} />
+                <div style={{ position: "absolute" as const, top: "100%", right: 0, marginTop: 6, background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.18)", zIndex: 41, overflow: "hidden", minWidth: 160 }}>
+                  <button onClick={() => imprimirGeral("dia")} style={{ display: "block", width: "100%", textAlign: "left" as const, border: "none", background: "#FFFFFF", padding: "10px 14px", fontSize: 13, fontWeight: 600, color: "#2A241C", cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🗓 Dia (hoje)</button>
+                  <button onClick={() => imprimirGeral("semana")} style={{ display: "block", width: "100%", textAlign: "left" as const, border: "none", borderTop: "1px solid #F2EFE8", background: "#FFFFFF", padding: "10px 14px", fontSize: 13, fontWeight: 600, color: "#2A241C", cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🗓 Semana</button>
+                  <button onClick={() => imprimirGeral("mes")} style={{ display: "block", width: "100%", textAlign: "left" as const, border: "none", borderTop: "1px solid #F2EFE8", background: "#FFFFFF", padding: "10px 14px", fontSize: 13, fontWeight: 600, color: "#2A241C", cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🗓 Mês ({MONTH_NAMES[month]})</button>
+                </div>
+              </>) : null}
+            </div>
           </div>
         </div>
         <div style={{ background: "#FFF", border: "1px solid #EAE3D5", borderRadius: 14, padding: "14px 16px 18px" }}>
