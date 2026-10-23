@@ -9155,7 +9155,7 @@ export default function App() {
                   <span style={{ fontSize: 22 }}>🚪</span>
                 </div>
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
-                  Saídas
+                  Saídas Utentes
                 </div>
                 <div style={{ width: 40, height: 4, borderRadius: 2, background: "#2BA3A3" }} />
               </button>
