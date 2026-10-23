@@ -8603,7 +8603,7 @@ export default function App() {
 
       {/* Página inicial */}
       {true && (
-        <div style={{ position: "fixed" as const, inset: 0, background: "#1E3A1E", display: "flex", alignItems: "center", justifyContent: "center", overflow: "auto" }}>
+        <div style={{ position: "fixed" as const, inset: 0, background: "#1E3A1E", display: "flex", overflow: "auto" }}>
 
           {/* Logo SVG marca de água — canto superior esquerdo, triplicado, com balanço suave */}
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
@@ -8849,19 +8849,19 @@ export default function App() {
           )}
 
           {/* Conteúdo centrado */}
-          <div style={{ position: "relative" as const, zIndex: 1, width: "100%", maxWidth: 680, padding: "0 24px" }}>
+          <div style={{ position: "relative" as const, zIndex: 1, width: "100%", maxWidth: 680, padding: "24px", margin: "auto" }}>
 
             {/* Título */}
-            <div className="home-center" style={{ textAlign: "center" as const, marginBottom: 48 }}>
+            <div className="home-center" style={{ textAlign: "center" as const, marginBottom: 24 }}>
               <button
                 className="home-icon-wrap"
                 onClick={syncFromSupabase}
                 disabled={syncStatus === "syncing"}
                 style={{
-                  width: 80, height: 80, borderRadius: 24,
+                  width: 60, height: 60, borderRadius: 18,
                   background: syncStatus === "syncing" ? "rgba(91,168,232,0.18)" : syncStatus === "error" ? "rgba(226,108,90,0.18)" : "rgba(255,255,255,0.12)",
                   border: `1px solid ${syncStatus === "syncing" ? "rgba(91,168,232,0.4)" : syncStatus === "error" ? "rgba(226,108,90,0.4)" : "rgba(255,255,255,0.2)"}`,
-                  display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px",
+                  display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px",
                   cursor: syncStatus === "syncing" ? "default" : "pointer", padding: 0,
                   animation: syncStatus === "syncing" ? "spin 1s linear infinite" : undefined,
                   transition: "background 0.3s ease, border-color 0.3s ease, transform 0.15s",
@@ -8874,16 +8874,16 @@ export default function App() {
                 onMouseEnter={(e) => { if (syncStatus !== "syncing") (e.currentTarget as HTMLElement).style.transform = "scale(1.08)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
               >
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={syncStatus === "syncing" ? "#5BA8E8" : syncStatus === "error" ? "#E26C5A" : "#F5B944"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 0.3s ease" }}>
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={syncStatus === "syncing" ? "#5BA8E8" : syncStatus === "error" ? "#E26C5A" : "#F5B944"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 0.3s ease" }}>
                   <path d="M3 21V7l9-4 9 4v14"/>
                   <path d="M9 21V13h6v8"/>
                   <path d="M9 9h.01M12 9h.01M15 9h.01M9 13h.01M15 13h.01"/>
                 </svg>
               </button>
-              <h1 className="home-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 700, margin: "0 0 8px", color: "#FFFFFF" }}>
+              <h1 className="home-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, margin: "0 0 6px", color: "#FFFFFF" }}>
                 Associação Oliveirense de Socorros Mútuos
               </h1>
-              <p style={{ fontSize: 14, color: "#8FBF8F", margin: "0 0 18px" }}>Complexo Intergeracional Quinta dos Avós</p>
+              <p style={{ fontSize: 13, color: "#8FBF8F", margin: "0 0 14px" }}>Complexo Intergeracional Quinta dos Avós</p>
 
               {/* Pesquisa rápida universal */}
               <div style={{ position: "relative" as const, maxWidth: 380, margin: "0 auto" }}>
@@ -8963,40 +8963,40 @@ export default function App() {
 
             {/* Aniversários */}
             {birthdayAlerts.length > 0 && (
-              <div style={{ marginBottom: 28 }}>
+              <div style={{ marginBottom: 16 }}>
                 {birthdayAlerts.map((alert, idx) => (
                   <div key={idx} className="bday-card" style={{
                     background: alert.isToday ? "linear-gradient(135deg, #FFF8E1, #FCE4EC)" : "linear-gradient(135deg, #F3F8FF, #EDE7F6)",
                     border: `2px solid ${alert.isToday ? "#FFD54F" : "#B39DDB"}`,
-                    borderRadius: 20, padding: "20px 24px", display: "flex", alignItems: "center", gap: 18, marginBottom: 12,
+                    borderRadius: 16, padding: "12px 18px", display: "flex", alignItems: "center", gap: 14, marginBottom: 8,
                   }}>
-                    <div className="bday-avatar" style={{ width: 64, height: 64, borderRadius: "50%", flexShrink: 0, background: alert.isToday ? "#FFD54F" : "#B39DDB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, overflow: "hidden", boxShadow: alert.isToday ? "0 4px 12px rgba(255,213,79,0.4)" : "0 4px 12px rgba(179,157,219,0.4)", animation: alert.isToday ? "bounce 1s infinite" : undefined }}>
+                    <div className="bday-avatar" style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, background: alert.isToday ? "#FFD54F" : "#B39DDB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, overflow: "hidden", boxShadow: alert.isToday ? "0 4px 12px rgba(255,213,79,0.4)" : "0 4px 12px rgba(179,157,219,0.4)", animation: alert.isToday ? "bounce 1s infinite" : undefined }}>
                       {alert.photo
                         ? <img src={alert.photo} alt={alert.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                         : (alert.isToday ? "🎂" : "🎁")
                       }
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="bday-name" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, color: "#2A241C", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{alert.name}</div>
-                      <div className="bday-msg" style={{ fontSize: 14, color: "#6B6358", fontWeight: 500 }}>{alert.isToday ? `🎉 Hoje faz ${alert.age} anos! Parabéns!` : `🔔 Amanhã faz ${alert.age} anos`}</div>
+                      <div className="bday-name" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 17, fontWeight: 700, color: "#2A241C", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{alert.name}</div>
+                      <div className="bday-msg" style={{ fontSize: 13, color: "#6B6358", fontWeight: 500 }}>{alert.isToday ? `🎉 Hoje faz ${alert.age} anos! Parabéns!` : `🔔 Amanhã faz ${alert.age} anos`}</div>
                     </div>
-                    <div className="bday-age" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 36, fontWeight: 800, color: alert.isToday ? "#F9A825" : "#7E57C2", lineHeight: 1, flexShrink: 0 }}>{alert.age}</div>
+                    <div className="bday-age" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 28, fontWeight: 800, color: alert.isToday ? "#F9A825" : "#7E57C2", lineHeight: 1, flexShrink: 0 }}>{alert.age}</div>
                   </div>
                 ))}
               </div>
             )}
 
             {/* 4 botões */}
-            <div className="home-grid" style={{ display: "flex", flexWrap: "wrap" as const, justifyContent: "center", gap: 20 }}>
+            <div className="home-grid" style={{ display: "flex", flexWrap: "wrap" as const, justifyContent: "center", gap: 16 }}>
               {canAccessPage(currentUser, "utentes") && (
               <button onClick={() => setActivePage("utentes")} className="home-btn"
-                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 16, minHeight: 190, width: 190, flex: "0 0 190px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 22, padding: "22px 14px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, minHeight: 142, width: 158, flex: "0 0 158px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(91,141,190,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 59, height: 59, borderRadius: 18, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <IconUserCircle size={29} color="#3A5A70" />
+                <div style={{ width: 50, height: 50, borderRadius: 15, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconUserCircle size={24} color="#3A5A70" />
                 </div>
-                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Utentes
                 </div>
                 <div style={{ width: 40, height: 4, borderRadius: 2, background: "#5B8DBE" }} />
@@ -9005,13 +9005,13 @@ export default function App() {
 
               {canAccessPage(currentUser, "schedule") && (
               <button onClick={() => setActivePage("schedule")} className="home-btn"
-                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 16, minHeight: 190, width: 190, flex: "0 0 190px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 22, padding: "22px 14px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, minHeight: 142, width: 158, flex: "0 0 158px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(232,177,74,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 59, height: 59, borderRadius: 18, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <IconUsers size={29} color="#B08A4E" />
+                <div style={{ width: 50, height: 50, borderRadius: 15, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconUsers size={24} color="#B08A4E" />
                 </div>
-                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Colaboradores
                 </div>
                 <div style={{ width: 40, height: 4, borderRadius: 2, background: "#E8B14A" }} />
@@ -9020,13 +9020,13 @@ export default function App() {
 
               {canAccessPage(currentUser, "stock") && (
               <button onClick={() => setActivePage("stock")} className="home-btn"
-                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 16, minHeight: 190, width: 190, flex: "0 0 190px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 22, padding: "22px 14px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, minHeight: 142, width: 158, flex: "0 0 158px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(111,168,111,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 59, height: 59, borderRadius: 18, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <IconBox size={29} color="#3B6D11" />
+                <div style={{ width: 50, height: 50, borderRadius: 15, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconBox size={24} color="#3B6D11" />
                 </div>
-                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Stock
                 </div>
                 <div style={{ width: 40, height: 4, borderRadius: 2, background: "#6FA86F" }} />
@@ -9035,13 +9035,13 @@ export default function App() {
 
               {canAccessPage(currentUser, "sugestoes") && (
               <button onClick={() => setActivePage("sugestoes")} className="home-btn"
-                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 16, minHeight: 190, width: 190, flex: "0 0 190px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 22, padding: "22px 14px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, minHeight: 142, width: 158, flex: "0 0 158px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(194,85,74,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 59, height: 59, borderRadius: 18, background: "#FFF0EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: 26 }}>💬</span>
+                <div style={{ width: 50, height: 50, borderRadius: 15, background: "#FFF0EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 22 }}>💬</span>
                 </div>
-                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Sugestões
                 </div>
                 <div style={{ width: 40, height: 4, borderRadius: 2, background: "#C2554A" }} />
@@ -9050,13 +9050,13 @@ export default function App() {
 
               {canAccessPage(currentUser, "saidas") && (
               <button onClick={() => setActivePage("saidas")} className="home-btn"
-                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 16, minHeight: 190, width: 190, flex: "0 0 190px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 22, padding: "22px 14px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, minHeight: 142, width: 158, flex: "0 0 158px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(43,163,163,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 59, height: 59, borderRadius: 18, background: "#E1F5EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: 26 }}>🚪</span>
+                <div style={{ width: 50, height: 50, borderRadius: 15, background: "#E1F5EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 22 }}>🚪</span>
                 </div>
-                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Saídas
                 </div>
                 <div style={{ width: 40, height: 4, borderRadius: 2, background: "#2BA3A3" }} />
@@ -9064,13 +9064,13 @@ export default function App() {
               )}
               {canAccessPage(currentUser, "enfermagem") && (
               <button onClick={() => setActivePage("enfermagem")} className="home-btn"
-                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "36px 16px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 16, minHeight: 190, width: 190, flex: "0 0 190px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 22, padding: "22px 14px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, minHeight: 142, width: 158, flex: "0 0 158px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(31,77,46,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 59, height: 59, borderRadius: 18, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: 26 }}>🩺</span>
+                <div style={{ width: 50, height: 50, borderRadius: 15, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 22 }}>🩺</span>
                 </div>
-                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
                   Enfermagem
                 </div>
                 <div style={{ width: 40, height: 4, borderRadius: 2, background: "#1F4D2E" }} />
