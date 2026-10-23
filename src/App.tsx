@@ -2275,6 +2275,51 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
     return Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
   };
 
+  const exportUtentesExcel = () => {
+    const esc = (v: any) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const cols: [string, (u: Utente) => any][] = [
+      ["Nº", (u) => u.id],
+      ["Nome", (u) => u.name],
+      ["Data de nascimento", (u) => u.birthDate],
+      ["Idade", (u) => calcularIdade(u.birthDate)],
+      ["Sexo", (u) => u.sexo],
+      ["Estado civil", (u) => u.estadoCivil],
+      ["Naturalidade", (u) => u.naturalidade],
+      ["Nacionalidade", (u) => u.nacionalidade],
+      ["Morada", (u) => u.morada],
+      ["Código postal", (u) => u.codigoPostal],
+      ["Localidade", (u) => u.localidade],
+      ["Concelho", (u) => u.concelho],
+      ["Distrito", (u) => u.distrito],
+      ["CC nº", (u) => u.ccNumber],
+      ["Validade CC", (u) => u.ccValidity],
+      ["NIF", (u) => u.nif],
+      ["Nº Segurança Social", (u) => u.ssNumero],
+      ["Nº utente SNS", (u) => u.numeroUtenteSaude],
+      ["Grupo sanguíneo", (u) => u.grupoSanguineo],
+      ["Centro de Saúde", (u) => u.centroSaude],
+      ["Médico", (u) => u.medicoAssistente],
+      ["Quarto", (u) => u.room],
+      ["Data de entrada", (u) => u.entryDate],
+      ["Data de inscrição", (u) => u.dataInscricao],
+      ["Nº inscrição", (u) => u.numeroInscricao],
+      ["Familiar", (u) => u.familyContact],
+      ["Parentesco", (u) => u.familyParentesco],
+      ["Telefone", (u) => u.familyPhone],
+      ["Email familiar", (u) => u.familyEmail],
+    ];
+    const lista = [...utentes].sort((a, b) => a.name.localeCompare(b.name));
+    const thead = "<tr>" + cols.map((c) => "<th style='background:#1F4D2E;color:#fff;padding:4px 8px'>" + esc(c[0]) + "</th>").join("") + "</tr>";
+    const rows = lista.map((u) => "<tr>" + cols.map((c) => "<td style='padding:3px 8px'>" + esc(c[1](u)) + "</td>").join("") + "</tr>").join("");
+    const html = "<html><head><meta charset='UTF-8'></head><body><table border='1' style='border-collapse:collapse;font-family:Arial;font-size:12px'><thead>" + thead + "</thead><tbody>" + rows + "</tbody></table></body></html>";
+    const blob = new Blob(["\ufeff" + html], { type: "application/vnd.ms-excel" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "utentes-aosm-" + new Date().toISOString().slice(0, 10) + ".xls";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const [familyLinkModal, setFamilyLinkModal] = useState<{ name: string; link: string } | null>(null);
 
   const handleImprimirProcesso = (u: Utente) => {
@@ -2888,6 +2933,17 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
         >
           🏠 Rel. ERPI
         </button>
+
+        {utAdmin && (
+        <button
+          onClick={exportUtentesExcel}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#E8F0E8", color: "#1F4D2E", border: "1px solid #B7D4B0", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
+          onMouseEnter={(e) => showTip(e, "Exportar dados dos utentes para Excel (guardar no computador)")}
+          onMouseLeave={hideTip}
+        >
+          📊 Excel
+        </button>
+        )}
 
         {showAdd ? (
           <div style={{ display: "flex", gap: 8 }}>
@@ -5626,6 +5682,12 @@ const DISPLAY_BY_EMAIL: Record<string, string> = {
   "colaboradores.quintadosavos@outlook.pt": "Colaboradores",
   "colaboradore.quintadosavos@outlook.pt": "Colaboradores",
 };
+const ACCESS_ROLES: { v: AppRole; label: string }[] = [
+  { v: "admin", label: "Administrador" },
+  { v: "enfermagem", label: "Enfermagem" },
+  { v: "colaboradoras", label: "Colaboradoras" },
+  { v: "saidas", label: "Saída Utentes" },
+];
 function LoginScreen({ onLogin }: { users: AppUser[]; onLogin: (user: AppUser) => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -5647,9 +5709,23 @@ function LoginScreen({ onLogin }: { users: AppUser[]; onLogin: (user: AppUser) =
       }
       applyAuthTok(data);
       const em = String(data.user?.email || username).trim().toLowerCase();
-      const role = ROLE_BY_EMAIL[em];
+      let acl: any[] = [];
+      try {
+        const er = await fetch(`${SUPABASE_URL}/rest/v1/escala_data?id=eq.main&select=app_access`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${data.access_token}` } });
+        const erows = await er.json();
+        if (Array.isArray(erows) && erows[0] && Array.isArray(erows[0].app_access)) acl = erows[0].app_access;
+      } catch (e2) {}
+      const acc = acl.find((a) => String(a.email || "").trim().toLowerCase() === em);
+      let role: AppRole | null = null;
+      let nome = DISPLAY_BY_EMAIL[em] || em;
+      if (acc) {
+        if (acc.ativo === false) { setError("Este acesso está desativado. Contacte o administrador."); return; }
+        role = (acc.role || null) as AppRole | null;
+        if (acc.nome) nome = acc.nome;
+      } else {
+        role = (ROLE_BY_EMAIL[em] || null) as AppRole | null;
+      }
       if (!role) { setError("Esta conta ainda não tem permissões atribuídas. Contacte o administrador."); return; }
-      const nome = DISPLAY_BY_EMAIL[em] || em;
       onLogin({ username: nome, password: "", role });
     } catch (err) {
       setError("Não foi possível ligar. Verifica a tua ligação à internet.");
@@ -6329,6 +6405,35 @@ export default function App() {
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [chpassClosing, setChpassClosing] = useState(false);
   const closeChpass = () => { setChpassClosing(true); setTimeout(() => { setShowChangePassword(false); setChangePasswordError(""); setChangePassCurrent(""); setChangePassNew(""); setChangePassConfirm(""); setChpassClosing(false); }, 170); };
+  const [acessosOpen, setAcessosOpen] = useState(false);
+  const [acessosClosing, setAcessosClosing] = useState(false);
+  const [acessosList, setAcessosList] = useState<any[]>([]);
+  const [newAccEmail, setNewAccEmail] = useState("");
+  const [newAccNome, setNewAccNome] = useState("");
+  const [newAccRole, setNewAccRole] = useState<AppRole>("colaboradoras");
+  const openAcessos = async () => {
+    setAcessosOpen(true);
+    try {
+      const e = await loadFromSupabase("escala_data");
+      let list: any[] | null = e && Array.isArray(e.app_access) ? e.app_access : null;
+      if (!list || list.length === 0) {
+        list = Object.keys(ROLE_BY_EMAIL).map((eem) => ({ email: eem, role: ROLE_BY_EMAIL[eem], nome: DISPLAY_BY_EMAIL[eem] || "", ativo: true }));
+      }
+      setAcessosList(list);
+    } catch (e) { setAcessosList([]); }
+  };
+  const closeAcessos = () => { setAcessosClosing(true); setTimeout(() => { setAcessosOpen(false); setAcessosClosing(false); }, 170); };
+  const addAcesso = () => {
+    const em = newAccEmail.trim().toLowerCase();
+    if (!em || em.indexOf("@") === -1) { alert("Escreva um email válido."); return; }
+    if (acessosList.some((a) => String(a.email || "").trim().toLowerCase() === em)) { alert("Esse email já está na lista."); return; }
+    setAcessosList((prev) => [...prev, { email: em, role: newAccRole, nome: newAccNome.trim(), ativo: true }]);
+    setNewAccEmail(""); setNewAccNome(""); setNewAccRole("colaboradoras");
+  };
+  const saveAcessos = async () => {
+    try { await saveToSupabase("escala_data", { app_access: acessosList }); alert("✅ Acessos guardados."); closeAcessos(); }
+    catch (e) { alert("❌ Não foi possível guardar. Tenta novamente."); }
+  };
   const [changePassCurrent, setChangePassCurrent] = useState("");
   const [changePassNew, setChangePassNew] = useState("");
   const [changePassConfirm, setChangePassConfirm] = useState("");
@@ -8825,6 +8930,15 @@ export default function App() {
               📥 Restaurar backup
             </button>
             
+            {currentUser.role === "admin" && (
+            <button
+              onClick={openAcessos}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#FFFFFF", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
+              title="Gerir acessos (emails e funções)"
+            >
+              👥 Acessos
+            </button>
+            )}
             <button
               onClick={() => { clearAuthTok(); setCurrentUser(null); }}
               style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#FFFFFF", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
@@ -8910,6 +9024,51 @@ export default function App() {
               </div>
             );
           })()}
+
+          {acessosOpen && currentUser.role === "admin" && (
+            <div onClick={() => closeAcessos()} style={{ position: "fixed" as const, inset: 0, background: "rgba(20,18,14,0.55)", zIndex: 350, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, animation: acessosClosing ? "popFadeOut 0.16s ease both" : "popFade 0.18s ease both" }}>
+              <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 18, width: "100%", maxWidth: 560, maxHeight: "86vh", overflowY: "auto" as const, boxShadow: "0 20px 60px rgba(0,0,0,0.35)", animation: acessosClosing ? "popZoomOut 0.16s ease both" : "popZoom 0.2s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+                <div style={{ padding: "16px 18px", borderBottom: "1px solid #EFEAE2", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky" as const, top: 0, background: "#FFFFFF", zIndex: 1 }}>
+                  <div>
+                    <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#2A241C" }}>👥 Gestão de Acessos</div>
+                    <div style={{ fontSize: 12, color: "#A39B8E" }}>Emails e funções — a password define-se no Supabase</div>
+                  </div>
+                  <button onClick={() => closeAcessos()} style={{ border: "none", background: "#F2EFE8", borderRadius: 8, width: 30, height: 30, fontSize: 16, cursor: "pointer", color: "#6B6358" }}>✕</button>
+                </div>
+                <div style={{ padding: 16 }}>
+                  {acessosList.map((a, i) => (
+                    <div key={i} style={{ display: "flex", flexWrap: "wrap" as const, alignItems: "center", gap: 8, padding: "10px 0", borderBottom: "1px solid #F4F0E8" }}>
+                      <div style={{ flex: "1 1 180px", minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#2A241C", wordBreak: "break-all" as const }}>{a.email}</div>
+                        <input value={a.nome || ""} onChange={(ev) => setAcessosList((prev) => prev.map((x, j) => j === i ? { ...x, nome: ev.target.value } : x))} placeholder="Nome (ex: Enfermagem)" style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 7, padding: "5px 8px", fontSize: 12, marginTop: 3, outline: "none", background: "#FAFAF8", color: "#2A241C", fontFamily: "'Inter', sans-serif", boxSizing: "border-box" as const }} />
+                      </div>
+                      <select value={a.role} onChange={(ev) => setAcessosList((prev) => prev.map((x, j) => j === i ? { ...x, role: ev.target.value } : x))} style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 8px", fontSize: 12, background: "#FFFFFF", color: "#2A241C", fontFamily: "'Inter', sans-serif" }}>
+                        {ACCESS_ROLES.map((r) => <option key={r.v} value={r.v}>{r.label}</option>)}
+                      </select>
+                      <button onClick={() => setAcessosList((prev) => prev.map((x, j) => j === i ? { ...x, ativo: x.ativo === false ? true : false } : x))} style={{ border: "1px solid " + (a.ativo === false ? "#F2C4BC" : "#B7D4B0"), background: a.ativo === false ? "#FFF0EE" : "#EFF7EF", color: a.ativo === false ? "#C2554A" : "#2E7D32", borderRadius: 8, padding: "7px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}>{a.ativo === false ? "Desativado" : "Ativo"}</button>
+                      <button onClick={() => { if (window.confirm("Remover o acesso de " + a.email + "? (não apaga a conta no Supabase, só tira a permissão)")) setAcessosList((prev) => prev.filter((_, j) => j !== i)); }} style={{ border: "1px solid #F2C4BC", background: "#FFF0EE", color: "#C2554A", borderRadius: 8, padding: "7px 9px", fontSize: 12, cursor: "pointer" }}>✕</button>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: 14, padding: "12px", background: "#F7F5F0", borderRadius: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#6B6358", marginBottom: 8 }}>Adicionar acesso</div>
+                    <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                      <input value={newAccEmail} onChange={(e) => setNewAccEmail(e.target.value)} placeholder="email@exemplo.com" style={{ flex: "1 1 180px", minWidth: 0, border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, outline: "none", background: "#FFFFFF", color: "#2A241C", fontFamily: "'Inter', sans-serif", boxSizing: "border-box" as const }} />
+                      <input value={newAccNome} onChange={(e) => setNewAccNome(e.target.value)} placeholder="Nome" style={{ flex: "1 1 120px", minWidth: 0, border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, outline: "none", background: "#FFFFFF", color: "#2A241C", fontFamily: "'Inter', sans-serif", boxSizing: "border-box" as const }} />
+                      <select value={newAccRole} onChange={(e) => setNewAccRole(e.target.value as AppRole)} style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "8px", fontSize: 13, background: "#FFFFFF", color: "#2A241C", fontFamily: "'Inter', sans-serif" }}>
+                        {ACCESS_ROLES.map((r) => <option key={r.v} value={r.v}>{r.label}</option>)}
+                      </select>
+                      <button onClick={addAcesso} style={{ background: "#1F4D2E", color: "#FFFFFF", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>+ Adicionar</button>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#A39B8E", marginTop: 8 }}>Primeiro cria o utilizador no Supabase (email + password). Aqui só defines a função. As alterações só ficam guardadas ao carregar em "Guardar acessos".</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+                    <button onClick={saveAcessos} style={{ flex: 1, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Guardar acessos</button>
+                    <button onClick={() => closeAcessos()} style={{ background: "transparent", color: "#6B6358", border: "1px solid #E4DED3", borderRadius: 10, padding: "12px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Modal de alterar password */}
           {showChangePassword && (
