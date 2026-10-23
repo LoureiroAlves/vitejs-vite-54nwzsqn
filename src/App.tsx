@@ -8749,13 +8749,13 @@ export default function App() {
         }
         .page-enter {
           position: fixed; inset: 0;
-          z-index: 100; overflow-y: auto;
+          z-index: 100; overflow-y: auto; overflow-x: hidden;
           will-change: transform;
           animation: slideUp 0.42s cubic-bezier(0.32, 0.72, 0, 1) both;
         }
         .page-exit {
           position: fixed; inset: 0;
-          z-index: 100; overflow-y: auto;
+          z-index: 100; overflow-y: auto; overflow-x: hidden;
           will-change: transform;
           animation: slideDown 0.32s cubic-bezier(0.32, 0.72, 0, 1) both;
         }
@@ -8771,11 +8771,12 @@ export default function App() {
         /* ===== RESPONSIVO MOBILE ===== */
         @media (max-width: 768px) {
           /* Home */
-          .home-grid { display: flex !important; flex-direction: column !important; grid-template-columns: none !important; max-width: 300px !important; width: 88% !important; margin: 0 auto !important; gap: 10px !important; }
-          .home-btn { width: 100% !important; padding: 14px 16px !important; border-radius: 14px !important; flex-direction: row !important; gap: 12px !important; justify-content: flex-start !important; box-sizing: border-box !important; }
-          .home-btn-icon { width: 42px !important; height: 42px !important; border-radius: 11px !important; flex-shrink: 0 !important; }
-          .home-btn-icon svg { width: 21px !important; height: 21px !important; }
-          .home-btn-label { font-size: 13px !important; }
+          .home-grid { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; max-width: 100% !important; width: 100% !important; margin: 0 auto !important; gap: 8px !important; }
+          .home-btn { width: auto !important; min-height: 0 !important; padding: 12px 4px !important; border-radius: 14px !important; flex-direction: column !important; gap: 6px !important; justify-content: center !important; align-items: center !important; box-sizing: border-box !important; }
+          .home-btn-icon { width: 40px !important; height: 40px !important; border-radius: 11px !important; flex-shrink: 0 !important; }
+          .home-btn-icon svg { width: 20px !important; height: 20px !important; }
+          .home-btn-icon span { font-size: 18px !important; }
+          .home-btn-label { font-size: 10.5px !important; text-align: center !important; line-height: 1.15 !important; }
           .home-title { font-size: 15px !important; padding: 0 20px; line-height: 1.3 !important; }
           .home-icon-wrap { width: 44px !important; height: 44px !important; margin-bottom: 12px !important; }
           .home-icon-wrap svg { width: 22px !important; height: 22px !important; }
@@ -8805,11 +8806,12 @@ export default function App() {
 
         @media (max-width: 480px) {
           /* Home ainda mais compacta */
-          .home-grid { max-width: 280px !important; gap: 8px !important; }
-          .home-btn { padding: 11px 12px !important; gap: 10px !important; }
+          .home-grid { max-width: 100% !important; gap: 6px !important; }
+          .home-btn { padding: 10px 3px !important; gap: 5px !important; }
           .home-btn-icon { width: 36px !important; height: 36px !important; }
           .home-btn-icon svg { width: 18px !important; height: 18px !important; }
-          .home-btn-label { font-size: 12px !important; }
+          .home-btn-icon span { font-size: 16px !important; }
+          .home-btn-label { font-size: 10px !important; }
           .home-title { font-size: 13px !important; line-height: 1.25 !important; }
           .home-icon-wrap { width: 40px !important; height: 40px !important; margin-bottom: 8px !important; }
           .home-icon-wrap svg { width: 20px !important; height: 20px !important; }
@@ -8851,8 +8853,8 @@ export default function App() {
           .home-session { position: static !important; top: auto !important; right: auto !important; width: 100% !important; max-width: 100% !important; justify-content: center !important; padding: 10px 8px 2px !important; flex: 0 0 auto !important; }
           .sd-wrap { padding-left: 8px !important; padding-right: 8px !important; }
           .sd-cal-card { padding: 10px 8px 14px !important; }
-          .sd-cal-grid { gap: 4px !important; }
-          .sd-cal-cell { min-height: 44px !important; font-size: 13px !important; }
+          .sd-cal-grid { gap: 3px !important; }
+          .sd-cal-cell { min-height: 38px !important; font-size: 12px !important; }
         }
       `}</style>
 
@@ -9355,7 +9357,7 @@ export default function App() {
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 22, padding: "22px 14px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, minHeight: 142, width: 158, flex: "0 0 158px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(91,141,190,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 50, height: 50, borderRadius: 15, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className="home-btn-icon" style={{ width: 50, height: 50, borderRadius: 15, background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <IconUserCircle size={24} color="#3A5A70" />
                 </div>
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
@@ -9370,7 +9372,7 @@ export default function App() {
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 22, padding: "22px 14px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, minHeight: 142, width: 158, flex: "0 0 158px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(232,177,74,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 50, height: 50, borderRadius: 15, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className="home-btn-icon" style={{ width: 50, height: 50, borderRadius: 15, background: "#F0E8D5", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <IconUsers size={24} color="#B08A4E" />
                 </div>
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
@@ -9385,7 +9387,7 @@ export default function App() {
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 22, padding: "22px 14px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, minHeight: 142, width: 158, flex: "0 0 158px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(111,168,111,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 50, height: 50, borderRadius: 15, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className="home-btn-icon" style={{ width: 50, height: 50, borderRadius: 15, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <IconBox size={24} color="#3B6D11" />
                 </div>
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
@@ -9400,7 +9402,7 @@ export default function App() {
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 22, padding: "22px 14px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, minHeight: 142, width: 158, flex: "0 0 158px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(194,85,74,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 50, height: 50, borderRadius: 15, background: "#FFF0EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className="home-btn-icon" style={{ width: 50, height: 50, borderRadius: 15, background: "#FFF0EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ fontSize: 22 }}>💬</span>
                 </div>
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
@@ -9415,7 +9417,7 @@ export default function App() {
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 22, padding: "22px 14px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, minHeight: 142, width: 158, flex: "0 0 158px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(43,163,163,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 50, height: 50, borderRadius: 15, background: "#E1F5EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className="home-btn-icon" style={{ width: 50, height: 50, borderRadius: 15, background: "#E1F5EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ fontSize: 22 }}>🚪</span>
                 </div>
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
@@ -9429,7 +9431,7 @@ export default function App() {
                 style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 22, padding: "22px 14px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, minHeight: 142, width: 158, flex: "0 0 158px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(31,77,46,0.5)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
-                <div style={{ width: 50, height: 50, borderRadius: 15, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className="home-btn-icon" style={{ width: 50, height: 50, borderRadius: 15, background: "#E8F0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ fontSize: 22 }}>🩺</span>
                 </div>
                 <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
