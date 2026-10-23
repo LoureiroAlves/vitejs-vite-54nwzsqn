@@ -4279,7 +4279,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
         </div>
         <button onClick={abrirNovoVazio} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const, flex: "0 0 auto" }}>+ Registar saída</button>
       </div>
-      <div style={{ maxWidth: 820, margin: "0 auto", padding: "18px 14px 80px", width: "100%", boxSizing: "border-box" as const }}>
+      <div className="sd-wrap" style={{ maxWidth: 820, margin: "0 auto", padding: "18px 14px 80px", width: "100%", boxSizing: "border-box" as const }}>
         <div style={{ background: "#FFF", border: "1px solid #EAE3D5", borderRadius: 14, padding: "12px 13px", display: "flex", flexWrap: "wrap" as const, gap: 10, alignItems: "flex-end", marginBottom: 14, boxSizing: "border-box" as const }}>
           <div style={{ position: "relative" as const, flex: 1, minWidth: 220 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 4 }}>Utente</div>
@@ -4325,11 +4325,11 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
             </div>
           </div>
         </div>
-        <div style={{ background: "#FFF", border: "1px solid #EAE3D5", borderRadius: 14, padding: "14px 16px 18px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 8 }}>
+        <div className="sd-cal-card" style={{ background: "#FFF", border: "1px solid #EAE3D5", borderRadius: 14, padding: "14px 16px 18px" }}>
+          <div className="sd-cal-grid" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 8 }}>
             {WD.map((d, i) => <div key={i} style={{ textAlign: "center" as const, fontSize: 11, fontWeight: 700, color: "#A39B8E" }}>{d}</div>)}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
+          <div className="sd-cal-grid" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
             {Array.from({ length: firstDow }, (_, i) => <div key={"e" + i} />)}
             {Array.from({ length: numDays }, (_, i) => i + 1).map((d) => {
               const dnum = year * 10000 + (month + 1) * 100 + d;
@@ -4337,7 +4337,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
               const t = s ? tipoById(s.tipo) : null;
               const isToday = dnum === todayNum;
               const voltou = !!(s && s.regressado);
-              return (<button key={d} onClick={() => abrirDia(d)} style={{ position: "relative" as const, minHeight: 54, border: voltou ? "2px solid #1F7A34" : ("1px solid " + (t ? t.cor : "#EAE3D5")), borderRadius: 10, background: t ? t.cor : "#FBF8F1", color: t ? t.corTexto : "#2A241C", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", boxShadow: isToday ? "0 0 0 2px #1F4D2E inset" : "none" }}>{d}{voltou ? <span style={{ position: "absolute" as const, top: 3, right: 3, width: 14, height: 14, borderRadius: "50%", background: "#FFFFFF", color: "#1F7A34", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>✓</span> : null}</button>);
+              return (<button key={d} className="sd-cal-cell" onClick={() => abrirDia(d)} style={{ position: "relative" as const, minHeight: 54, border: voltou ? "2px solid #1F7A34" : ("1px solid " + (t ? t.cor : "#EAE3D5")), borderRadius: 10, background: t ? t.cor : "#FBF8F1", color: t ? t.corTexto : "#2A241C", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", boxShadow: isToday ? "0 0 0 2px #1F4D2E inset" : "none" }}>{d}{voltou ? <span style={{ position: "absolute" as const, top: 3, right: 3, width: 14, height: 14, borderRadius: "50%", background: "#FFFFFF", color: "#1F7A34", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>✓</span> : null}</button>);
             })}
           </div>
         </div>
@@ -8849,6 +8849,10 @@ export default function App() {
           input, select, textarea { max-width: 100% !important; box-sizing: border-box !important; }
           .home-screen { flex-direction: column !important; }
           .home-session { position: static !important; top: auto !important; right: auto !important; width: 100% !important; max-width: 100% !important; justify-content: center !important; padding: 10px 8px 2px !important; flex: 0 0 auto !important; }
+          .sd-wrap { padding-left: 8px !important; padding-right: 8px !important; }
+          .sd-cal-card { padding: 10px 8px 14px !important; }
+          .sd-cal-grid { gap: 4px !important; }
+          .sd-cal-cell { min-height: 44px !important; font-size: 13px !important; }
         }
       `}</style>
 
