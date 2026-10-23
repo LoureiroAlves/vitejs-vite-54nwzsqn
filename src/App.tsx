@@ -2241,8 +2241,11 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
   const removeUtente = (id: string) => {
     if (!utSuperAdmin) { alert("Só o administrador principal pode apagar utentes."); return; }
-    if (!window.confirm("Remover este utente e todos os seus dados?")) return;
+    const alvo = utentes.find((u) => u.id === id);
+    if (!window.confirm("Remover " + (alvo ? alvo.name : "este utente") + " e TODOS os seus dados (ficha, registos e ficheiros)?\n\nEsta ação não pode ser desfeita.")) return;
     deleteUtenteRow(id);
+    const _tok = (_authSession && _authSession.access_token) || "";
+    fetch("/api/api/delete-utente-files?id=" + encodeURIComponent(id), { method: "POST", headers: { Authorization: "Bearer " + _tok } }).catch(() => {});
     delete _utenteSavedCache[id];
     setUtentes((prev) => prev.filter((u) => u.id !== id));
     if (openUtente?.id === id) setOpenUtente(null);
@@ -2258,104 +2261,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
     if (openUtente?.id === id) setOpenUtente((prev) => prev ? { ...prev, ...updates } : prev);
   };
 
-  // ---------- Registo de saídas (consultas, família, etc.) ----------
-  const [pendingOuting, setPendingOuting] = useState<Record<string, { reason: "consulta" | "familia" | "outro"; customText: string }>>({});
-
-  const OUTING_REASON_LABELS: Record<string, string> = { consulta: "🏥 Consulta", familia: "👪 Família", outro: "📍 Outro" };
-  const OUTING_DETAIL_PLACEHOLDER: Record<string, string> = {
-    consulta: "Onde foi? (ex: Hospital de Aveiro — Cardiologia)",
-    familia: "Quem foi buscar? (ex: filha, D. Ana)",
-    outro: "Qual o motivo?",
-  };
-
-  const appendLogEntry = (utenteId: string, dateStr: string, text: string) => {
-    setUtentes((prev) => prev.map((u) => {
-      if (u.id !== utenteId) return u;
-      const logs = u.dailyLogs || [];
-      const existingIdx = logs.findIndex((l) => l.date === dateStr);
-      let newLogs;
-      if (existingIdx >= 0) {
-        newLogs = [...logs];
-        newLogs[existingIdx] = { ...newLogs[existingIdx], text: newLogs[existingIdx].text + "\n\n" + text };
-      } else {
-        newLogs = [{ date: dateStr, text }, ...logs];
-      }
-      const updated = { ...u, dailyLogs: newLogs };
-      if (openUtente?.id === utenteId) setOpenUtente(updated);
-      return updated;
-    }));
-  };
-
-  const selectPendingReason = (utenteId: string, reason: "consulta" | "familia" | "outro") => {
-    setPendingOuting((prev) => ({ ...prev, [utenteId]: { reason, customText: prev[utenteId]?.reason === reason ? prev[utenteId].customText : "" } }));
-  };
-
-  const setPendingCustomText = (utenteId: string, text: string) => {
-    setPendingOuting((prev) => ({ ...prev, [utenteId]: { reason: prev[utenteId]?.reason || "outro", customText: text } }));
-  };
-
-  const outingLabelWithDetails = (reason: "consulta" | "familia" | "outro", details?: string) => {
-    const base = OUTING_REASON_LABELS[reason];
-    return details?.trim() ? `${base} — ${details.trim()}` : base;
-  };
-
-  const confirmDeparture = (utenteId: string) => {
-    if (utReadOnlyAll) return;
-    const pending = pendingOuting[utenteId];
-    if (!pending) return;
-    if (pending.reason === "outro" && !pending.customText.trim()) return;
-    const now = new Date();
-    const details = pending.customText.trim();
-    updateUtente(utenteId, {
-      currentOuting: {
-        reason: pending.reason,
-        details: details || undefined,
-        departedAt: now.toISOString(),
-      },
-    });
-    const reasonLabel = outingLabelWithDetails(pending.reason, details);
-    const timeStr = now.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
-    appendLogEntry(utenteId, todayStr, `📋 SAÍDA DO UTENTE\n🚪 Saída às ${timeStr} — ${reasonLabel}`);
-    setPendingOuting((prev) => { const next = { ...prev }; delete next[utenteId]; return next; });
-  };
-
-  const confirmArrival = (utenteId: string) => {
-    if (utReadOnlyAll) return;
-    const u = utentes.find((x) => x.id === utenteId);
-    if (!u?.currentOuting) return;
-    const now = new Date();
-    const departedDate = new Date(u.currentOuting.departedAt);
-    const departedDateStr = departedDate.toLocaleDateString("pt-PT");
-    const sameDay = departedDateStr === todayStr;
-    const reasonLabel = outingLabelWithDetails(u.currentOuting.reason, u.currentOuting.details);
-    const timeStr = now.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
-    const departedTimeStr = departedDate.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
-
-    const historyEntry = {
-      id: Date.now().toString() + Math.random().toString(36).slice(2),
-      reason: u.currentOuting.reason,
-      details: u.currentOuting.details,
-      expectedReturn: u.currentOuting.expectedReturn,
-      departedAt: u.currentOuting.departedAt,
-      returnedAt: now.toISOString(),
-    };
-    updateUtente(utenteId, {
-      currentOuting: null,
-      outingsHistory: [...(u.outingsHistory || []), historyEntry],
-    });
-
-    // Regista o regresso no dia de HOJE (dia real do regresso) — se tiver sido uma saída
-    // de vários dias (ex: internamento hospitalar), não mexe nos registos dos dias entretanto,
-    // só refere aqui a data/hora de saída para dar contexto.
-    const nota = sameDay
-      ? `📋 SAÍDA DO UTENTE\n🏠 Regresso às ${timeStr} (${reasonLabel})`
-      : `📋 SAÍDA DO UTENTE\n🏠 Regresso às ${timeStr} — tinha saído a ${departedDateStr} às ${departedTimeStr} (${reasonLabel})`;
-    appendLogEntry(utenteId, todayStr, nota);
-  };
-
-  const generateFamilyCode = () => {
-    return Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
-  };
+  // (secção antiga de saídas removida — agora na página Saídas de Utentes)
 
   const [familyLinkModal, setFamilyLinkModal] = useState<{ name: string; link: string } | null>(null);
 
@@ -2995,36 +2901,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
         </div>
       )}
 
-      {/* Painel de Saídas */}
-      {utentes.some((u) => u.currentOuting) && (
-        <div style={{ maxWidth: 1300, margin: "0 auto 16px", background: "#FFF8E8", border: "1px solid #E8D28A", borderRadius: 14, padding: "14px 18px" }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#8A6A2E", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 10 }}>🚪 Utentes fora neste momento</div>
-          <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
-            {utentes.filter((u) => u.currentOuting).map((u) => (
-              <div key={u.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "#FFFFFF", borderRadius: 10, padding: "10px 14px", flexWrap: "wrap" as const }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontWeight: 600, fontSize: 14, color: "#2A241C" }}>{u.name}</span>
-                  <span style={{ fontSize: 13, color: "#8A6A2E" }}>
-                    {outingLabelWithDetails(u.currentOuting!.reason, u.currentOuting!.details)}
-                  </span>
-                  {u.currentOuting!.expectedReturn && (
-                    <span style={{ fontSize: 12, color: "#A39B8E" }}>· regresso previsto: {u.currentOuting!.expectedReturn}</span>
-                  )}
-                  <span style={{ fontSize: 11, color: "#A39B8E" }}>
-                    · saiu a {new Date(u.currentOuting!.departedAt).toLocaleDateString("pt-PT")} às {new Date(u.currentOuting!.departedAt).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                </div>
-                <button
-                  onClick={() => confirmArrival(u.id)}
-                  style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
-                >
-                  ✓ Regressou
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+
 
       {/* Grelha de utentes */}
       {filteredUtentes.length === 0 ? (
@@ -3039,13 +2916,15 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               style={{ background: "#FFFFFF", border: "1px solid #E4DED3", borderRadius: 14, padding: "20px 16px", cursor: "pointer", transition: "box-shadow 0.15s", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 10, position: "relative" as const }}
               onClick={() => setOpenUtente(utente)}
             >
-              <button
-                style={{ position: "absolute" as const, top: 10, right: 10, border: "none", background: "transparent", cursor: "pointer", color: "#C2BAAC", padding: 4, borderRadius: 6 }}
-                onClick={(e) => { e.stopPropagation(); removeUtente(utente.id); }}
-                title="Remover utente"
-              >
-                <IconTrash2 size={13} />
-              </button>
+              {utSuperAdmin && (
+                <button
+                  style={{ position: "absolute" as const, top: 8, right: 8, border: "1px solid #F2C4BC", background: "#FFF0EE", cursor: "pointer", color: "#C2554A", width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}
+                  onClick={(e) => { e.stopPropagation(); removeUtente(utente.id); }}
+                  title="Remover utente"
+                >
+                  <IconTrash2 size={15} />
+                </button>
+              )}
               <div
                 className="utente-avatar"
                 style={{ width: 56, height: 56, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", overflow: "hidden", flexShrink: 0 }}
@@ -3097,66 +2976,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                 <div style={{ fontSize: 11, color: "#5B8DBE", fontWeight: 600 }}>📎 {utente.files!.length} documento(s)</div>
               )}
 
-              {/* Célula de saídas */}
-              <div
-                onClick={(e) => e.stopPropagation()}
-                style={{ width: "100%", marginTop: 4, paddingTop: 10, borderTop: "1px solid #F0EDE6", display: "flex", flexDirection: "column" as const, gap: 6 }}
-              >
-                {utente.currentOuting ? (
-                  <>
-                    <div style={{ fontSize: 11, color: "#8A6A2E", textAlign: "center" as const }}>
-                      🚪 Fora — {outingLabelWithDetails(utente.currentOuting.reason, utente.currentOuting.details)}
-                      <br />desde as {new Date(utente.currentOuting.departedAt).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
-                    </div>
-                    <button
-                      onClick={() => confirmArrival(utente.id)}
-                      style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 8, padding: "6px 0", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}
-                    >
-                      ✓ Chegada
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ display: "flex", gap: 4 }}>
-                      {(["consulta", "familia", "outro"] as const).map((r) => (
-                        <button
-                          key={r}
-                          onClick={() => selectPendingReason(utente.id, r)}
-                          style={{
-                            flex: 1, border: pendingOuting[utente.id]?.reason === r ? "1px solid #2A241C" : "1px solid #E4DED3",
-                            background: pendingOuting[utente.id]?.reason === r ? "#2A241C" : "#FAFAF8",
-                            color: pendingOuting[utente.id]?.reason === r ? "#F5B944" : "#6B6358",
-                            borderRadius: 6, padding: "5px 2px", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif",
-                          }}
-                        >
-                          {OUTING_REASON_LABELS[r]}
-                        </button>
-                      ))}
-                    </div>
-                    {pendingOuting[utente.id]?.reason && (
-                      <input
-                        autoFocus
-                        value={pendingOuting[utente.id]?.customText || ""}
-                        onChange={(e) => setPendingCustomText(utente.id, e.target.value)}
-                        placeholder={OUTING_DETAIL_PLACEHOLDER[pendingOuting[utente.id]!.reason]}
-                        style={{ border: "1px solid #E4DED3", borderRadius: 6, padding: "5px 8px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C" }}
-                      />
-                    )}
-                    <button
-                      onClick={() => confirmDeparture(utente.id)}
-                      disabled={!pendingOuting[utente.id]?.reason || (pendingOuting[utente.id]?.reason === "outro" && !pendingOuting[utente.id]?.customText.trim())}
-                      style={{
-                        background: pendingOuting[utente.id]?.reason ? "#F0E8D5" : "#F7F5F0",
-                        color: pendingOuting[utente.id]?.reason ? "#8A6A2E" : "#C2BAAC",
-                        border: "none", borderRadius: 6, padding: "6px 0", fontSize: 12, fontWeight: 700,
-                        cursor: pendingOuting[utente.id]?.reason ? "pointer" : "default", fontFamily: "'Inter', sans-serif",
-                      }}
-                    >
-                      🚪 Saída
-                    </button>
-                  </>
-                )}
-              </div>
+
             </div>
           ))}
         </div>
@@ -3278,7 +3098,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
                         <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>{label}</label>
-                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
+                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: (_isDataKey(key as string) ? _maskData(e.target.value) : e.target.value) })} placeholder={placeholder}
                           style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                       </div>
                     ))}
@@ -3297,7 +3117,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
                         <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>{label}</label>
-                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
+                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: (_isDataKey(key as string) ? _maskData(e.target.value) : e.target.value) })} placeholder={placeholder}
                           style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                       </div>
                     ))}
@@ -3318,7 +3138,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
                         <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>{label}</label>
-                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
+                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: (_isDataKey(key as string) ? _maskData(e.target.value) : e.target.value) })} placeholder={placeholder}
                           style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                       </div>
                     ))}
@@ -3337,7 +3157,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
                         <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>{label}</label>
-                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
+                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: (_isDataKey(key as string) ? _maskData(e.target.value) : e.target.value) })} placeholder={placeholder}
                           style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                       </div>
                     ))}
@@ -3356,7 +3176,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
                         <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#8A6A2E", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>{label}</label>
-                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
+                        <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: (_isDataKey(key as string) ? _maskData(e.target.value) : e.target.value) })} placeholder={placeholder}
                           style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }} />
                       </div>
                     ))}
@@ -3748,7 +3568,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                 ].map(({ key, label, placeholder }) => (
                   <div key={key} style={{ background: "#FFFFFF", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                     <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6B6358", marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</label>
-                    <textarea rows={4} value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder}
+                    <textarea rows={4} value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: (_isDataKey(key as string) ? _maskData(e.target.value) : e.target.value) })} placeholder={placeholder}
                       style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 12px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", resize: "vertical" as const, boxSizing: "border-box" as const }} />
                   </div>
                 ))}
@@ -3994,7 +3814,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                       </div>
                       <div>
                         <label style={fieldLabel}>Data prevista para admissão</label>
-                        <input value={fa.avaliacaoAdmissao?.dataAdmissaoPrevista || ""} onChange={(e) => updateFicha({ avaliacaoAdmissao: { ...(fa.avaliacaoAdmissao || {}), dataAdmissaoPrevista: e.target.value } })} placeholder="DD/MM/AAAA" style={inputStyle} />
+                        <input value={fa.avaliacaoAdmissao?.dataAdmissaoPrevista || ""} onChange={(e) => updateFicha({ avaliacaoAdmissao: { ...(fa.avaliacaoAdmissao || {}), dataAdmissaoPrevista: _maskData(e.target.value) } })} placeholder="DD/MM/AAAA" style={inputStyle} />
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
@@ -4085,7 +3905,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     <input
                       type="text"
                       value={(ccUtente as any)[f.key] || ""}
-                      onChange={(e) => updateUtente(ccUtente.id, { [f.key]: e.target.value } as Partial<Utente>)}
+                      onChange={(e) => updateUtente(ccUtente.id, { [f.key]: (_isDataKey(f.key as string) ? _maskData(e.target.value) : e.target.value) } as Partial<Utente>)}
                       placeholder={f.placeholder}
                       style={{ width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const }}
                     />
@@ -4174,6 +3994,9 @@ function aplicarMascaraData(valorAtual: string, novoValor: string): string {
   return resultado;
 }
 
+function _maskData(v: string): string { const d = String(v).replace(/[^0-9]/g, "").slice(0, 8); if (d.length > 4) return d.slice(0, 2) + "/" + d.slice(2, 4) + "/" + d.slice(4); if (d.length > 2) return d.slice(0, 2) + "/" + d.slice(2); return d; }
+function _isDataKey(k: string): boolean { return k === "birthDate" || k === "entryDate" || k === "dataInscricao" || k === "ccValidity"; }
+function _iniciais(name: string): string { const w = String(name || "").trim().split(/\s+/).filter(Boolean); if (w.length >= 2) return (w[0][0] + w[w.length - 1][0]).toUpperCase(); return String(name || "").slice(0, 2).toUpperCase(); }
 function calcularIdade(birthDate?: string): string {
   if (!birthDate) return "";
   const partes = birthDate.split("/");
@@ -4279,8 +4102,9 @@ function _printSaidas(nomeUtente: string, subtitulo: string, linhas: { tipoLabel
 }
 function SaidasPage({ onBack }: { onBack: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
-  useEffect(() => { loadUtentesFromDB().then((l) => setUtentes(l as Utente[])); }, []);
-  useEffect(() => { saveUtentesData({ utentes }); }, [utentes]);
+  const _saidasReady = useRef(false);
+  useEffect(() => { loadUtentesFromDB().then((l) => { _saidasReady.current = true; setUtentes(l as Utente[]); }); }, []);
+  useEffect(() => { if (_saidasReady.current) saveUtentesData({ utentes }); }, [utentes]);
   const [tiposCustom, setTiposCustom] = useState<{ id: string; label: string; cor: string; corTexto: string }[]>([]);
   useEffect(() => { loadFromSupabase("escala_data").then((e: any) => { if (e && Array.isArray(e.saida_tipos)) setTiposCustom(e.saida_tipos); }).catch(() => {}); }, []);
   const tipos = [...SAIDA_TIPOS_BASE, ...tiposCustom];
@@ -4340,12 +4164,12 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
   const verSaida = (sheet && sheet.mode === "ver" && sheet.saidaId) ? (saidasDe(selUtente).find((s) => s.id === sheet.saidaId) || null) : null;
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#EFE7D4", minHeight: "100vh", color: "#2A241C", width: "100%", maxWidth: "100vw", overflowX: "hidden", boxSizing: "border-box" as const }}>
-      <div style={{ background: "#2A241C", padding: "13px 14px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const, rowGap: 10 }}>
-        <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, border: "1px solid #4A3E30", background: "transparent", borderRadius: 9, padding: "7px 12px", cursor: "pointer", color: "#C9C2B5", fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>← Voltar</button>
-        <div style={{ width: 38, height: 38, borderRadius: 11, background: "#3A332A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19 }}>🚪</div>
+      <div style={{ background: "#1F4D2E", padding: "13px 14px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const, rowGap: 10 }}>
+        <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, border: "1px solid rgba(255,255,255,0.28)", background: "transparent", borderRadius: 9, padding: "7px 12px", cursor: "pointer", color: "#DDEBDD", fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>← Voltar</button>
+        <div style={{ width: 38, height: 38, borderRadius: 11, background: "#15431F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19 }}>🚪</div>
         <div style={{ flex: "1 1 170px", minWidth: 0 }}>
           <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: "#FFF" }}>Saídas de Utentes</div>
-          <div style={{ fontSize: 12, color: "#B7AE9D" }}>Calendário de saídas e regressos</div>
+          <div style={{ fontSize: 12, color: "#C2DCC2" }}>Calendário de saídas e regressos</div>
         </div>
         <button onClick={abrirNovoVazio} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const, flex: "0 0 auto" }}>+ Registar saída</button>
       </div>
@@ -4353,10 +4177,10 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
         <div style={{ background: "#FFF", border: "1px solid #EAE3D5", borderRadius: 14, padding: "12px 13px", display: "flex", flexWrap: "wrap" as const, gap: 10, alignItems: "flex-end", marginBottom: 14, boxSizing: "border-box" as const }}>
           <div style={{ position: "relative" as const, flex: 1, minWidth: 220 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 4 }}>Utente</div>
-            <button onClick={() => setPickOpen(!pickOpen)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, border: "1px solid #E4DED3", borderRadius: 10, padding: "8px 12px", background: "#FAF7F0", cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
-              <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, overflow: "hidden", flexShrink: 0 }}>{selUtente && selUtente.photo ? <img src={selUtente.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" as const }} /> : (selUtente ? selUtente.name.slice(0, 2).toUpperCase() : "—")}</div>
+            <button onClick={() => setPickOpen(!pickOpen)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, border: "1px solid #E4DED3", borderRadius: 10, padding: "8px 12px", background: "#FAF7F0", cursor: "pointer", color: "#2A241C", fontFamily: "'Inter', sans-serif" }}>
+              <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, overflow: "hidden", flexShrink: 0 }}>{selUtente && selUtente.photo ? <img src={selUtente.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" as const }} /> : (selUtente ? _iniciais(selUtente.name) : "—")}</div>
               <div style={{ flex: 1, textAlign: "left" as const }}>
-                <div style={{ fontSize: 14, fontWeight: 700 }}>{selUtente ? selUtente.name : "Escolher utente"}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#2A241C" }}>{selUtente ? selUtente.name : "Escolher utente"}</div>
                 <div style={{ fontSize: 11, color: "#A39B8E" }}>{selUtente ? ("Nº " + selUtente.id + (selUtente.room ? (" · Quarto " + selUtente.room) : "")) : ""}</div>
               </div>
               <span style={{ color: "#A39B8E" }}>▾</span>
@@ -4366,7 +4190,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
                 <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar..." style={{ width: "100%", border: "none", borderBottom: "1px solid #EFEAE2", padding: "10px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "'Inter', sans-serif", background: "#FFF", color: "#2A241C" }} />
                 {filtrados.map((u) => (
                   <button key={u.id} onClick={() => { setSelId(u.id); setPickOpen(false); setSearch(""); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", border: "none", borderBottom: "1px solid #F4F0E8", background: u.id === selId ? "#FAF7F0" : "#FFF", cursor: "pointer", textAlign: "left" as const }}>
-                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, overflow: "hidden", flexShrink: 0 }}>{u.photo ? <img src={u.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" as const }} /> : u.name.slice(0, 2).toUpperCase()}</div>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, overflow: "hidden", flexShrink: 0 }}>{u.photo ? <img src={u.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" as const }} /> : _iniciais(u.name)}</div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: "#2A241C" }}>{u.name}</span>
                   </button>
                 ))}
@@ -4380,7 +4204,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
             <button onClick={goNext} style={{ border: "1px solid #E4DED3", background: "#F7F5F0", borderRadius: 9, padding: "8px 12px", cursor: "pointer", color: "#6B6358", fontWeight: 700 }}>›</button>
           </div>
           <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={imprimirHoje} style={{ border: "none", background: "#2A241C", color: "#F5B944", borderRadius: 9, padding: "9px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨 Dia</button>
+            <button onClick={imprimirHoje} style={{ border: "none", background: "#2E6B2E", color: "#FFFFFF", borderRadius: 9, padding: "9px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨 Dia</button>
             <button onClick={imprimirMes} style={{ border: "none", background: "#1F4D2E", color: "#FFF", borderRadius: 9, padding: "9px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨 Mês</button>
           </div>
         </div>
@@ -4395,7 +4219,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
               const s = saidaNoDia(selUtente, dnum);
               const t = s ? tipoById(s.tipo) : null;
               const isToday = dnum === todayNum;
-              return (<button key={d} onClick={() => abrirDia(d)} style={{ minHeight: 54, border: "1px solid " + (t ? t.cor : "#EAE3D5"), borderRadius: 10, background: t ? t.cor : "#FBF8F1", color: t ? t.corTexto : "#2A241C", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", boxShadow: isToday ? "0 0 0 2px #2A241C inset" : "none" }}>{d}</button>);
+              return (<button key={d} onClick={() => abrirDia(d)} style={{ minHeight: 54, border: "1px solid " + (t ? t.cor : "#EAE3D5"), borderRadius: 10, background: t ? t.cor : "#FBF8F1", color: t ? t.corTexto : "#2A241C", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", boxShadow: isToday ? "0 0 0 2px #1F4D2E inset" : "none" }}>{d}</button>);
             })}
           </div>
         </div>
@@ -4406,8 +4230,8 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
             {addTipo ? (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
                 <input value={novoNome} onChange={(e) => setNovoNome(e.target.value)} placeholder="Nome do tipo" style={{ border: "1px solid #E4DED3", borderRadius: 8, padding: "5px 9px", fontSize: 12, outline: "none", fontFamily: "'Inter', sans-serif", background: "#FAFAF8", color: "#2A241C", width: 140 }} />
-                {SAIDA_PALETA.map((c) => <button key={c} onClick={() => setNovoCor(c)} style={{ width: 20, height: 20, borderRadius: 5, background: c, border: novoCor === c ? "2px solid #2A241C" : "1px solid #D8D1C4", cursor: "pointer", padding: 0 }} />)}
-                <button onClick={adicionarTipo} style={{ border: "none", background: "#2A241C", color: "#F5B944", borderRadius: 7, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>OK</button>
+                {SAIDA_PALETA.map((c) => <button key={c} onClick={() => setNovoCor(c)} style={{ width: 20, height: 20, borderRadius: 5, background: c, border: novoCor === c ? "2px solid #1F4D2E" : "1px solid #D8D1C4", cursor: "pointer", padding: 0 }} />)}
+                <button onClick={adicionarTipo} style={{ border: "none", background: "#1F4D2E", color: "#FFFFFF", borderRadius: 7, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>OK</button>
                 <button onClick={() => { setAddTipo(false); setNovoNome(""); }} style={{ border: "1px solid #E4DED3", background: "#FFF", color: "#6B6358", borderRadius: 7, padding: "5px 10px", fontSize: 12, cursor: "pointer" }}>✕</button>
               </span>
             ) : (
@@ -4440,7 +4264,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
                     {verSaida.notas ? (<div><div style={{ fontSize: 10, color: "#A39B8E", fontWeight: 700, textTransform: "uppercase" as const, marginBottom: 4 }}>Notas</div><div style={{ fontSize: 13, color: "#2A241C", background: "#FAF7F0", border: "1px solid #EFEAE2", borderRadius: 10, padding: "9px 11px", lineHeight: 1.5, marginBottom: 14, whiteSpace: "pre-wrap" as const }}>{verSaida.notas}</div></div>) : null}
                     {ongoing ? (<button onClick={() => confirmarRegresso(verSaida)} style={{ width: "100%", background: "#1F4D2E", color: "#FFF", border: "none", borderRadius: 10, padding: "11px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", marginBottom: 10 }}>✓ Confirmar regresso (hoje)</button>) : null}
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => { setFTipo(verSaida.tipo); setFInicio(verSaida.inicio); setFHoraI(verSaida.horaInicio || ""); setFFim(verSaida.fim || ""); setFHoraF(verSaida.horaRegresso || ""); setFAuto(verSaida.regressoAuto); setFNotas(verSaida.notas || ""); setSheet({ mode: "editar", saidaId: verSaida.id }); }} style={{ flex: 1, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Editar</button>
+                      <button onClick={() => { setFTipo(verSaida.tipo); setFInicio(verSaida.inicio); setFHoraI(verSaida.horaInicio || ""); setFFim(verSaida.fim || ""); setFHoraF(verSaida.horaRegresso || ""); setFAuto(verSaida.regressoAuto); setFNotas(verSaida.notas || ""); setSheet({ mode: "editar", saidaId: verSaida.id }); }} style={{ flex: 1, background: "#1F4D2E", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Editar</button>
                       <button onClick={() => apagarSaida(verSaida.id)} style={{ background: "#FFF0EE", color: "#C2554A", border: "1px solid #F2C4BC", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Apagar</button>
                       <button onClick={() => imprimirUma(verSaida)} style={{ background: "#F7F5F0", color: "#6B6358", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 13px", fontSize: 13, cursor: "pointer" }}>🖨</button>
                     </div>
@@ -4452,7 +4276,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
                   <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 17, fontWeight: 700, margin: "4px 0 14px" }}>{sheet.mode === "editar" ? "Editar saída" : "Registar saída"}{selUtente ? (" — " + selUtente.name) : ""}</div>
                   <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6358", marginBottom: 6 }}>Tipo de saída</label>
                   <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 7, marginBottom: 14 }}>
-                    {tipos.map((t) => (<button key={t.id} onClick={() => setFTipo(t.id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: fTipo === t.id ? "2px solid #2A241C" : "1px solid #E4DED3", background: fTipo === t.id ? "#FAF7F0" : "#FFF", borderRadius: 9, padding: "6px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", color: "#2A241C" }}><span style={{ width: 11, height: 11, borderRadius: 3, background: t.cor }} />{t.label}</button>))}
+                    {tipos.map((t) => (<button key={t.id} onClick={() => setFTipo(t.id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: fTipo === t.id ? "2px solid #1F4D2E" : "1px solid #E4DED3", background: fTipo === t.id ? "#FAF7F0" : "#FFF", borderRadius: 9, padding: "6px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", color: "#2A241C" }}><span style={{ width: 11, height: 11, borderRadius: 3, background: t.cor }} />{t.label}</button>))}
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 10, marginBottom: 14 }}>
                     <div style={{ flex: "1 1 150px", minWidth: 0 }}><label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6358", marginBottom: 6 }}>Data de saída</label><div style={{ display: "flex", gap: 6 }}><input value={fInicio} onChange={(e) => setFInicio(mask(e.target.value))} placeholder="DD/MM/AAAA" style={{ ...inputStyle, flex: 3, minWidth: 0 }} /><input value={fHoraI} onChange={(e) => setFHoraI(maskH(e.target.value))} placeholder="hh:mm" style={{ ...inputStyle, flex: 2, minWidth: 0, textAlign: "center" as const }} /></div></div>
@@ -4465,7 +4289,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
                   <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6358", marginBottom: 6 }}>Notas (opcional)</label>
                   <textarea value={fNotas} onChange={(e) => setFNotas(e.target.value)} rows={3} placeholder="Ex: foi com a filha, leva a medicação..." style={{ ...inputStyle, resize: "vertical" as const, marginBottom: 16 }} />
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={sheet.mode === "editar" ? guardarEdicao : guardarNova} style={{ flex: 1, background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>{sheet.mode === "editar" ? "Guardar alterações" : "Guardar saída"}</button>
+                    <button onClick={sheet.mode === "editar" ? guardarEdicao : guardarNova} style={{ flex: 1, background: "#1F4D2E", color: "#F5B944", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>{sheet.mode === "editar" ? "Guardar alterações" : "Guardar saída"}</button>
                     <button onClick={() => setSheet(null)} style={{ background: "transparent", color: "#6B6358", border: "1px solid #E4DED3", borderRadius: 10, padding: "12px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
                   </div>
                 </div>
@@ -4850,7 +4674,7 @@ function EnfermagemPage({ onBack }: { onBack: () => void }) {
                   ].map(({ key, label, placeholder }) => (
                     <div key={key}>
                       <label style={fieldLabel}>{label}</label>
-                      <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: e.target.value })} placeholder={placeholder} style={inputStyle} />
+                      <input value={(u as any)[key] || ""} onChange={(e) => updateUtente(u.id, { [key]: (_isDataKey(key as string) ? _maskData(e.target.value) : e.target.value) })} placeholder={placeholder} style={inputStyle} />
                     </div>
                   ))}
                   <div>
