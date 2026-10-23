@@ -9342,7 +9342,7 @@ export default function App() {
                   <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 18, width: "100%", maxWidth: 440, maxHeight: "80vh", overflowY: "auto" as const, boxShadow: "0 20px 60px rgba(0,0,0,0.35)", animation: resumoClosing ? "popZoomOut 0.16s ease both" : "popZoom 0.24s cubic-bezier(0.34, 1.56, 0.64, 1) both" }}>
                     <div style={{ padding: "16px 18px", borderBottom: "1px solid #EFEAE2", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky" as const, top: 0, background: "#FFFFFF" }}>
                       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#2A241C" }}>{titulos[resumoModal]}</div>
-                      <button onClick={() => closeResumo()} style={{ border: "none", background: "#F2EFE8", borderRadius: 8, width: 30, height: 30, fontSize: 16, cursor: "pointer", color: "#6B6358" }}>✕</button>
+                      <button onClick={() => closeResumo()} style={{ border: "none", background: "#F2EFE8", borderRadius: 8, width: 30, height: 30, fontSize: 16, cursor: "pointer", color: "#6B6358", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}>✕</button>
                     </div>
                     <div style={{ padding: 10 }}>
                       {modalItens.length === 0 ? (
