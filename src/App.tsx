@@ -5615,7 +5615,7 @@ const DEFAULT_APP_USERS: AppUser[] = [
 function canAccessPage(user: AppUser | null, page: "utentes" | "schedule" | "stock" | "sugestoes" | "enfermagem" | "saidas"): boolean {
   if (!user) return false;
   if (user.role === "admin") return true;
-  if (user.role === "enfermagem") return page === "enfermagem" || page === "utentes";
+  if (user.role === "enfermagem") return page === "enfermagem" || page === "utentes" || page === "saidas";
   if (user.role === "colaboradoras") return page === "utentes";
   if (user.role === "saidas") return page === "saidas";
   if (page === "sugestoes") return false;
