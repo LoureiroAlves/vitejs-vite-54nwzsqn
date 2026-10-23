@@ -4233,18 +4233,19 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
               </div>
               <span style={{ color: "#A39B8E" }}>▾</span>
             </button>
-            {pickOpen ? (
-              <div style={{ position: "absolute" as const, top: "100%", left: 0, right: 0, zIndex: 20, marginTop: 6, background: "#FFF", border: "1px solid #E4DED3", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", maxHeight: 280, overflowY: "auto" as const }}>
+            {pickOpen ? (<>
+              <div onClick={() => setPickOpen(false)} style={{ position: "fixed" as const, inset: 0, zIndex: 19 }} />
+              <div onMouseLeave={() => setPickOpen(false)} style={{ position: "absolute" as const, top: "100%", left: 0, right: 0, zIndex: 20, marginTop: 6, background: "#FFF", border: "1px solid #E4DED3", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", maxHeight: 280, overflowY: "auto" as const }}>
                 <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar..." style={{ width: "100%", border: "none", borderBottom: "1px solid #EFEAE2", padding: "10px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "'Inter', sans-serif", background: "#FFF", color: "#2A241C" }} />
                 {filtrados.map((u) => (
-                  <button key={u.id} onClick={() => { setSelId(u.id); setPickOpen(false); setSearch(""); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", border: "none", borderBottom: "1px solid #F4F0E8", background: u.id === selId ? "#FAF7F0" : "#FFF", cursor: "pointer", textAlign: "left" as const }}>
+                  <button key={u.id} className="saida-pick-item" onClick={() => { setSelId(u.id); setPickOpen(false); setSearch(""); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", border: "none", borderBottom: "1px solid #F4F0E8", background: u.id === selId ? "#FAF7F0" : "#FFF", cursor: "pointer", textAlign: "left" as const }}>
                     <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, overflow: "hidden", flexShrink: 0 }}>{u.photo ? <img src={u.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" as const }} /> : _iniciais(u.name)}</div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: "#2A241C" }}>{u.name}</span>
                   </button>
                 ))}
                 {filtrados.length === 0 ? <div style={{ padding: 14, fontSize: 13, color: "#A39B8E", textAlign: "center" as const }}>Nenhum utente.</div> : null}
               </div>
-            ) : null}
+            </>) : null}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flex: "1 1 auto", justifyContent: "center" }}>
             <button onClick={goPrev} style={{ border: "1px solid #E4DED3", background: "#F7F5F0", borderRadius: 9, padding: "8px 12px", cursor: "pointer", color: "#6B6358", fontWeight: 700 }}>‹</button>
@@ -8574,6 +8575,7 @@ export default function App() {
         .tool-btn-active { background: #F5B944 !important; color: #2A241C !important; }
         .tool-btn-active:hover { background: #F0AF30 !important; }
         .print-menu-item:hover { background: #F7F5F0; }
+        .saida-pick-item:hover { background: #F2EFE8 !important; }
         @keyframes monthFade {
           0%   { opacity: 0; transform: translateY(6px); }
           100% { opacity: 1; transform: translateY(0); }
