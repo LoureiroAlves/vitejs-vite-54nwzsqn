@@ -8517,6 +8517,8 @@ export default function App() {
           100% { opacity: 1; transform: translateY(0); }
         }
         .month-fade { animation: monthFade 0.28s cubic-bezier(0.32, 0.72, 0, 1) both; }
+        @keyframes popZoom { 0% { opacity: 0; transform: scale(0.85); } 100% { opacity: 1; transform: scale(1); } }
+        @keyframes popFade { 0% { opacity: 0; } 100% { opacity: 1; } }
         @keyframes bounce {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-6px); }
@@ -9060,8 +9062,8 @@ export default function App() {
               } as const;
               const c = cats[resumoModal];
               return (
-                <div onClick={() => setResumoModal(null)} style={{ position: "fixed" as const, inset: 0, zIndex: 400, background: "rgba(20,30,20,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-                  <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 18, width: "100%", maxWidth: 440, maxHeight: "80vh", overflowY: "auto" as const, boxShadow: "0 20px 60px rgba(0,0,0,0.35)" }}>
+                <div onClick={() => setResumoModal(null)} style={{ position: "fixed" as const, inset: 0, zIndex: 400, background: "rgba(20,30,20,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, animation: "popFade 0.18s ease both" }}>
+                  <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 18, width: "100%", maxWidth: 440, maxHeight: "80vh", overflowY: "auto" as const, boxShadow: "0 20px 60px rgba(0,0,0,0.35)", animation: "popZoom 0.24s cubic-bezier(0.34, 1.56, 0.64, 1) both" }}>
                     <div style={{ padding: "16px 18px", borderBottom: "1px solid #EFEAE2", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky" as const, top: 0, background: "#FFFFFF" }}>
                       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#2A241C" }}>{c.titulo}</div>
                       <button onClick={() => setResumoModal(null)} style={{ border: "none", background: "#F2EFE8", borderRadius: 8, width: 30, height: 30, fontSize: 16, cursor: "pointer", color: "#6B6358" }}>✕</button>
