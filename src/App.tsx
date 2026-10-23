@@ -8860,7 +8860,7 @@ export default function App() {
 
       {/* Página inicial */}
       {true && (
-        <div className="home-screen" style={{ position: "fixed" as const, inset: 0, background: "#1E3A1E", display: "flex", overflow: "auto" }}>
+        <div className="home-screen" style={{ position: "fixed" as const, inset: 0, background: "#1E3A1E", display: "flex", overflowY: "auto" as const, overflowX: "hidden" as const }}>
 
           {/* Logo SVG marca de água — canto superior esquerdo, triplicado, com balanço suave */}
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
