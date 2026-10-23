@@ -9036,7 +9036,7 @@ export default function App() {
 
             {(canAccessPage(currentUser, "saidas") || canAccessPage(currentUser, "utentes")) && (
               <div style={{ background: "#FFFFFF", borderRadius: 16, padding: "14px 16px", marginBottom: 16, boxShadow: "0 4px 20px rgba(0,0,0,0.25)" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>Saídas de hoje · {today.toLocaleDateString("pt-PT")}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>Utentes fora da Quinta dos Avós</div>
                 <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 10 }}>
                   {[
                     { n: saidasHoje.fora.length, label: "🚪 Fora agora", bg: "#E1F5EE", col: "#1C7F7F", nomes: saidasHoje.fora, cat: "fora" as const },
