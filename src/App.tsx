@@ -4267,7 +4267,8 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
               const s = saidaNoDia(selUtente, dnum);
               const t = s ? tipoById(s.tipo) : null;
               const isToday = dnum === todayNum;
-              return (<button key={d} onClick={() => abrirDia(d)} style={{ minHeight: 54, border: "1px solid " + (t ? t.cor : "#EAE3D5"), borderRadius: 10, background: t ? t.cor : "#FBF8F1", color: t ? t.corTexto : "#2A241C", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", boxShadow: isToday ? "0 0 0 2px #1F4D2E inset" : "none" }}>{d}</button>);
+              const voltou = !!(s && s.regressado);
+              return (<button key={d} onClick={() => abrirDia(d)} style={{ position: "relative" as const, minHeight: 54, border: voltou ? "2px solid #1F7A34" : ("1px solid " + (t ? t.cor : "#EAE3D5")), borderRadius: 10, background: t ? t.cor : "#FBF8F1", color: t ? t.corTexto : "#2A241C", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", boxShadow: isToday ? "0 0 0 2px #1F4D2E inset" : "none" }}>{d}{voltou ? <span style={{ position: "absolute" as const, top: 3, right: 3, width: 14, height: 14, borderRadius: "50%", background: "#FFFFFF", color: "#1F7A34", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>✓</span> : null}</button>);
             })}
           </div>
         </div>
