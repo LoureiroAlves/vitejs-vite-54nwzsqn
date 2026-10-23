@@ -8855,6 +8855,23 @@ export default function App() {
           .sd-cal-card { padding: 10px 8px 14px !important; }
           .sd-cal-grid { gap: 3px !important; }
           .sd-cal-cell { min-height: 38px !important; font-size: 12px !important; }
+          /* Painel "Utentes fora" compacto: 3 numa linha */
+          .hoje-panel { padding: 10px 10px !important; margin-bottom: 12px !important; }
+          .hoje-tiles { gap: 6px !important; }
+          .hoje-tile { flex: 1 1 0 !important; min-width: 0 !important; padding: 7px 5px !important; }
+          .hoje-tile > div:nth-child(1) { font-size: 19px !important; }
+          .hoje-tile > div:nth-child(2) { font-size: 9.5px !important; margin: 2px 0 2px !important; line-height: 1.1 !important; }
+          .hoje-tile > div:nth-child(3) { font-size: 9px !important; }
+          /* Barra de topo mais pequena */
+          .home-session { gap: 6px !important; }
+          .home-session button { padding: 5px 9px !important; font-size: 11px !important; }
+          .home-session > span { font-size: 11px !important; }
+          /* Aniversário mais pequeno */
+          .bday-card { padding: 8px 11px !important; }
+          .bday-avatar { width: 38px !important; height: 38px !important; font-size: 19px !important; }
+          .bday-name { font-size: 13.5px !important; }
+          .bday-msg { font-size: 11px !important; }
+          .bday-age { font-size: 20px !important; }
         }
       `}</style>
 
@@ -9299,15 +9316,15 @@ export default function App() {
             )}
 
             {(canAccessPage(currentUser, "saidas") || canAccessPage(currentUser, "utentes")) && (
-              <div style={{ background: "#FFFFFF", borderRadius: 16, padding: "14px 16px", marginBottom: 16, boxShadow: "0 4px 20px rgba(0,0,0,0.25)" }}>
+              <div className="hoje-panel" style={{ background: "#FFFFFF", borderRadius: 16, padding: "14px 16px", marginBottom: 16, boxShadow: "0 4px 20px rgba(0,0,0,0.25)" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>Utentes fora da Quinta dos Avós</div>
-                <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 10 }}>
+                <div className="hoje-tiles" style={{ display: "flex", flexWrap: "wrap" as const, gap: 10 }}>
                   {[
                     { n: saidasHoje.fora.length, label: "🚪 Fora agora", bg: "#E1F5EE", col: "#1C7F7F", nomes: saidasHoje.fora, cat: "fora" as const },
                     { n: saidasHoje.regressos.length, label: "🏠 Regressos hoje", bg: "#E8F0E8", col: "#2E7D32", nomes: saidasHoje.regressos, cat: "regressos" as const },
                     { n: saidasHoje.consultas.length, label: "🩺 Consultas hoje", bg: "#E8EEF5", col: "#3A5A70", nomes: saidasHoje.consultas, cat: "consultas" as const },
                   ].map((t, i) => (
-                    <button key={i} onClick={() => { setModalItens(t.nomes); setEntradasDadas(new Set()); setResumoModal(t.cat); }} style={{ flex: "1 1 150px", minWidth: 0, textAlign: "left" as const, border: "none", cursor: "pointer", borderRadius: 12, padding: "11px 13px", background: t.bg, fontFamily: "'Inter', sans-serif" }}>
+                    <button key={i} className="hoje-tile" onClick={() => { setModalItens(t.nomes); setEntradasDadas(new Set()); setResumoModal(t.cat); }} style={{ flex: "1 1 150px", minWidth: 0, textAlign: "left" as const, border: "none", cursor: "pointer", borderRadius: 12, padding: "11px 13px", background: t.bg, fontFamily: "'Inter', sans-serif" }}>
                       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 800, lineHeight: 1, color: t.col }}>{t.n}</div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: "#4A443B", margin: "3px 0 4px" }}>{t.label}</div>
                       <div style={{ fontSize: 11, color: "#6B6358", lineHeight: 1.35 }}>{t.nomes.length ? (t.nomes.slice(0, 3).map((x) => x.nome).join(" · ") + (t.nomes.length > 3 ? " +" + (t.nomes.length - 3) : "")) : "—"}</div>
