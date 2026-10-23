@@ -8372,6 +8372,8 @@ export default function App() {
 
   const [resumoModal, setResumoModal] = useState<null | "fora" | "regressos" | "consultas">(null);
   const [resumoTick, setResumoTick] = useState(0);
+  const [modalItens, setModalItens] = useState<{ uid: string; nome: string; sub: string }[]>([]);
+  const [entradasDadas, setEntradasDadas] = useState<Set<string>>(new Set());
   const _tipoLabelHoje = (id: string): string => { const t = SAIDA_TIPOS_BASE.find((x) => x.id === id); return t ? t.label : "Saída"; };
 
   // ---------- Resumo de saídas de hoje (painel inicial) ----------
@@ -8415,6 +8417,7 @@ export default function App() {
     const nova = { id: Date.now().toString() + Math.random().toString(36).slice(2), date: tStr, time: hm, author: _appCurrentUserName || "", text: "📋 ENTRADA DO UTENTE\n🏠 Regresso (entrada) a " + tStr + " às " + hm + " (" + _tipoLabelHoje(abertas[0].tipo) + ")" };
     u.dailyLogs = [nova, ...(u.dailyLogs || [])];
     saveUtentesData({ utentes });
+    setEntradasDadas((prev) => { const nx = new Set(prev); nx.add(uid); return nx; });
     setResumoTick((t) => t + 1);
   };
   const isUtentesPage = (activePage as string) === "utentes";
@@ -9045,7 +9048,7 @@ export default function App() {
                     { n: saidasHoje.regressos.length, label: "🏠 Regressos hoje", bg: "#E8F0E8", col: "#2E7D32", nomes: saidasHoje.regressos, cat: "regressos" as const },
                     { n: saidasHoje.consultas.length, label: "🩺 Consultas hoje", bg: "#E8EEF5", col: "#3A5A70", nomes: saidasHoje.consultas, cat: "consultas" as const },
                   ].map((t, i) => (
-                    <button key={i} onClick={() => setResumoModal(t.cat)} style={{ flex: "1 1 150px", minWidth: 0, textAlign: "left" as const, border: "none", cursor: "pointer", borderRadius: 12, padding: "11px 13px", background: t.bg, fontFamily: "'Inter', sans-serif" }}>
+                    <button key={i} onClick={() => { setModalItens(t.nomes); setEntradasDadas(new Set()); setResumoModal(t.cat); }} style={{ flex: "1 1 150px", minWidth: 0, textAlign: "left" as const, border: "none", cursor: "pointer", borderRadius: 12, padding: "11px 13px", background: t.bg, fontFamily: "'Inter', sans-serif" }}>
                       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 800, lineHeight: 1, color: t.col }}>{t.n}</div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: "#4A443B", margin: "3px 0 4px" }}>{t.label}</div>
                       <div style={{ fontSize: 11, color: "#6B6358", lineHeight: 1.35 }}>{t.nomes.length ? (t.nomes.slice(0, 3).map((x) => x.nome).join(" · ") + (t.nomes.length > 3 ? " +" + (t.nomes.length - 3) : "")) : "—"}</div>
@@ -9055,31 +9058,33 @@ export default function App() {
               </div>
             )}
             {resumoModal && (() => {
-              const cats = {
-                fora: { titulo: "🚪 Utentes fora agora", itens: saidasHoje.fora },
-                regressos: { titulo: "🏠 Regressos previstos hoje", itens: saidasHoje.regressos },
-                consultas: { titulo: "🩺 Consultas de hoje", itens: saidasHoje.consultas },
-              } as const;
-              const c = cats[resumoModal];
+              const titulos = { fora: "🚪 Utentes fora agora", regressos: "🏠 Regressos previstos hoje", consultas: "🩺 Consultas de hoje" } as const;
               return (
                 <div onClick={() => setResumoModal(null)} style={{ position: "fixed" as const, inset: 0, zIndex: 400, background: "rgba(20,30,20,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, animation: "popFade 0.18s ease both" }}>
                   <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 18, width: "100%", maxWidth: 440, maxHeight: "80vh", overflowY: "auto" as const, boxShadow: "0 20px 60px rgba(0,0,0,0.35)", animation: "popZoom 0.24s cubic-bezier(0.34, 1.56, 0.64, 1) both" }}>
                     <div style={{ padding: "16px 18px", borderBottom: "1px solid #EFEAE2", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky" as const, top: 0, background: "#FFFFFF" }}>
-                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#2A241C" }}>{c.titulo}</div>
+                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#2A241C" }}>{titulos[resumoModal]}</div>
                       <button onClick={() => setResumoModal(null)} style={{ border: "none", background: "#F2EFE8", borderRadius: 8, width: 30, height: 30, fontSize: 16, cursor: "pointer", color: "#6B6358" }}>✕</button>
                     </div>
                     <div style={{ padding: 10 }}>
-                      {c.itens.length === 0 ? (
+                      {modalItens.length === 0 ? (
                         <div style={{ padding: 22, textAlign: "center" as const, color: "#A39B8E", fontSize: 14 }}>Ninguém nesta lista.</div>
-                      ) : c.itens.map((it, i) => (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderBottom: "1px solid #F4F0E8" }}>
+                      ) : modalItens.map((it, i) => {
+                        const done = entradasDadas.has(it.uid);
+                        return (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 10px", marginBottom: 4, borderRadius: 10, border: done ? "2px solid #2E7D32" : "1px solid #EFEAE2", background: done ? "#EFF7EF" : "#FFFFFF", transition: "border-color 0.25s ease, background 0.25s ease" }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 14, fontWeight: 700, color: "#2A241C" }}>{it.nome}</div>
-                            <div style={{ fontSize: 12, color: "#8A8278" }}>{it.sub}</div>
+                            <div style={{ fontSize: 12, color: done ? "#2E7D32" : "#8A8278" }}>{done ? "✓ Entrada registada" : it.sub}</div>
                           </div>
-                          <button onClick={() => darEntradaResumo(it.uid)} style={{ background: "#1F4D2E", color: "#FFFFFF", border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const, flexShrink: 0 }}>✓ Dar entrada</button>
+                          {done ? (
+                            <span style={{ color: "#2E7D32", fontWeight: 800, fontSize: 12, whiteSpace: "nowrap" as const, flexShrink: 0 }}>✓ Regressou</span>
+                          ) : (
+                            <button onClick={() => darEntradaResumo(it.uid)} style={{ background: "#1F4D2E", color: "#FFFFFF", border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const, flexShrink: 0 }}>✓ Dar entrada</button>
+                          )}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
