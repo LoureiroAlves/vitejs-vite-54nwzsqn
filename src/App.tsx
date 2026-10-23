@@ -4104,6 +4104,17 @@ function _printSaidas(nomeUtente: string, subtitulo: string, linhas: { tipoLabel
   w.document.open(); w.document.write(html); w.document.close(); w.focus();
   setTimeout(() => w.print(), 300);
 }
+function _printSaidasGeral(subtitulo: string, linhas: { utente: string; tipoLabel: string; cor: string; inicio: string; fim: string; estado: string }[]) {
+  const esc = (s: any) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const rows = linhas.map((l) => "<tr><td style='font-weight:bold'>" + esc(l.utente) + "</td><td style='border-left:6px solid " + l.cor + "'>" + esc(l.tipoLabel) + "</td><td>" + esc(l.inicio) + "</td><td>" + esc(l.fim) + "</td><td>" + esc(l.estado) + "</td></tr>").join("");
+  const corpo = linhas.length ? "<table><thead><tr><th>Utente</th><th>Tipo de saída</th><th>Saída</th><th>Regresso</th><th>Estado</th></tr></thead><tbody>" + rows + "</tbody></table>" : "<p class='vazio'>Sem saídas neste período.</p>";
+  const css = "@page{size:A4;margin:16mm}body{font-family:Arial,sans-serif;color:#2A241C}h1{font-size:18px;margin:0 0 4px}.sub{font-size:12px;color:#888;margin:0 0 16px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#2A241C;color:#fff;padding:7px 8px;text-align:left}td{padding:7px 8px;border-bottom:1px solid #E4DED3;vertical-align:top;word-break:break-word}.vazio{color:#999;font-style:italic}";
+  const html = "<!DOCTYPE html><html lang='pt'><head><meta charset='UTF-8'><title>Saidas</title><style>" + css + "</style></head><body><h1>Saídas — Todos os utentes</h1><p class='sub'>Associação Oliveirense de Socorros Mútuos · " + esc(subtitulo) + " · Impresso em " + new Date().toLocaleDateString("pt-PT") + "</p>" + corpo + "</body></html>";
+  const w = window.open("", "_blank");
+  if (!w) { alert("Verifique se os pop-ups estão bloqueados."); return; }
+  w.document.open(); w.document.write(html); w.document.close(); w.focus();
+  setTimeout(() => w.print(), 300);
+}
 function SaidasPage({ onBack }: { onBack: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   const _saidasReady = useRef(false);
@@ -4162,6 +4173,19 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
   const imprimirMes = () => { if (!selUtente) return; const ms = year * 10000 + (month + 1) * 100 + 1; const me = year * 10000 + (month + 1) * 100 + numDays; const linhas = saidasDe(selUtente).filter((s) => { const st = _saidaDnum(s.inicio); return st && st <= me && effEnd(s) >= ms; }).sort((a, b) => _saidaDnum(a.inicio) - _saidaDnum(b.inicio)).map(linhaDe); _printSaidas(selUtente.name, MONTH_NAMES[month] + " " + year, linhas); };
   const imprimirHoje = () => { if (!selUtente) return; const linhas = saidasDe(selUtente).filter((s) => { const st = _saidaDnum(s.inicio); return st && todayNum >= st && todayNum <= effEnd(s); }).map(linhaDe); _printSaidas(selUtente.name, "Dia " + todayStr, linhas); };
   const imprimirUma = (s: Saida) => { if (!selUtente) return; _printSaidas(selUtente.name, tipoById(s.tipo).label, [linhaDe(s)]); };
+  const imprimirGeral = () => {
+    const ms = year * 10000 + (month + 1) * 100 + 1;
+    const me = year * 10000 + (month + 1) * 100 + numDays;
+    const linhas: { utente: string; tipoLabel: string; cor: string; inicio: string; fim: string; estado: string }[] = [];
+    utentes.forEach((u) => {
+      saidasDe(u).forEach((s) => {
+        const st = _saidaDnum(s.inicio);
+        if (st && st <= me && effEnd(s) >= ms) { const d = linhaDe(s); linhas.push({ utente: u.name, tipoLabel: d.tipoLabel, cor: d.cor, inicio: d.inicio, fim: d.fim, estado: d.estado }); }
+      });
+    });
+    linhas.sort((a, b) => (_saidaDnum(a.inicio.split(" ")[0]) - _saidaDnum(b.inicio.split(" ")[0])) || a.utente.localeCompare(b.utente));
+    _printSaidasGeral(MONTH_NAMES[month] + " " + year, linhas);
+  };
   const inputStyle = { width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 11px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const };
   const WD = ["D", "S", "T", "Q", "Q", "S", "S"];
   const filtrados = utentes.filter((u) => u.name.toLowerCase().includes(search.toLowerCase()));
@@ -4209,7 +4233,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
           </div>
           <div style={{ display: "flex", gap: 6 }}>
             <button onClick={imprimirHoje} style={{ border: "none", background: "#2E6B2E", color: "#FFFFFF", borderRadius: 9, padding: "9px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨 Dia</button>
-            <button onClick={imprimirMes} style={{ border: "none", background: "#1F4D2E", color: "#FFF", borderRadius: 9, padding: "9px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨 Mês</button>
+            <button onClick={imprimirMes} style={{ border: "none", background: "#1F4D2E", color: "#FFF", borderRadius: 9, padding: "9px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨 Mês</button><button onClick={imprimirGeral} style={{ border: "none", background: "#3A5A70", color: "#FFF", borderRadius: 9, padding: "9px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨 Geral</button>
           </div>
         </div>
         <div style={{ background: "#FFF", border: "1px solid #EAE3D5", borderRadius: 14, padding: "14px 16px 18px" }}>
