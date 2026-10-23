@@ -8777,7 +8777,7 @@ export default function App() {
           .home-btn-icon svg { width: 20px !important; height: 20px !important; }
           .home-btn-icon span { font-size: 18px !important; }
           .home-btn-label { font-size: 10.5px !important; text-align: center !important; line-height: 1.15 !important; }
-          .home-title { font-size: 15px !important; padding: 0 20px; line-height: 1.3 !important; }
+          .home-title { font-size: 18px !important; padding: 0 12px; line-height: 1.25 !important; }
           .home-icon-wrap { width: 44px !important; height: 44px !important; margin-bottom: 12px !important; }
           .home-icon-wrap svg { width: 22px !important; height: 22px !important; }
           .home-center { margin-bottom: 14px !important; }
@@ -8812,7 +8812,7 @@ export default function App() {
           .home-btn-icon svg { width: 18px !important; height: 18px !important; }
           .home-btn-icon span { font-size: 16px !important; }
           .home-btn-label { font-size: 10px !important; }
-          .home-title { font-size: 13px !important; line-height: 1.25 !important; }
+          .home-title { font-size: 16px !important; line-height: 1.25 !important; }
           .home-icon-wrap { width: 40px !important; height: 40px !important; margin-bottom: 8px !important; }
           .home-icon-wrap svg { width: 20px !important; height: 20px !important; }
           .bday-card { padding: 10px 12px !important; }
@@ -8873,6 +8873,7 @@ export default function App() {
           .bday-name { font-size: 13.5px !important; }
           .bday-msg { font-size: 11px !important; }
           .bday-age { font-size: 20px !important; }
+          .floating-word-cycle { display: none !important; }
         }
       `}</style>
 
