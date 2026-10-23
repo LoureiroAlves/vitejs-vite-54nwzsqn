@@ -8370,26 +8370,48 @@ export default function App() {
     return results.slice(0, 8);
   }, [quickSearch, employees, rvEmployees]);
 
+  const [resumoModal, setResumoModal] = useState<null | "fora" | "regressos" | "consultas">(null);
+  const [resumoTick, setResumoTick] = useState(0);
+  const _tipoLabelHoje = (id: string): string => { const t = SAIDA_TIPOS_BASE.find((x) => x.id === id); return t ? t.label : "Saída"; };
+
   // ---------- Resumo de saídas de hoje (painel inicial) ----------
   const saidasHoje = useMemo(() => {
     const list: any[] = loadUtentesData()?.utentes ?? [];
     const dnum = (d?: string): number => { if (!d) return 0; const pr = String(d).split("/"); if (pr.length !== 3) return 0; return parseInt(pr[2], 10) * 10000 + parseInt(pr[1], 10) * 100 + parseInt(pr[0], 10); };
     const tnum = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
     const effEnd = (s: any): number => s.regressado && s.dataRegresso ? dnum(s.dataRegresso) : (s.fim ? dnum(s.fim) : tnum);
-    const fora: { nome: string; extra: string }[] = [];
-    const regressos: { nome: string; extra: string }[] = [];
-    const consultas: { nome: string; extra: string }[] = [];
+    type ItemHoje = { uid: string; sid: string; nome: string; sub: string };
+    const fora: ItemHoje[] = [];
+    const regressos: ItemHoje[] = [];
+    const consultas: ItemHoje[] = [];
     list.forEach((u: any) => {
       (u.saidas || []).forEach((s: any) => {
         const st = dnum(s.inicio);
+        const lbl = _tipoLabelHoje(s.tipo);
         const aberta = !(s.regressado || (s.regressoAuto && s.fim && dnum(s.fim) < tnum));
-        if (aberta && st && st <= tnum && tnum <= effEnd(s)) fora.push({ nome: u.name, extra: s.fim ? ("até " + s.fim) : "" });
-        if (!s.regressado && s.fim && dnum(s.fim) === tnum) regressos.push({ nome: u.name, extra: "" });
-        if (s.tipo === "consulta" && st === tnum) consultas.push({ nome: u.name, extra: s.horaInicio || "" });
+        if (aberta && st && st <= tnum && tnum <= effEnd(s)) fora.push({ uid: u.id, sid: s.id, nome: u.name, sub: lbl + " · saiu " + s.inicio + (s.horaInicio ? " " + s.horaInicio : "") + (s.fim ? " · regresso prev. " + s.fim : "") });
+        if (!s.regressado && s.fim && dnum(s.fim) === tnum) regressos.push({ uid: u.id, sid: s.id, nome: u.name, sub: lbl + " · regresso previsto hoje" });
+        if (s.tipo === "consulta" && st === tnum) consultas.push({ uid: u.id, sid: s.id, nome: u.name, sub: lbl + (s.horaInicio ? " · " + s.horaInicio : "") });
       });
     });
     return { fora, regressos, consultas };
-  }, [activePage]);
+  }, [activePage, resumoTick]);
+
+  const darEntradaResumo = (uid: string, sid: string) => {
+    const data = loadUtentesData() || { utentes: [] };
+    const utentes: any[] = data.utentes || [];
+    const u = utentes.find((x: any) => x.id === uid);
+    const s = u && (u.saidas || []).find((x: any) => x.id === sid);
+    if (!u || !s) return;
+    if (!window.confirm("Dar entrada (regresso) de " + u.name + " hoje?")) return;
+    const hm = new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+    const tStr = today.toLocaleDateString("pt-PT");
+    s.regressado = true; s.dataRegresso = tStr; s.horaRegresso = hm;
+    const nova = { id: Date.now().toString() + Math.random().toString(36).slice(2), date: tStr, time: hm, author: _appCurrentUserName || "", text: "📋 ENTRADA DO UTENTE\n🏠 Regresso (entrada) a " + tStr + " às " + hm + " (" + _tipoLabelHoje(s.tipo) + ")" };
+    u.dailyLogs = [nova, ...(u.dailyLogs || [])];
+    saveUtentesData({ utentes });
+    setResumoTick((t) => t + 1);
+  };
   const isUtentesPage = (activePage as string) === "utentes";
   const isSchedulePage = (activePage as string) === "schedule";
   const isSugestoesPage = (activePage as string) === "sugestoes";
@@ -9012,19 +9034,50 @@ export default function App() {
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>Saídas de hoje · {today.toLocaleDateString("pt-PT")}</div>
                 <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 10 }}>
                   {[
-                    { n: saidasHoje.fora.length, label: "🚪 Fora agora", bg: "#E1F5EE", col: "#1C7F7F", nomes: saidasHoje.fora },
-                    { n: saidasHoje.regressos.length, label: "🏠 Regressos hoje", bg: "#E8F0E8", col: "#2E7D32", nomes: saidasHoje.regressos },
-                    { n: saidasHoje.consultas.length, label: "🩺 Consultas hoje", bg: "#E8EEF5", col: "#3A5A70", nomes: saidasHoje.consultas },
+                    { n: saidasHoje.fora.length, label: "🚪 Fora agora", bg: "#E1F5EE", col: "#1C7F7F", nomes: saidasHoje.fora, cat: "fora" as const },
+                    { n: saidasHoje.regressos.length, label: "🏠 Regressos hoje", bg: "#E8F0E8", col: "#2E7D32", nomes: saidasHoje.regressos, cat: "regressos" as const },
+                    { n: saidasHoje.consultas.length, label: "🩺 Consultas hoje", bg: "#E8EEF5", col: "#3A5A70", nomes: saidasHoje.consultas, cat: "consultas" as const },
                   ].map((t, i) => (
-                    <button key={i} onClick={() => setActivePage("saidas")} style={{ flex: "1 1 150px", minWidth: 0, textAlign: "left" as const, border: "none", cursor: "pointer", borderRadius: 12, padding: "11px 13px", background: t.bg, fontFamily: "'Inter', sans-serif" }}>
+                    <button key={i} onClick={() => setResumoModal(t.cat)} style={{ flex: "1 1 150px", minWidth: 0, textAlign: "left" as const, border: "none", cursor: "pointer", borderRadius: 12, padding: "11px 13px", background: t.bg, fontFamily: "'Inter', sans-serif" }}>
                       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 800, lineHeight: 1, color: t.col }}>{t.n}</div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: "#4A443B", margin: "3px 0 4px" }}>{t.label}</div>
-                      <div style={{ fontSize: 11, color: "#6B6358", lineHeight: 1.35 }}>{t.nomes.length ? (t.nomes.slice(0, 3).map((x) => x.nome + (x.extra ? " (" + x.extra + ")" : "")).join(" · ") + (t.nomes.length > 3 ? " +" + (t.nomes.length - 3) : "")) : "—"}</div>
+                      <div style={{ fontSize: 11, color: "#6B6358", lineHeight: 1.35 }}>{t.nomes.length ? (t.nomes.slice(0, 3).map((x) => x.nome).join(" · ") + (t.nomes.length > 3 ? " +" + (t.nomes.length - 3) : "")) : "—"}</div>
                     </button>
                   ))}
                 </div>
               </div>
             )}
+            {resumoModal && (() => {
+              const cats = {
+                fora: { titulo: "🚪 Utentes fora agora", itens: saidasHoje.fora },
+                regressos: { titulo: "🏠 Regressos previstos hoje", itens: saidasHoje.regressos },
+                consultas: { titulo: "🩺 Consultas de hoje", itens: saidasHoje.consultas },
+              } as const;
+              const c = cats[resumoModal];
+              return (
+                <div onClick={() => setResumoModal(null)} style={{ position: "fixed" as const, inset: 0, zIndex: 400, background: "rgba(20,30,20,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+                  <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 18, width: "100%", maxWidth: 440, maxHeight: "80vh", overflowY: "auto" as const, boxShadow: "0 20px 60px rgba(0,0,0,0.35)" }}>
+                    <div style={{ padding: "16px 18px", borderBottom: "1px solid #EFEAE2", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky" as const, top: 0, background: "#FFFFFF" }}>
+                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#2A241C" }}>{c.titulo}</div>
+                      <button onClick={() => setResumoModal(null)} style={{ border: "none", background: "#F2EFE8", borderRadius: 8, width: 30, height: 30, fontSize: 16, cursor: "pointer", color: "#6B6358" }}>✕</button>
+                    </div>
+                    <div style={{ padding: 10 }}>
+                      {c.itens.length === 0 ? (
+                        <div style={{ padding: 22, textAlign: "center" as const, color: "#A39B8E", fontSize: 14 }}>Ninguém nesta lista.</div>
+                      ) : c.itens.map((it, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderBottom: "1px solid #F4F0E8" }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: "#2A241C" }}>{it.nome}</div>
+                            <div style={{ fontSize: 12, color: "#8A8278" }}>{it.sub}</div>
+                          </div>
+                          <button onClick={() => darEntradaResumo(it.uid, it.sid)} style={{ background: "#1F4D2E", color: "#FFFFFF", border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const, flexShrink: 0 }}>✓ Dar entrada</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* 4 botões */}
             <div className="home-grid" style={{ display: "flex", flexWrap: "wrap" as const, justifyContent: "center", gap: 16 }}>
