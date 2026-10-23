@@ -8369,6 +8369,27 @@ export default function App() {
 
     return results.slice(0, 8);
   }, [quickSearch, employees, rvEmployees]);
+
+  // ---------- Resumo de saídas de hoje (painel inicial) ----------
+  const saidasHoje = useMemo(() => {
+    const list: any[] = loadUtentesData()?.utentes ?? [];
+    const dnum = (d?: string): number => { if (!d) return 0; const pr = String(d).split("/"); if (pr.length !== 3) return 0; return parseInt(pr[2], 10) * 10000 + parseInt(pr[1], 10) * 100 + parseInt(pr[0], 10); };
+    const tnum = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    const effEnd = (s: any): number => s.regressado && s.dataRegresso ? dnum(s.dataRegresso) : (s.fim ? dnum(s.fim) : tnum);
+    const fora: { nome: string; extra: string }[] = [];
+    const regressos: { nome: string; extra: string }[] = [];
+    const consultas: { nome: string; extra: string }[] = [];
+    list.forEach((u: any) => {
+      (u.saidas || []).forEach((s: any) => {
+        const st = dnum(s.inicio);
+        const aberta = !(s.regressado || (s.regressoAuto && s.fim && dnum(s.fim) < tnum));
+        if (aberta && st && st <= tnum && tnum <= effEnd(s)) fora.push({ nome: u.name, extra: s.fim ? ("até " + s.fim) : "" });
+        if (!s.regressado && s.fim && dnum(s.fim) === tnum) regressos.push({ nome: u.name, extra: "" });
+        if (s.tipo === "consulta" && st === tnum) consultas.push({ nome: u.name, extra: s.horaInicio || "" });
+      });
+    });
+    return { fora, regressos, consultas };
+  }, [activePage]);
   const isUtentesPage = (activePage as string) === "utentes";
   const isSchedulePage = (activePage as string) === "schedule";
   const isSugestoesPage = (activePage as string) === "sugestoes";
@@ -8983,6 +9004,25 @@ export default function App() {
                     <div className="bday-age" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 28, fontWeight: 800, color: alert.isToday ? "#F9A825" : "#7E57C2", lineHeight: 1, flexShrink: 0 }}>{alert.age}</div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {(canAccessPage(currentUser, "saidas") || canAccessPage(currentUser, "utentes")) && (
+              <div style={{ background: "#FFFFFF", borderRadius: 16, padding: "14px 16px", marginBottom: 16, boxShadow: "0 4px 20px rgba(0,0,0,0.25)" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>Saídas de hoje · {today.toLocaleDateString("pt-PT")}</div>
+                <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 10 }}>
+                  {[
+                    { n: saidasHoje.fora.length, label: "🚪 Fora agora", bg: "#E1F5EE", col: "#1C7F7F", nomes: saidasHoje.fora },
+                    { n: saidasHoje.regressos.length, label: "🏠 Regressos hoje", bg: "#E8F0E8", col: "#2E7D32", nomes: saidasHoje.regressos },
+                    { n: saidasHoje.consultas.length, label: "🩺 Consultas hoje", bg: "#E8EEF5", col: "#3A5A70", nomes: saidasHoje.consultas },
+                  ].map((t, i) => (
+                    <button key={i} onClick={() => setActivePage("saidas")} style={{ flex: "1 1 150px", minWidth: 0, textAlign: "left" as const, border: "none", cursor: "pointer", borderRadius: 12, padding: "11px 13px", background: t.bg, fontFamily: "'Inter', sans-serif" }}>
+                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 800, lineHeight: 1, color: t.col }}>{t.n}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#4A443B", margin: "3px 0 4px" }}>{t.label}</div>
+                      <div style={{ fontSize: 11, color: "#6B6358", lineHeight: 1.35 }}>{t.nomes.length ? (t.nomes.slice(0, 3).map((x) => x.nome + (x.extra ? " (" + x.extra + ")" : "")).join(" · ") + (t.nomes.length > 3 ? " +" + (t.nomes.length - 3) : "")) : "—"}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
