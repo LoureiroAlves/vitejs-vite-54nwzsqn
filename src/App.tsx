@@ -8862,10 +8862,11 @@ export default function App() {
           .hoje-tile > div:nth-child(1) { font-size: 19px !important; }
           .hoje-tile > div:nth-child(2) { font-size: 9.5px !important; margin: 2px 0 2px !important; line-height: 1.1 !important; }
           .hoje-tile > div:nth-child(3) { font-size: 9px !important; }
-          /* Barra de topo mais pequena */
-          .home-session { gap: 6px !important; }
-          .home-session button { padding: 5px 9px !important; font-size: 11px !important; }
-          .home-session > span { font-size: 11px !important; }
+          /* Barra de topo: ícones redondos numa linha */
+          .home-session { gap: 8px !important; justify-content: center !important; }
+          .home-session > span:first-child { display: none !important; }
+          .home-session button { padding: 0 !important; width: 42px !important; height: 42px !important; border-radius: 50% !important; justify-content: center !important; font-size: 18px !important; }
+          .home-session .tx { display: none !important; }
           /* Aniversário mais pequeno */
           .bday-card { padding: 8px 11px !important; }
           .bday-avatar { width: 38px !important; height: 38px !important; font-size: 19px !important; }
@@ -8971,14 +8972,14 @@ export default function App() {
               }}
               title="Descarregar agora uma cópia de segurança de tudo (turnos, utentes, stock, ementa)"
             >
-              {manualBackupState === "loading" ? "⏳ A gravar..." : manualBackupState === "done" ? "✅ Gravado!" : manualBackupState === "error" ? "⚠️ Erro" : "💾 Guardar tudo"}
+              <span className="ic">{manualBackupState === "loading" ? "⏳" : manualBackupState === "done" ? "✅" : manualBackupState === "error" ? "⚠️" : "💾"}</span><span className="tx">{manualBackupState === "loading" ? "A gravar..." : manualBackupState === "done" ? "Gravado!" : manualBackupState === "error" ? "Erro" : "Guardar tudo"}</span>
             </button>
             <button
               onClick={handlePickRestoreFile}
               style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#FFFFFF", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
               title="Restaurar dados a partir de um ficheiro de backup"
             >
-              📥 Restaurar backup
+              <span className="ic">📥</span><span className="tx">Restaurar backup</span>
             </button>
             
             {currentUser.role === "admin" && (
@@ -8987,7 +8988,7 @@ export default function App() {
               style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#FFFFFF", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
               title="Gerir acessos (emails e funções)"
             >
-              👥 Acessos
+              <span className="ic">👥</span><span className="tx">Acessos</span>
             </button>
             )}
             <button
@@ -8995,7 +8996,7 @@ export default function App() {
               style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#FFFFFF", fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}
               title="Terminar sessão"
             >
-              Sair
+              <span className="ic">🚪</span><span className="tx">Sair</span>
             </button>
           </div>
 
