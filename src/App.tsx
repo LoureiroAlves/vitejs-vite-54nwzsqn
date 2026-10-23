@@ -1363,6 +1363,8 @@ function loadUtentesData(): any {
 // Chave estável de cada registo diário (para não se perderem ao juntar)
 let _appCurrentUserName = "";
 let _appCurrentUserRole = "";
+function _roleLabelCurto(role: string): string { if (role === "admin") return "Administração"; if (role === "enfermagem") return "Enfermagem"; if (role === "colaboradoras") return "Colaboradoras"; if (role === "saidas") return "Saída Utentes"; return "Outro"; }
+function _autorAtual(): string { const r = _roleLabelCurto(_appCurrentUserRole); return _appCurrentUserName ? (_appCurrentUserName + " (" + r + ")") : r; }
 function printDailyLogDay(utente: any, dateStr: string) {
   const esc = (s: any) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
   const logs = ((utente.dailyLogs || []) as any[]).filter((l) => l.date === dateStr);
@@ -4139,7 +4141,7 @@ function handleImprimirFolhaRosto(u: Utente) {
 }
 
 interface Saida {
-  id: string; tipo: string; inicio: string; fim?: string; regressoAuto: boolean; regressado?: boolean; dataRegresso?: string; notas?: string; horaInicio?: string; horaRegresso?: string;
+  id: string; tipo: string; inicio: string; fim?: string; regressoAuto: boolean; regressado?: boolean; dataRegresso?: string; notas?: string; horaInicio?: string; horaRegresso?: string; autorSaida?: string; autorRegresso?: string;
 }
 const SAIDA_TIPOS_BASE: { id: string; label: string; cor: string; corTexto: string }[] = [
   { id: "familiares", label: "Saída com familiares", cor: "#E8B14A", corTexto: "#5A3E0A" },
@@ -4157,10 +4159,10 @@ function _saidaDnum(d?: string): number {
   if (p.length !== 3) return 0;
   return parseInt(p[2], 10) * 10000 + parseInt(p[1], 10) * 100 + parseInt(p[0], 10);
 }
-function _printSaidas(nomeUtente: string, subtitulo: string, linhas: { tipoLabel: string; cor: string; inicio: string; fim: string; estado: string; notas: string }[]) {
+function _printSaidas(nomeUtente: string, subtitulo: string, linhas: { tipoLabel: string; cor: string; inicio: string; fim: string; estado: string; notas: string; registo: string }[]) {
   const esc = (s: any) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  const rows = linhas.map((l) => "<tr><td style='border-left:6px solid " + l.cor + ";font-weight:bold'>" + esc(l.tipoLabel) + "</td><td>" + esc(l.inicio) + "</td><td>" + esc(l.fim) + "</td><td>" + esc(l.estado) + "</td><td>" + esc(l.notas).split(_SNL).join("<br>") + "</td></tr>").join("");
-  const corpo = linhas.length ? "<table><thead><tr><th>Tipo de saída</th><th>Saída</th><th>Regresso</th><th>Estado</th><th>Notas</th></tr></thead><tbody>" + rows + "</tbody></table>" : "<p class='vazio'>Sem saídas neste período.</p>";
+  const rows = linhas.map((l) => "<tr><td style='border-left:6px solid " + l.cor + ";font-weight:bold'>" + esc(l.tipoLabel) + "</td><td>" + esc(l.inicio) + "</td><td>" + esc(l.fim) + "</td><td>" + esc(l.estado) + "</td><td>" + esc(l.registo).split(_SNL).join("<br>") + "</td><td>" + esc(l.notas).split(_SNL).join("<br>") + "</td></tr>").join("");
+  const corpo = linhas.length ? "<table><thead><tr><th>Tipo de saída</th><th>Saída</th><th>Regresso</th><th>Estado</th><th>Registado por</th><th>Notas</th></tr></thead><tbody>" + rows + "</tbody></table>" : "<p class='vazio'>Sem saídas neste período.</p>";
   const css = "@page{size:A4;margin:18mm}body{font-family:Arial,sans-serif;color:#2A241C}h1{font-size:18px;margin:0 0 4px}.sub{font-size:12px;color:#888;margin:0 0 16px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#2A241C;color:#fff;padding:7px 8px;text-align:left}td{padding:7px 8px;border-bottom:1px solid #E4DED3;vertical-align:top;word-break:break-word}.vazio{color:#999;font-style:italic}";
   const html = "<!DOCTYPE html><html lang='pt'><head><meta charset='UTF-8'><title>Saidas</title><style>" + css + "</style></head><body><h1>Saídas — " + esc(nomeUtente) + "</h1><p class='sub'>Associação Oliveirense de Socorros Mútuos · " + esc(subtitulo) + " · Impresso em " + new Date().toLocaleDateString("pt-PT") + "</p>" + corpo + "</body></html>";
   const w = window.open("", "_blank");
@@ -4168,10 +4170,10 @@ function _printSaidas(nomeUtente: string, subtitulo: string, linhas: { tipoLabel
   w.document.open(); w.document.write(html); w.document.close(); w.focus();
   setTimeout(() => w.print(), 300);
 }
-function _printSaidasGeral(subtitulo: string, linhas: { utente: string; tipoLabel: string; cor: string; inicio: string; fim: string; estado: string }[]) {
+function _printSaidasGeral(subtitulo: string, linhas: { utente: string; tipoLabel: string; cor: string; inicio: string; fim: string; estado: string; registo: string }[]) {
   const esc = (s: any) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  const rows = linhas.map((l) => "<tr><td style='font-weight:bold'>" + esc(l.utente) + "</td><td style='border-left:6px solid " + l.cor + "'>" + esc(l.tipoLabel) + "</td><td>" + esc(l.inicio) + "</td><td>" + esc(l.fim) + "</td><td>" + esc(l.estado) + "</td></tr>").join("");
-  const corpo = linhas.length ? "<table><thead><tr><th>Utente</th><th>Tipo de saída</th><th>Saída</th><th>Regresso</th><th>Estado</th></tr></thead><tbody>" + rows + "</tbody></table>" : "<p class='vazio'>Sem saídas neste período.</p>";
+  const rows = linhas.map((l) => "<tr><td style='font-weight:bold'>" + esc(l.utente) + "</td><td style='border-left:6px solid " + l.cor + "'>" + esc(l.tipoLabel) + "</td><td>" + esc(l.inicio) + "</td><td>" + esc(l.fim) + "</td><td>" + esc(l.estado) + "</td><td>" + esc(l.registo).split(_SNL).join("<br>") + "</td></tr>").join("");
+  const corpo = linhas.length ? "<table><thead><tr><th>Utente</th><th>Tipo de saída</th><th>Saída</th><th>Regresso</th><th>Estado</th><th>Registado por</th></tr></thead><tbody>" + rows + "</tbody></table>" : "<p class='vazio'>Sem saídas neste período.</p>";
   const css = "@page{size:A4;margin:16mm}body{font-family:Arial,sans-serif;color:#2A241C}h1{font-size:18px;margin:0 0 4px}.sub{font-size:12px;color:#888;margin:0 0 16px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#2A241C;color:#fff;padding:7px 8px;text-align:left}td{padding:7px 8px;border-bottom:1px solid #E4DED3;vertical-align:top;word-break:break-word}.vazio{color:#999;font-style:italic}";
   const html = "<!DOCTYPE html><html lang='pt'><head><meta charset='UTF-8'><title>Saidas</title><style>" + css + "</style></head><body><h1>Saídas — Todos os utentes</h1><p class='sub'>Associação Oliveirense de Socorros Mútuos · " + esc(subtitulo) + " · Impresso em " + new Date().toLocaleDateString("pt-PT") + "</p>" + corpo + "</body></html>";
   const w = window.open("", "_blank");
@@ -4231,12 +4233,12 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
   const estadoTexto = (s: Saida): string => { if (s.regressado && s.dataRegresso) return "Regressou a " + s.dataRegresso + (s.horaRegresso ? " às " + s.horaRegresso : ""); if (s.fim && s.regressoAuto) return "Regresso automático a " + s.fim + (s.horaRegresso ? " às " + s.horaRegresso : ""); if (s.fim) return "Regresso previsto " + s.fim + (s.horaRegresso ? " às " + s.horaRegresso : ""); return "Fora (sem data de regresso)"; };
   const abrirDia = (d: number) => { const dnum = year * 10000 + (month + 1) * 100 + d; const s = saidaNoDia(selUtente, dnum); if (s) { setDragY(0); setSheet({ mode: "ver", saidaId: s.id }); } else { const ab = saidaAberta(); if (ab) { alert("Este utente ainda está fora — " + tipoById(ab.tipo).label + " desde " + ab.inicio + ". Dê primeiro a entrada (regresso) antes de registar nova saída."); setDragY(0); setSheet({ mode: "ver", saidaId: ab.id }); return; } const dd = new Date(year, month, d); setFTipo("familiares"); setFInicio(dd.toLocaleDateString("pt-PT")); setFHoraI(nowHM()); setFFim(""); setFHoraF(""); setFAuto(true); setFNotas(""); setDragY(0); setSheet({ mode: "novo" }); } };
   const abrirNovoVazio = () => { if (!selId) { alert("Escolha primeiro um utente."); return; } const ab = saidaAberta(); if (ab) { alert("Este utente ainda está fora — " + tipoById(ab.tipo).label + " desde " + ab.inicio + ". Dê primeiro a entrada (regresso) antes de registar nova saída."); setDragY(0); setSheet({ mode: "ver", saidaId: ab.id }); return; } setFTipo("familiares"); setFInicio(todayStr); setFHoraI(nowHM()); setFFim(""); setFHoraF(""); setFAuto(true); setFNotas(""); setDragY(0); setSheet({ mode: "novo" }); };
-  const guardarNova = () => { if (!selId) { alert("Escolha primeiro um utente."); return; } if (!fInicio.trim()) { alert("Indique a data de saída (DD/MM/AAAA)."); return; } const ab = saidaAberta(); if (ab) { alert("Este utente ainda está fora — dê primeiro a entrada (regresso) da saída anterior (" + tipoById(ab.tipo).label + " desde " + ab.inicio + ")."); return; } const nova: Saida = { id: Date.now().toString() + Math.random().toString(36).slice(2), tipo: fTipo, inicio: fInicio.trim(), horaInicio: fHoraI.trim() || undefined, fim: fFim.trim() || undefined, horaRegresso: fFim.trim() ? (fHoraF.trim() || undefined) : undefined, regressoAuto: fAuto && !!fFim.trim(), notas: fNotas.trim() || undefined }; updateSaidas((prev) => [...prev, nova]); appendLog("📋 SAÍDA DO UTENTE" + _SNL + "🚪 " + tipoById(fTipo).label + " — saída a " + nova.inicio + (nova.horaInicio ? (" às " + nova.horaInicio) : "") + (nova.fim ? (" · regresso previsto " + nova.fim + (nova.horaRegresso ? (" às " + nova.horaRegresso) : "")) : "") + (nova.notas ? (_SNL + nova.notas) : "")); closeSheet(); };
+  const guardarNova = () => { if (!selId) { alert("Escolha primeiro um utente."); return; } if (!fInicio.trim()) { alert("Indique a data de saída (DD/MM/AAAA)."); return; } const ab = saidaAberta(); if (ab) { alert("Este utente ainda está fora — dê primeiro a entrada (regresso) da saída anterior (" + tipoById(ab.tipo).label + " desde " + ab.inicio + ")."); return; } const nova: Saida = { id: Date.now().toString() + Math.random().toString(36).slice(2), tipo: fTipo, inicio: fInicio.trim(), horaInicio: fHoraI.trim() || undefined, fim: fFim.trim() || undefined, horaRegresso: fFim.trim() ? (fHoraF.trim() || undefined) : undefined, regressoAuto: fAuto && !!fFim.trim(), notas: fNotas.trim() || undefined, autorSaida: _autorAtual() }; updateSaidas((prev) => [...prev, nova]); appendLog("📋 SAÍDA DO UTENTE" + _SNL + "🚪 " + tipoById(fTipo).label + " — saída a " + nova.inicio + (nova.horaInicio ? (" às " + nova.horaInicio) : "") + (nova.fim ? (" · regresso previsto " + nova.fim + (nova.horaRegresso ? (" às " + nova.horaRegresso) : "")) : "") + (nova.notas ? (_SNL + nova.notas) : "")); closeSheet(); };
   const guardarEdicao = () => { if (!sheet || !sheet.saidaId) return; const id = sheet.saidaId; updateSaidas((prev) => prev.map((s) => s.id === id ? { ...s, tipo: fTipo, inicio: fInicio.trim(), horaInicio: fHoraI.trim() || undefined, fim: fFim.trim() || undefined, horaRegresso: fFim.trim() ? (fHoraF.trim() || undefined) : undefined, regressoAuto: fAuto && !!fFim.trim(), notas: fNotas.trim() || undefined } : s)); setSheet({ mode: "ver", saidaId: id }); };
   const apagarSaida = (id: string) => { if (!window.confirm("Apagar esta saída?")) return; updateSaidas((prev) => prev.filter((s) => s.id !== id)); closeSheet(); };
-  const confirmarRegresso = (s: Saida) => { const hm = nowHM(); updateSaidas((prev) => prev.map((x) => x.id === s.id ? { ...x, regressado: true, dataRegresso: todayStr, horaRegresso: hm } : x)); appendLog("📋 ENTRADA DO UTENTE" + _SNL + "🏠 Regresso (entrada) a " + todayStr + " às " + hm + " (" + tipoById(s.tipo).label + ")"); closeSheet(); };
+  const confirmarRegresso = (s: Saida) => { const hm = nowHM(); updateSaidas((prev) => prev.map((x) => x.id === s.id ? { ...x, regressado: true, dataRegresso: todayStr, horaRegresso: hm, autorRegresso: _autorAtual() } : x)); appendLog("📋 ENTRADA DO UTENTE" + _SNL + "🏠 Regresso (entrada) a " + todayStr + " às " + hm + " (" + tipoById(s.tipo).label + ")"); closeSheet(); };
   const adicionarTipo = () => { const nome = novoNome.trim(); if (!nome) return; const id = "c" + Date.now().toString(36); const novos = [...tiposCustom, { id, label: nome, cor: novoCor, corTexto: "#FFFFFF" }]; setTiposCustom(novos); saveToSupabase("escala_data", { saida_tipos: novos }).catch(() => {}); setNovoNome(""); setAddTipo(false); };
-  const linhaDe = (s: Saida) => ({ tipoLabel: tipoById(s.tipo).label, cor: tipoById(s.tipo).cor, inicio: s.inicio + (s.horaInicio ? " " + s.horaInicio : ""), fim: (s.dataRegresso || s.fim) ? ((s.dataRegresso || s.fim) + (s.horaRegresso ? " " + s.horaRegresso : "")) : "—", estado: estadoTexto(s), notas: s.notas || "" });
+  const linhaDe = (s: Saida) => ({ tipoLabel: tipoById(s.tipo).label, cor: tipoById(s.tipo).cor, inicio: s.inicio + (s.horaInicio ? " " + s.horaInicio : ""), fim: (s.dataRegresso || s.fim) ? ((s.dataRegresso || s.fim) + (s.horaRegresso ? " " + s.horaRegresso : "")) : "—", estado: estadoTexto(s), notas: s.notas || "", registo: (s.autorSaida ? "Saída: " + s.autorSaida : "") + (s.autorRegresso ? ((s.autorSaida ? _SNL : "") + "Entrada: " + s.autorRegresso) : "") });
   const imprimirMes = () => { if (!selUtente) return; const ms = year * 10000 + (month + 1) * 100 + 1; const me = year * 10000 + (month + 1) * 100 + numDays; const linhas = saidasDe(selUtente).filter((s) => { const st = _saidaDnum(s.inicio); return st && st <= me && effEnd(s) >= ms; }).sort((a, b) => _saidaDnum(a.inicio) - _saidaDnum(b.inicio)).map(linhaDe); _printSaidas(selUtente.name, MONTH_NAMES[month] + " " + year, linhas); };
   const imprimirHoje = () => { if (!selUtente) return; const linhas = saidasDe(selUtente).filter((s) => { const st = _saidaDnum(s.inicio); return st && todayNum >= st && todayNum <= effEnd(s); }).map(linhaDe); _printSaidas(selUtente.name, "Dia " + todayStr, linhas); };
   const imprimirUma = (s: Saida) => { if (!selUtente) return; _printSaidas(selUtente.name, tipoById(s.tipo).label, [linhaDe(s)]); };
@@ -4252,11 +4254,11 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
       ps = dnD(mon); pe = dnD(sun);
       sub = "Semana de " + mon.toLocaleDateString("pt-PT") + " a " + sun.toLocaleDateString("pt-PT");
     } else { ps = year * 10000 + (month + 1) * 100 + 1; pe = year * 10000 + (month + 1) * 100 + numDays; sub = MONTH_NAMES[month] + " " + year; }
-    const linhas: { utente: string; tipoLabel: string; cor: string; inicio: string; fim: string; estado: string }[] = [];
+    const linhas: { utente: string; tipoLabel: string; cor: string; inicio: string; fim: string; estado: string; registo: string }[] = [];
     utentes.forEach((u) => {
       saidasDe(u).forEach((s) => {
         const st = _saidaDnum(s.inicio);
-        if (st && st <= pe && effEnd(s) >= ps) { const d = linhaDe(s); linhas.push({ utente: u.name, tipoLabel: d.tipoLabel, cor: d.cor, inicio: d.inicio, fim: d.fim, estado: d.estado }); }
+        if (st && st <= pe && effEnd(s) >= ps) { const d = linhaDe(s); linhas.push({ utente: u.name, tipoLabel: d.tipoLabel, cor: d.cor, inicio: d.inicio, fim: d.fim, estado: d.estado, registo: d.registo }); }
       });
     });
     linhas.sort((a, b) => (_saidaDnum(a.inicio.split(" ")[0]) - _saidaDnum(b.inicio.split(" ")[0])) || a.utente.localeCompare(b.utente));
@@ -8593,7 +8595,7 @@ export default function App() {
     if (!window.confirm("Dar entrada (regresso) de " + u.name + " hoje?")) return;
     const hm = new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
     const tStr = today.toLocaleDateString("pt-PT");
-    abertas.forEach((x: any) => { x.regressado = true; x.dataRegresso = tStr; x.horaRegresso = hm; });
+    abertas.forEach((x: any) => { x.regressado = true; x.dataRegresso = tStr; x.horaRegresso = hm; x.autorRegresso = _autorAtual(); });
     const nova = { id: Date.now().toString() + Math.random().toString(36).slice(2), date: tStr, time: hm, author: _appCurrentUserName || "", text: "📋 ENTRADA DO UTENTE\n🏠 Regresso (entrada) a " + tStr + " às " + hm + " (" + _tipoLabelHoje(abertas[0].tipo) + ")" };
     u.dailyLogs = [nova, ...(u.dailyLogs || [])];
     saveUtentesData({ utentes });
