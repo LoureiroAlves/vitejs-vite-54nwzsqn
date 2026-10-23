@@ -8847,12 +8847,14 @@ export default function App() {
           [style*="grid-template-columns: repeat(2, 1fr)"] { grid-template-columns: 1fr !important; }
           [style*="grid-template-columns: 1.4fr 1fr 1.4fr auto"] { grid-template-columns: 1fr !important; }
           input, select, textarea { max-width: 100% !important; box-sizing: border-box !important; }
+          .home-screen { flex-direction: column !important; }
+          .home-session { position: static !important; top: auto !important; right: auto !important; width: 100% !important; max-width: 100% !important; justify-content: center !important; padding: 10px 8px 2px !important; flex: 0 0 auto !important; }
         }
       `}</style>
 
       {/* Página inicial */}
       {true && (
-        <div style={{ position: "fixed" as const, inset: 0, background: "#1E3A1E", display: "flex", overflow: "auto" }}>
+        <div className="home-screen" style={{ position: "fixed" as const, inset: 0, background: "#1E3A1E", display: "flex", overflow: "auto" }}>
 
           {/* Logo SVG marca de água — canto superior esquerdo, triplicado, com balanço suave */}
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
@@ -8933,7 +8935,7 @@ export default function App() {
           </div>
 
           {/* Sessão / logout */}
-          <div style={{ position: "absolute" as const, top: 16, right: 20, display: "flex", alignItems: "center", gap: 10, zIndex: 2, flexWrap: "wrap" as const, maxWidth: "calc(100vw - 32px)", justifyContent: "flex-end" }}>
+          <div className="home-session" style={{ position: "absolute" as const, top: 16, right: 20, display: "flex", alignItems: "center", gap: 10, zIndex: 2, flexWrap: "wrap" as const, maxWidth: "calc(100vw - 32px)", justifyContent: "flex-end" }}>
             <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", fontFamily: "'Inter', sans-serif" }}>{currentUser.username}</span>
             <button
               onClick={handleManualBackup}
