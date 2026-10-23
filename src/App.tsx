@@ -2263,6 +2263,10 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
   // (secção antiga de saídas removida — agora na página Saídas de Utentes)
 
+  const generateFamilyCode = () => {
+    return Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+  };
+
   const [familyLinkModal, setFamilyLinkModal] = useState<{ name: string; link: string } | null>(null);
 
   const handleImprimirProcesso = (u: Utente) => {
