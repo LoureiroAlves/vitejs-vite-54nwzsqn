@@ -8379,35 +8379,40 @@ export default function App() {
     const list: any[] = loadUtentesData()?.utentes ?? [];
     const dnum = (d?: string): number => { if (!d) return 0; const pr = String(d).split("/"); if (pr.length !== 3) return 0; return parseInt(pr[2], 10) * 10000 + parseInt(pr[1], 10) * 100 + parseInt(pr[0], 10); };
     const tnum = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-    const effEnd = (s: any): number => s.regressado && s.dataRegresso ? dnum(s.dataRegresso) : (s.fim ? dnum(s.fim) : tnum);
-    type ItemHoje = { uid: string; sid: string; nome: string; sub: string };
+    type ItemHoje = { uid: string; nome: string; sub: string };
     const fora: ItemHoje[] = [];
     const regressos: ItemHoje[] = [];
     const consultas: ItemHoje[] = [];
+    const seenF = new Set<string>();
+    const seenR = new Set<string>();
+    const seenC = new Set<string>();
     list.forEach((u: any) => {
       (u.saidas || []).forEach((s: any) => {
         const st = dnum(s.inicio);
         const lbl = _tipoLabelHoje(s.tipo);
         const aberta = !(s.regressado || (s.regressoAuto && s.fim && dnum(s.fim) < tnum));
-        if (aberta && st && st <= tnum && tnum <= effEnd(s)) fora.push({ uid: u.id, sid: s.id, nome: u.name, sub: lbl + " · saiu " + s.inicio + (s.horaInicio ? " " + s.horaInicio : "") + (s.fim ? " · regresso prev. " + s.fim : "") });
-        if (!s.regressado && s.fim && dnum(s.fim) === tnum) regressos.push({ uid: u.id, sid: s.id, nome: u.name, sub: lbl + " · regresso previsto hoje" });
-        if (s.tipo === "consulta" && st === tnum) consultas.push({ uid: u.id, sid: s.id, nome: u.name, sub: lbl + (s.horaInicio ? " · " + s.horaInicio : "") });
+        if (aberta && st && st <= tnum && !seenF.has(u.id)) { seenF.add(u.id); fora.push({ uid: u.id, nome: u.name, sub: lbl + " · saiu " + s.inicio + (s.horaInicio ? " " + s.horaInicio : "") + (s.fim ? " · regresso prev. " + s.fim : "") }); }
+        if (!s.regressado && s.fim && dnum(s.fim) === tnum && !seenR.has(u.id)) { seenR.add(u.id); regressos.push({ uid: u.id, nome: u.name, sub: lbl + " · regresso previsto hoje" }); }
+        if (s.tipo === "consulta" && st === tnum && !seenC.has(u.id)) { seenC.add(u.id); consultas.push({ uid: u.id, nome: u.name, sub: lbl + (s.horaInicio ? " · " + s.horaInicio : "") }); }
       });
     });
     return { fora, regressos, consultas };
   }, [activePage, resumoTick]);
 
-  const darEntradaResumo = (uid: string, sid: string) => {
+  const darEntradaResumo = (uid: string) => {
     const data = loadUtentesData() || { utentes: [] };
     const utentes: any[] = data.utentes || [];
     const u = utentes.find((x: any) => x.id === uid);
-    const s = u && (u.saidas || []).find((x: any) => x.id === sid);
-    if (!u || !s) return;
+    if (!u) return;
+    const tnum = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    const dnum = (d?: string): number => { if (!d) return 0; const pr = String(d).split("/"); if (pr.length !== 3) return 0; return parseInt(pr[2], 10) * 10000 + parseInt(pr[1], 10) * 100 + parseInt(pr[0], 10); };
+    const abertas = (u.saidas || []).filter((x: any) => !x.regressado && dnum(x.inicio) <= tnum);
+    if (!abertas.length) { setResumoTick((t) => t + 1); return; }
     if (!window.confirm("Dar entrada (regresso) de " + u.name + " hoje?")) return;
     const hm = new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
     const tStr = today.toLocaleDateString("pt-PT");
-    s.regressado = true; s.dataRegresso = tStr; s.horaRegresso = hm;
-    const nova = { id: Date.now().toString() + Math.random().toString(36).slice(2), date: tStr, time: hm, author: _appCurrentUserName || "", text: "📋 ENTRADA DO UTENTE\n🏠 Regresso (entrada) a " + tStr + " às " + hm + " (" + _tipoLabelHoje(s.tipo) + ")" };
+    abertas.forEach((x: any) => { x.regressado = true; x.dataRegresso = tStr; x.horaRegresso = hm; });
+    const nova = { id: Date.now().toString() + Math.random().toString(36).slice(2), date: tStr, time: hm, author: _appCurrentUserName || "", text: "📋 ENTRADA DO UTENTE\n🏠 Regresso (entrada) a " + tStr + " às " + hm + " (" + _tipoLabelHoje(abertas[0].tipo) + ")" };
     u.dailyLogs = [nova, ...(u.dailyLogs || [])];
     saveUtentesData({ utentes });
     setResumoTick((t) => t + 1);
@@ -9070,7 +9075,7 @@ export default function App() {
                             <div style={{ fontSize: 14, fontWeight: 700, color: "#2A241C" }}>{it.nome}</div>
                             <div style={{ fontSize: 12, color: "#8A8278" }}>{it.sub}</div>
                           </div>
-                          <button onClick={() => darEntradaResumo(it.uid, it.sid)} style={{ background: "#1F4D2E", color: "#FFFFFF", border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const, flexShrink: 0 }}>✓ Dar entrada</button>
+                          <button onClick={() => darEntradaResumo(it.uid)} style={{ background: "#1F4D2E", color: "#FFFFFF", border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const, flexShrink: 0 }}>✓ Dar entrada</button>
                         </div>
                       ))}
                     </div>
