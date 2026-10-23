@@ -6434,6 +6434,21 @@ export default function App() {
     try { await saveToSupabase("escala_data", { app_access: acessosList }); alert("✅ Acessos guardados."); closeAcessos(); }
     catch (e) { alert("❌ Não foi possível guardar. Tenta novamente."); }
   };
+  const importarSupabase = async () => {
+    try {
+      const _tok = (_authSession && _authSession.access_token) || "";
+      const r = await fetch("/api/api/list-users", { method: "POST", headers: { Authorization: "Bearer " + _tok } });
+      const d = await r.json();
+      if (!r.ok || !Array.isArray(d.emails)) { alert("❌ Não foi possível importar: " + ((d && d.error) || "")); return; }
+      setAcessosList((prev) => {
+        const have = new Set(prev.map((a) => String(a.email || "").trim().toLowerCase()));
+        const novos = d.emails.filter((em: string) => !have.has(em)).map((em: string) => ({ email: em, role: (ROLE_BY_EMAIL[em] || "colaboradoras"), nome: (DISPLAY_BY_EMAIL[em] || ""), ativo: true }));
+        if (novos.length === 0) { alert("Já estão todas as contas na lista."); return prev; }
+        alert("✅ " + novos.length + " conta(s) importada(s). Escolhe a função de cada uma e carrega em \"Guardar acessos\".");
+        return [...prev, ...novos];
+      });
+    } catch (e) { alert("❌ Erro de ligação."); }
+  };
   const [changePassCurrent, setChangePassCurrent] = useState("");
   const [changePassNew, setChangePassNew] = useState("");
   const [changePassConfirm, setChangePassConfirm] = useState("");
@@ -9036,6 +9051,7 @@ export default function App() {
                   <button onClick={() => closeAcessos()} style={{ border: "none", background: "#F2EFE8", borderRadius: 8, width: 30, height: 30, fontSize: 16, cursor: "pointer", color: "#6B6358" }}>✕</button>
                 </div>
                 <div style={{ padding: 16 }}>
+                  <button onClick={importarSupabase} style={{ width: "100%", background: "#E8EEF5", color: "#3A5A70", border: "1px solid #B8CCE0", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", marginBottom: 12 }}>⬇️ Importar contas do Supabase</button>
                   {acessosList.map((a, i) => (
                     <div key={i} style={{ display: "flex", flexWrap: "wrap" as const, alignItems: "center", gap: 8, padding: "10px 0", borderBottom: "1px solid #F4F0E8" }}>
                       <div style={{ flex: "1 1 180px", minWidth: 0 }}>
