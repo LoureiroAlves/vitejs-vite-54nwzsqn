@@ -2094,6 +2094,14 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   const [importResult, setImportResult] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [printColsOpen, setPrintColsOpen] = useState(false);
+  const [printColsClosing, setPrintColsClosing] = useState(false);
+  const [panelClosing, setPanelClosing] = useState(false);
+  const [ccClosing, setCcClosing] = useState(false);
+  const [famClosing, setFamClosing] = useState(false);
+  const closePrintCols = () => { setPrintColsClosing(true); setTimeout(() => { setPrintColsOpen(false); setPrintColsClosing(false); }, 170); };
+  const closePanel = () => { setPanelClosing(true); setTimeout(() => { setOpenUtente(null); setPanelClosing(false); }, 300); };
+  const closeCC = () => { setCcClosing(true); setTimeout(() => { setShowCCPanel(null); setCcClosing(false); }, 170); };
+  const closeFam = () => { setFamClosing(true); setTimeout(() => { setFamilyLinkModal(null); setFamClosing(false); }, 170); };
   const [printCols, setPrintCols] = useState<Record<string, boolean>>({ name: true, birthDate: true, room: true, entryDate: true, familyContact: true, ultimaObs: true, numDocs: true });
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState("");
@@ -2821,8 +2829,8 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
         </div>
       </header>
       {printColsOpen && (
-        <div onClick={() => setPrintColsOpen(false)} style={{ position: "fixed" as const, inset: 0, zIndex: 200, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 14, padding: 20, maxWidth: 460, width: "100%", maxHeight: "80vh", overflowY: "auto" as const, boxShadow: "0 8px 30px rgba(0,0,0,0.2)" }}>
+        <div onClick={() => closePrintCols()} style={{ position: "fixed" as const, inset: 0, zIndex: 200, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, animation: printColsClosing ? "popFadeOut 0.16s ease both" : "popFade 0.18s ease both" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 14, padding: 20, maxWidth: 460, width: "100%", maxHeight: "80vh", overflowY: "auto" as const, boxShadow: "0 8px 30px rgba(0,0,0,0.2)", animation: printColsClosing ? "popZoomOut 0.16s ease both" : "popZoom 0.2s cubic-bezier(0.34,1.56,0.64,1) both" }}>
             <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: "#2A241C", marginBottom: 4 }}>🖨️ Imprimir listagem de utentes</div>
             <div style={{ fontSize: 12, color: "#8A6A2E", marginBottom: 14 }}>Escolhe que dados aparecem na listagem de cada utente.</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
@@ -2834,8 +2842,8 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               ))}
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-              <button onClick={() => setPrintColsOpen(false)} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "9px 16px", fontSize: 13, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
-              <button onClick={() => { setPrintColsOpen(false); exportPDFUtentes(); }} style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Imprimir</button>
+              <button onClick={() => closePrintCols()} style={{ border: "1px solid #E4DED3", background: "#FFFFFF", borderRadius: 8, padding: "9px 16px", fontSize: 13, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
+              <button onClick={() => { closePrintCols(); exportPDFUtentes(); }} style={{ background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Imprimir</button>
             </div>
           </div>
         </div>
@@ -2988,7 +2996,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
       {/* Painel lateral da ficha do utente */}
       {openUtente && (() => { const u = openUtente; const utBloq = utReadOnlyAll || (utSoRegisto && utenteTab !== "registo"); return (
-        <div style={{ position: "fixed" as const, inset: 0, zIndex: 60, background: "#F0F4F8", display: "flex", flexDirection: "column" as const, animation: "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1) both" }}>
+        <div style={{ position: "fixed" as const, inset: 0, zIndex: 60, background: "#F0F4F8", display: "flex", flexDirection: "column" as const, animation: panelClosing ? "slideDown 0.34s cubic-bezier(0.32, 0.72, 0, 1) both" : "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1) both" }}>
 
           {/* Header */}
           <div style={{ background: "#2A241C", padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, flexShrink: 0, position: "relative" as const }}>
@@ -3055,7 +3063,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
               {utenteTab === "cuidados" && (<button onClick={() => printCuidados(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Cuidados</button>)}
               {utenteTab === "admissao" && (<button onClick={() => handleImprimirProcesso(u)} style={{ background: "#F5B944", color: "#2A241C", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🖨️ Ficha</button>)}
               {utSuperAdmin && (<button onClick={() => { if (!window.confirm("Apagar TODOS os ficheiros (fotos e documentos) do utente " + u.name + "? Não pode ser desfeito. Os registos em texto mantêm-se.")) return; const _tok = (_authSession && _authSession.access_token) || ""; fetch("/api/api/delete-utente-files?id=" + encodeURIComponent(u.id), { method: "POST", headers: { Authorization: "Bearer " + _tok } }).then((r) => r.json()).then((d) => { alert(d && d.ok ? ("✅ " + d.apagados + " ficheiro(s) apagado(s).") : ("❌ Não foi possível: " + ((d && d.error) || ""))); }).catch(() => alert("❌ Erro de ligação.")); }} style={{ background: "#C2554A", color: "white", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }} title="Apagar ficheiros deste utente">🗑️ Ficheiros</button>)}<button onClick={() => handleGetFamilyLink(u)} style={{ background: "#3A5A70", color: "white", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🔗 Família</button>
-              <button onClick={() => setOpenUtente(null)} style={{ background: "transparent", border: "1px solid #4A3E30", borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: "#C9C2B5" }}><IconX size={16} /></button>
+              <button onClick={() => closePanel()} style={{ background: "transparent", border: "1px solid #4A3E30", borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: "#C9C2B5" }}><IconX size={16} /></button>
             </div>
           </div>
 
@@ -3887,18 +3895,18 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
         ];
         return (
           <>
-            <div style={{ position: "fixed" as const, inset: 0, background: "rgba(20,18,14,0.5)", zIndex: 250 }} onClick={() => setShowCCPanel(null)} />
+            <div style={{ position: "fixed" as const, inset: 0, background: "rgba(20,18,14,0.5)", zIndex: 250, animation: ccClosing ? "popFadeOut 0.16s ease both" : "popFade 0.18s ease both" }} onClick={() => closeCC()} />
             <div style={{
               position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)",
               width: "min(480px, 92vw)", maxHeight: "85vh", overflowY: "auto" as const,
-              background: "#FFFFFF", borderRadius: 20, zIndex: 251, boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+              background: "#FFFFFF", borderRadius: 20, zIndex: 251, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", animation: ccClosing ? "popCenterOut 0.16s ease both" : "popCenterIn 0.2s ease both",
             }}>
               <div style={{ padding: "20px 24px", background: "#E8EEF5", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#2A241C" }}>📇 Ficha do Utente</div>
                   <div style={{ fontSize: 12, color: "#3A5A70" }}>{ccUtente.name} — Dados do Cartão de Cidadão</div>
                 </div>
-                <button onClick={() => setShowCCPanel(null)} style={{ border: "none", background: "rgba(255,255,255,0.6)", borderRadius: 10, padding: 8, cursor: "pointer", color: "#2A241C" }}>
+                <button onClick={() => closeCC()} style={{ border: "none", background: "rgba(255,255,255,0.6)", borderRadius: 10, padding: 8, cursor: "pointer", color: "#2A241C" }}>
                   <IconX size={18} />
                 </button>
               </div>
@@ -3915,7 +3923,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                     />
                   </div>
                 ))}
-                <button onClick={() => setShowCCPanel(null)} style={{ width: "100%", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", marginTop: 8 }}>
+                <button onClick={() => closeCC()} style={{ width: "100%", background: "#2A241C", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", marginTop: 8 }}>
                   Fechar
                 </button>
               </div>
@@ -3927,8 +3935,8 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
       {/* Modal de link de família — campo selecionável, sem depender de clipboard API */}
       {familyLinkModal && (
         <>
-          <div style={{ position: "fixed" as const, inset: 0, background: "rgba(42,36,28,0.4)", zIndex: 200 }} onClick={() => setFamilyLinkModal(null)} />
-          <div style={{ position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "min(440px, 92vw)", background: "#FFFFFF", borderRadius: 20, zIndex: 201, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+          <div style={{ position: "fixed" as const, inset: 0, background: "rgba(42,36,28,0.4)", zIndex: 200, animation: famClosing ? "popFadeOut 0.16s ease both" : "popFade 0.18s ease both" }} onClick={() => closeFam()} />
+          <div style={{ position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "min(440px, 92vw)", background: "#FFFFFF", borderRadius: 20, zIndex: 201, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden", animation: famClosing ? "popCenterOut 0.16s ease both" : "popCenterIn 0.2s ease both" }}>
             <div style={{ padding: "20px 24px", background: "#E8EEF5", display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 26 }}>🔗</span>
               <div>
@@ -3957,7 +3965,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
                 >
                   Copiar link
                 </button>
-                <button onClick={() => setFamilyLinkModal(null)} style={{ flex: 1, background: "transparent", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>
+                <button onClick={() => closeFam()} style={{ flex: 1, background: "transparent", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>
                   Fechar
                 </button>
               </div>
@@ -4133,6 +4141,8 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
   const [selId, setSelId] = useState<string | null>(null);
   const [pickOpen, setPickOpen] = useState(false);
   const [geralMenu, setGeralMenu] = useState(false);
+  const [sheetClosing, setSheetClosing] = useState(false);
+  const closeSheet = () => { setSheetClosing(true); setTimeout(() => { setSheet(null); setSheetClosing(false); setDragY(0); }, 250); };
   const [search, setSearch] = useState("");
   useEffect(() => { if (!selId && utentes.length) setSelId(utentes[0].id); }, [utentes, selId]);
   const selUtente = utentes.find((u) => u.id === selId) || null;
@@ -4165,10 +4175,10 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
   const estadoTexto = (s: Saida): string => { if (s.regressado && s.dataRegresso) return "Regressou a " + s.dataRegresso + (s.horaRegresso ? " às " + s.horaRegresso : ""); if (s.fim && s.regressoAuto) return "Regresso automático a " + s.fim + (s.horaRegresso ? " às " + s.horaRegresso : ""); if (s.fim) return "Regresso previsto " + s.fim + (s.horaRegresso ? " às " + s.horaRegresso : ""); return "Fora (sem data de regresso)"; };
   const abrirDia = (d: number) => { const dnum = year * 10000 + (month + 1) * 100 + d; const s = saidaNoDia(selUtente, dnum); if (s) { setDragY(0); setSheet({ mode: "ver", saidaId: s.id }); } else { const ab = saidaAberta(); if (ab) { alert("Este utente ainda está fora — " + tipoById(ab.tipo).label + " desde " + ab.inicio + ". Dê primeiro a entrada (regresso) antes de registar nova saída."); setDragY(0); setSheet({ mode: "ver", saidaId: ab.id }); return; } const dd = new Date(year, month, d); setFTipo("familiares"); setFInicio(dd.toLocaleDateString("pt-PT")); setFHoraI(nowHM()); setFFim(""); setFHoraF(""); setFAuto(true); setFNotas(""); setDragY(0); setSheet({ mode: "novo" }); } };
   const abrirNovoVazio = () => { if (!selId) { alert("Escolha primeiro um utente."); return; } const ab = saidaAberta(); if (ab) { alert("Este utente ainda está fora — " + tipoById(ab.tipo).label + " desde " + ab.inicio + ". Dê primeiro a entrada (regresso) antes de registar nova saída."); setDragY(0); setSheet({ mode: "ver", saidaId: ab.id }); return; } setFTipo("familiares"); setFInicio(todayStr); setFHoraI(nowHM()); setFFim(""); setFHoraF(""); setFAuto(true); setFNotas(""); setDragY(0); setSheet({ mode: "novo" }); };
-  const guardarNova = () => { if (!selId) { alert("Escolha primeiro um utente."); return; } if (!fInicio.trim()) { alert("Indique a data de saída (DD/MM/AAAA)."); return; } const ab = saidaAberta(); if (ab) { alert("Este utente ainda está fora — dê primeiro a entrada (regresso) da saída anterior (" + tipoById(ab.tipo).label + " desde " + ab.inicio + ")."); return; } const nova: Saida = { id: Date.now().toString() + Math.random().toString(36).slice(2), tipo: fTipo, inicio: fInicio.trim(), horaInicio: fHoraI.trim() || undefined, fim: fFim.trim() || undefined, horaRegresso: fFim.trim() ? (fHoraF.trim() || undefined) : undefined, regressoAuto: fAuto && !!fFim.trim(), notas: fNotas.trim() || undefined }; updateSaidas((prev) => [...prev, nova]); appendLog("📋 SAÍDA DO UTENTE" + _SNL + "🚪 " + tipoById(fTipo).label + " — saída a " + nova.inicio + (nova.horaInicio ? (" às " + nova.horaInicio) : "") + (nova.fim ? (" · regresso previsto " + nova.fim + (nova.horaRegresso ? (" às " + nova.horaRegresso) : "")) : "") + (nova.notas ? (_SNL + nova.notas) : "")); setSheet(null); };
+  const guardarNova = () => { if (!selId) { alert("Escolha primeiro um utente."); return; } if (!fInicio.trim()) { alert("Indique a data de saída (DD/MM/AAAA)."); return; } const ab = saidaAberta(); if (ab) { alert("Este utente ainda está fora — dê primeiro a entrada (regresso) da saída anterior (" + tipoById(ab.tipo).label + " desde " + ab.inicio + ")."); return; } const nova: Saida = { id: Date.now().toString() + Math.random().toString(36).slice(2), tipo: fTipo, inicio: fInicio.trim(), horaInicio: fHoraI.trim() || undefined, fim: fFim.trim() || undefined, horaRegresso: fFim.trim() ? (fHoraF.trim() || undefined) : undefined, regressoAuto: fAuto && !!fFim.trim(), notas: fNotas.trim() || undefined }; updateSaidas((prev) => [...prev, nova]); appendLog("📋 SAÍDA DO UTENTE" + _SNL + "🚪 " + tipoById(fTipo).label + " — saída a " + nova.inicio + (nova.horaInicio ? (" às " + nova.horaInicio) : "") + (nova.fim ? (" · regresso previsto " + nova.fim + (nova.horaRegresso ? (" às " + nova.horaRegresso) : "")) : "") + (nova.notas ? (_SNL + nova.notas) : "")); closeSheet(); };
   const guardarEdicao = () => { if (!sheet || !sheet.saidaId) return; const id = sheet.saidaId; updateSaidas((prev) => prev.map((s) => s.id === id ? { ...s, tipo: fTipo, inicio: fInicio.trim(), horaInicio: fHoraI.trim() || undefined, fim: fFim.trim() || undefined, horaRegresso: fFim.trim() ? (fHoraF.trim() || undefined) : undefined, regressoAuto: fAuto && !!fFim.trim(), notas: fNotas.trim() || undefined } : s)); setSheet({ mode: "ver", saidaId: id }); };
-  const apagarSaida = (id: string) => { if (!window.confirm("Apagar esta saída?")) return; updateSaidas((prev) => prev.filter((s) => s.id !== id)); setSheet(null); };
-  const confirmarRegresso = (s: Saida) => { const hm = nowHM(); updateSaidas((prev) => prev.map((x) => x.id === s.id ? { ...x, regressado: true, dataRegresso: todayStr, horaRegresso: hm } : x)); appendLog("📋 ENTRADA DO UTENTE" + _SNL + "🏠 Regresso (entrada) a " + todayStr + " às " + hm + " (" + tipoById(s.tipo).label + ")"); setSheet(null); };
+  const apagarSaida = (id: string) => { if (!window.confirm("Apagar esta saída?")) return; updateSaidas((prev) => prev.filter((s) => s.id !== id)); closeSheet(); };
+  const confirmarRegresso = (s: Saida) => { const hm = nowHM(); updateSaidas((prev) => prev.map((x) => x.id === s.id ? { ...x, regressado: true, dataRegresso: todayStr, horaRegresso: hm } : x)); appendLog("📋 ENTRADA DO UTENTE" + _SNL + "🏠 Regresso (entrada) a " + todayStr + " às " + hm + " (" + tipoById(s.tipo).label + ")"); closeSheet(); };
   const adicionarTipo = () => { const nome = novoNome.trim(); if (!nome) return; const id = "c" + Date.now().toString(36); const novos = [...tiposCustom, { id, label: nome, cor: novoCor, corTexto: "#FFFFFF" }]; setTiposCustom(novos); saveToSupabase("escala_data", { saida_tipos: novos }).catch(() => {}); setNovoNome(""); setAddTipo(false); };
   const linhaDe = (s: Saida) => ({ tipoLabel: tipoById(s.tipo).label, cor: tipoById(s.tipo).cor, inicio: s.inicio + (s.horaInicio ? " " + s.horaInicio : ""), fim: (s.dataRegresso || s.fim) ? ((s.dataRegresso || s.fim) + (s.horaRegresso ? " " + s.horaRegresso : "")) : "—", estado: estadoTexto(s), notas: s.notas || "" });
   const imprimirMes = () => { if (!selUtente) return; const ms = year * 10000 + (month + 1) * 100 + 1; const me = year * 10000 + (month + 1) * 100 + numDays; const linhas = saidasDe(selUtente).filter((s) => { const st = _saidaDnum(s.inicio); return st && st <= me && effEnd(s) >= ms; }).sort((a, b) => _saidaDnum(a.inicio) - _saidaDnum(b.inicio)).map(linhaDe); _printSaidas(selUtente.name, MONTH_NAMES[month] + " " + year, linhas); };
@@ -4290,17 +4300,17 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
         </div>
       </div>
       {sheet ? (
-        <div onClick={() => setSheet(null)} style={{ position: "fixed" as const, inset: 0, zIndex: 300, background: "rgba(26,22,16,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 440, animation: "slideUp 0.3s cubic-bezier(0.32,0.72,0,1) both" }}>
+        <div onClick={() => closeSheet()} style={{ position: "fixed" as const, inset: 0, zIndex: 300, background: "rgba(26,22,16,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 440, animation: sheetClosing ? "slideDown 0.26s cubic-bezier(0.32,0.72,0,1) both" : "slideUp 0.3s cubic-bezier(0.32,0.72,0,1) both" }}>
             <div style={{ background: "#FFF", borderRadius: "22px 22px 0 0", boxShadow: "0 -10px 40px rgba(0,0,0,0.3)", transform: "translateY(" + dragY + "px)", transition: "transform 0.18s ease", maxHeight: "88vh", overflowY: "auto" as const }}>
-              <div onTouchStart={(e) => { dragStart.current = e.touches[0].clientY; }} onTouchMove={(e) => { if (dragStart.current != null) setDragY(Math.max(0, e.touches[0].clientY - dragStart.current)); }} onTouchEnd={() => { if (dragY > 90) setSheet(null); else setDragY(0); dragStart.current = null; }} style={{ padding: "10px 0 2px", textAlign: "center" as const, cursor: "grab" }}>
+              <div onTouchStart={(e) => { dragStart.current = e.touches[0].clientY; }} onTouchMove={(e) => { if (dragStart.current != null) setDragY(Math.max(0, e.touches[0].clientY - dragStart.current)); }} onTouchEnd={() => { if (dragY > 90) closeSheet(); else setDragY(0); dragStart.current = null; }} style={{ padding: "10px 0 2px", textAlign: "center" as const, cursor: "grab" }}>
                 <div style={{ width: 42, height: 5, borderRadius: 999, background: "#D8D1C4", margin: "0 auto" }} />
               </div>
               {verSaida ? (() => { const t = tipoById(verSaida.tipo); const ongoing = !verSaida.regressado && (!verSaida.fim || !verSaida.regressoAuto); return (
                 <div>
                   <div style={{ background: t.cor, margin: "6px 12px 0", borderRadius: 14, padding: "13px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div><div style={{ fontSize: 15, fontWeight: 800, color: t.corTexto }}>{t.label}</div><div style={{ fontSize: 12, color: t.corTexto, opacity: 0.85 }}>{selUtente ? selUtente.name : ""} · Nº {selUtente ? selUtente.id : ""}</div></div>
-                    <button onClick={() => setSheet(null)} style={{ color: t.corTexto, background: "rgba(255,255,255,0.18)", border: "none", borderRadius: 8, width: 30, height: 30, fontSize: 17, cursor: "pointer" }}>✕</button>
+                    <button onClick={() => closeSheet()} style={{ color: t.corTexto, background: "rgba(255,255,255,0.18)", border: "none", borderRadius: 8, width: 30, height: 30, fontSize: 17, cursor: "pointer" }}>✕</button>
                   </div>
                   <div style={{ padding: "14px 16px 22px" }}>
                     <div style={{ display: "flex", gap: 10, marginBottom: 11 }}>
@@ -4339,7 +4349,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
                   <textarea value={fNotas} onChange={(e) => setFNotas(e.target.value)} rows={3} placeholder="Ex: foi com a filha, leva a medicação..." style={{ ...inputStyle, resize: "vertical" as const, marginBottom: 16 }} />
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={sheet.mode === "editar" ? guardarEdicao : guardarNova} style={{ flex: 1, background: "#1F4D2E", color: "#F5B944", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>{sheet.mode === "editar" ? "Guardar alterações" : "Guardar saída"}</button>
-                    <button onClick={() => setSheet(null)} style={{ background: "transparent", color: "#6B6358", border: "1px solid #E4DED3", borderRadius: 10, padding: "12px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
+                    <button onClick={() => closeSheet()} style={{ background: "transparent", color: "#6B6358", border: "1px solid #E4DED3", borderRadius: 10, padding: "12px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
                   </div>
                 </div>
               ) : null}
@@ -6316,6 +6326,8 @@ export default function App() {
   _appCurrentUserRole = currentUser?.role || "";
   const [appUsersList, setAppUsersList] = useState<AppUser[]>(DEFAULT_APP_USERS);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [chpassClosing, setChpassClosing] = useState(false);
+  const closeChpass = () => { setChpassClosing(true); setTimeout(() => { setShowChangePassword(false); setChangePasswordError(""); setChangePassCurrent(""); setChangePassNew(""); setChangePassConfirm(""); setChpassClosing(false); }, 170); };
   const [changePassCurrent, setChangePassCurrent] = useState("");
   const [changePassNew, setChangePassNew] = useState("");
   const [changePassConfirm, setChangePassConfirm] = useState("");
@@ -8419,6 +8431,8 @@ export default function App() {
   const [resumoTick, setResumoTick] = useState(0);
   const [modalItens, setModalItens] = useState<{ uid: string; nome: string; sub: string }[]>([]);
   const [entradasDadas, setEntradasDadas] = useState<Set<string>>(new Set());
+  const [resumoClosing, setResumoClosing] = useState(false);
+  const closeResumo = () => { setResumoClosing(true); setTimeout(() => { setResumoModal(null); setResumoClosing(false); }, 170); };
   const _tipoLabelHoje = (id: string): string => { const t = SAIDA_TIPOS_BASE.find((x) => x.id === id); return t ? t.label : "Saída"; };
 
   // ---------- Resumo de saídas de hoje (painel inicial) ----------
@@ -8567,6 +8581,10 @@ export default function App() {
         .month-fade { animation: monthFade 0.28s cubic-bezier(0.32, 0.72, 0, 1) both; }
         @keyframes popZoom { 0% { opacity: 0; transform: scale(0.85); } 100% { opacity: 1; transform: scale(1); } }
         @keyframes popFade { 0% { opacity: 0; } 100% { opacity: 1; } }
+        @keyframes popZoomOut { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.9); } }
+        @keyframes popFadeOut { 0% { opacity: 1; } 100% { opacity: 0; } }
+        @keyframes popCenterIn { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.92); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+        @keyframes popCenterOut { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); } }
         @keyframes bounce {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-6px); }
@@ -8894,11 +8912,11 @@ export default function App() {
           {/* Modal de alterar password */}
           {showChangePassword && (
             <div
-              style={{ position: "fixed" as const, inset: 0, background: "rgba(20,18,14,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-              onClick={() => { setShowChangePassword(false); setChangePasswordError(""); setChangePassCurrent(""); setChangePassNew(""); setChangePassConfirm(""); }}
+              style={{ position: "fixed" as const, inset: 0, background: "rgba(20,18,14,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, animation: chpassClosing ? "popFadeOut 0.16s ease both" : "popFade 0.18s ease both" }}
+              onClick={() => closeChpass()}
             >
               <div
-                style={{ background: "#FFFFFF", borderRadius: 20, padding: 28, width: "100%", maxWidth: 360, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}
+                style={{ background: "#FFFFFF", borderRadius: 20, padding: 28, width: "100%", maxWidth: 360, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", animation: chpassClosing ? "popZoomOut 0.16s ease both" : "popZoom 0.2s cubic-bezier(0.34,1.56,0.64,1) both" }}
                 onClick={(e) => e.stopPropagation()}
               >
                 <h3 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, margin: "0 0 16px", color: "#2A241C" }}>
@@ -8930,7 +8948,7 @@ export default function App() {
                 {changePasswordError && <div style={{ color: "#C2554A", fontSize: 12, marginBottom: 14 }}>{changePasswordError}</div>}
                 <div style={{ display: "flex", gap: 10 }}>
                   <button
-                    onClick={() => { setShowChangePassword(false); setChangePasswordError(""); setChangePassCurrent(""); setChangePassNew(""); setChangePassConfirm(""); }}
+                    onClick={() => closeChpass()}
                     style={{ flex: 1, background: "transparent", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}
                   >
                     Cancelar
@@ -9105,11 +9123,11 @@ export default function App() {
             {resumoModal && (() => {
               const titulos = { fora: "🚪 Utentes fora agora", regressos: "🏠 Regressos previstos hoje", consultas: "🩺 Consultas de hoje" } as const;
               return (
-                <div onClick={() => setResumoModal(null)} style={{ position: "fixed" as const, inset: 0, zIndex: 400, background: "rgba(20,30,20,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, animation: "popFade 0.18s ease both" }}>
-                  <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 18, width: "100%", maxWidth: 440, maxHeight: "80vh", overflowY: "auto" as const, boxShadow: "0 20px 60px rgba(0,0,0,0.35)", animation: "popZoom 0.24s cubic-bezier(0.34, 1.56, 0.64, 1) both" }}>
+                <div onClick={() => closeResumo()} style={{ position: "fixed" as const, inset: 0, zIndex: 400, background: "rgba(20,30,20,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, animation: resumoClosing ? "popFadeOut 0.16s ease both" : "popFade 0.18s ease both" }}>
+                  <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 18, width: "100%", maxWidth: 440, maxHeight: "80vh", overflowY: "auto" as const, boxShadow: "0 20px 60px rgba(0,0,0,0.35)", animation: resumoClosing ? "popZoomOut 0.16s ease both" : "popZoom 0.24s cubic-bezier(0.34, 1.56, 0.64, 1) both" }}>
                     <div style={{ padding: "16px 18px", borderBottom: "1px solid #EFEAE2", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky" as const, top: 0, background: "#FFFFFF" }}>
                       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#2A241C" }}>{titulos[resumoModal]}</div>
-                      <button onClick={() => setResumoModal(null)} style={{ border: "none", background: "#F2EFE8", borderRadius: 8, width: 30, height: 30, fontSize: 16, cursor: "pointer", color: "#6B6358" }}>✕</button>
+                      <button onClick={() => closeResumo()} style={{ border: "none", background: "#F2EFE8", borderRadius: 8, width: 30, height: 30, fontSize: 16, cursor: "pointer", color: "#6B6358" }}>✕</button>
                     </div>
                     <div style={{ padding: 10 }}>
                       {modalItens.length === 0 ? (
