@@ -4369,7 +4369,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
                 <div>
                   <div style={{ background: t.cor, margin: "6px 12px 0", borderRadius: 14, padding: "13px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div><div style={{ fontSize: 15, fontWeight: 800, color: t.corTexto }}>{t.label}</div><div style={{ fontSize: 12, color: t.corTexto, opacity: 0.85 }}>{selUtente ? selUtente.name : ""} · Nº {selUtente ? selUtente.id : ""}</div></div>
-                    <button onClick={() => closeSheet()} style={{ color: t.corTexto, background: "rgba(255,255,255,0.18)", border: "none", borderRadius: 8, width: 30, height: 30, fontSize: 17, cursor: "pointer" }}>✕</button>
+                    <button onClick={() => closeSheet()} style={{ color: t.corTexto, background: "rgba(255,255,255,0.18)", border: "none", borderRadius: 8, width: 30, height: 30, fontSize: 17, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0, flexShrink: 0 }}>✕</button>
                   </div>
                   <div style={{ padding: "14px 16px 22px" }}>
                     <div style={{ display: "flex", gap: 10, marginBottom: 11 }}>
