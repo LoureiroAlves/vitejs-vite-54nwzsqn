@@ -8839,6 +8839,15 @@ export default function App() {
           /* Botões de toolbar quebram em várias linhas */
           .toolbar-wrap { flex-wrap: wrap !important; row-gap: 6px !important; }
         }
+
+        /* Reforço global para telemóvel */
+        @media (max-width: 768px) {
+          html, body { max-width: 100%; overflow-x: hidden; }
+          [style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
+          [style*="grid-template-columns: repeat(2, 1fr)"] { grid-template-columns: 1fr !important; }
+          [style*="grid-template-columns: 1.4fr 1fr 1.4fr auto"] { grid-template-columns: 1fr !important; }
+          input, select, textarea { max-width: 100% !important; box-sizing: border-box !important; }
+        }
       `}</style>
 
       {/* Página inicial */}
@@ -8924,7 +8933,7 @@ export default function App() {
           </div>
 
           {/* Sessão / logout */}
-          <div style={{ position: "absolute" as const, top: 16, right: 20, display: "flex", alignItems: "center", gap: 10, zIndex: 2 }}>
+          <div style={{ position: "absolute" as const, top: 16, right: 20, display: "flex", alignItems: "center", gap: 10, zIndex: 2, flexWrap: "wrap" as const, maxWidth: "calc(100vw - 32px)", justifyContent: "flex-end" }}>
             <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", fontFamily: "'Inter', sans-serif" }}>{currentUser.username}</span>
             <button
               onClick={handleManualBackup}
