@@ -8582,6 +8582,14 @@ export default function App() {
     return { fora, regressos, consultas };
   }, [activePage, resumoTick]);
 
+  // Ao abrir a app (login), buscar os utentes atualizados da base de dados e refrescar o painel
+  useEffect(() => {
+    if (!currentUser) return;
+    let alive = true;
+    loadUtentesFromDB().then(() => { if (alive) setResumoTick((t) => t + 1); }).catch(() => {});
+    return () => { alive = false; };
+  }, [currentUser]);
+
   const darEntradaResumo = (uid: string) => {
     const data = loadUtentesData() || { utentes: [] };
     const utentes: any[] = data.utentes || [];
