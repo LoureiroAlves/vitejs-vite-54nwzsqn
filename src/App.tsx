@@ -8549,7 +8549,7 @@ export default function App() {
     return results.slice(0, 8);
   }, [quickSearch, employees, rvEmployees]);
 
-  const [resumoModal, setResumoModal] = useState<null | "fora" | "regressos" | "consultas">(null);
+  const [resumoModal, setResumoModal] = useState<null | "fora" | "regressos" | "consultas" | "proximas">(null);
   const [resumoTick, setResumoTick] = useState(0);
   const [modalItens, setModalItens] = useState<{ uid: string; nome: string; sub: string }[]>([]);
   const [entradasDadas, setEntradasDadas] = useState<Set<string>>(new Set());
@@ -8566,9 +8566,11 @@ export default function App() {
     const fora: ItemHoje[] = [];
     const regressos: ItemHoje[] = [];
     const consultas: ItemHoje[] = [];
+    const proximas: ItemHoje[] = [];
     const seenF = new Set<string>();
     const seenR = new Set<string>();
     const seenC = new Set<string>();
+    const seenP = new Set<string>();
     list.forEach((u: any) => {
       (u.saidas || []).forEach((s: any) => {
         const st = dnum(s.inicio);
@@ -8577,9 +8579,10 @@ export default function App() {
         if (aberta && st && st <= tnum && !seenF.has(u.id)) { seenF.add(u.id); fora.push({ uid: u.id, nome: u.name, sub: lbl + " · saiu " + s.inicio + (s.horaInicio ? " " + s.horaInicio : "") + (s.fim ? " · regresso prev. " + s.fim : "") }); }
         if (!s.regressado && s.fim && dnum(s.fim) === tnum && !seenR.has(u.id)) { seenR.add(u.id); regressos.push({ uid: u.id, nome: u.name, sub: lbl + " · regresso previsto hoje" }); }
         if (s.tipo === "consulta" && st === tnum && !seenC.has(u.id)) { seenC.add(u.id); consultas.push({ uid: u.id, nome: u.name, sub: lbl + (s.horaInicio ? " · " + s.horaInicio : "") }); }
+        if (!s.regressado && st && st > tnum && !seenP.has(u.id)) { seenP.add(u.id); proximas.push({ uid: u.id, nome: u.name, sub: lbl + " · saída " + s.inicio + (s.horaInicio ? " " + s.horaInicio : "") }); }
       });
     });
-    return { fora, regressos, consultas };
+    return { fora, regressos, consultas, proximas };
   }, [activePage, resumoTick]);
 
   // Ao abrir a app (login), buscar os utentes atualizados da base de dados e refrescar o painel
@@ -8864,11 +8867,10 @@ export default function App() {
           .sd-cal-cell { min-height: 38px !important; font-size: 12px !important; }
           /* Painel "Utentes fora" compacto: 3 numa linha */
           .hoje-panel { padding: 10px 10px !important; margin-bottom: 12px !important; }
-          .hoje-tiles { gap: 6px !important; }
-          .hoje-tile { flex: 1 1 0 !important; min-width: 0 !important; padding: 7px 5px !important; }
-          .hoje-tile > div:nth-child(1) { font-size: 19px !important; }
-          .hoje-tile > div:nth-child(2) { font-size: 9.5px !important; margin: 2px 0 2px !important; line-height: 1.1 !important; }
-          .hoje-tile > div:nth-child(3) { font-size: 9px !important; }
+          .hoje-tiles { grid-template-columns: repeat(2, 1fr) !important; gap: 6px !important; }
+          .hoje-tile { padding: 7px 8px !important; }
+          .hoje-tile > div:nth-child(1) { font-size: 20px !important; }
+          .hoje-tile > div:nth-child(2) { font-size: 10px !important; }
           /* Barra de topo: ícones redondos numa linha */
           .home-session { gap: 8px !important; justify-content: center !important; }
           .home-session > span:first-child { display: none !important; }
@@ -9327,23 +9329,23 @@ export default function App() {
             {(canAccessPage(currentUser, "saidas") || canAccessPage(currentUser, "utentes")) && (
               <div className="hoje-panel" style={{ background: "#FFFFFF", borderRadius: 16, padding: "14px 16px", marginBottom: 16, boxShadow: "0 4px 20px rgba(0,0,0,0.25)" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#A39B8E", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>Utentes fora da Quinta dos Avós</div>
-                <div className="hoje-tiles" style={{ display: "flex", flexWrap: "wrap" as const, gap: 10 }}>
+                <div className="hoje-tiles" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
                   {[
                     { n: saidasHoje.fora.length, label: "🚪 Fora agora", bg: "#E1F5EE", col: "#1C7F7F", nomes: saidasHoje.fora, cat: "fora" as const },
                     { n: saidasHoje.regressos.length, label: "🏠 Regressos hoje", bg: "#E8F0E8", col: "#2E7D32", nomes: saidasHoje.regressos, cat: "regressos" as const },
                     { n: saidasHoje.consultas.length, label: "🩺 Consultas hoje", bg: "#E8EEF5", col: "#3A5A70", nomes: saidasHoje.consultas, cat: "consultas" as const },
+                    { n: saidasHoje.proximas.length, label: "📅 Próximas saídas", bg: "#FDF3E3", col: "#B5831F", nomes: saidasHoje.proximas, cat: "proximas" as const },
                   ].map((t, i) => (
-                    <button key={i} className="hoje-tile" onClick={() => { setModalItens(t.nomes); setEntradasDadas(new Set()); setResumoModal(t.cat); }} style={{ flex: "1 1 150px", minWidth: 0, textAlign: "left" as const, border: "none", cursor: "pointer", borderRadius: 12, padding: "11px 13px", background: t.bg, fontFamily: "'Inter', sans-serif" }}>
-                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 800, lineHeight: 1, color: t.col }}>{t.n}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#4A443B", margin: "3px 0 4px" }}>{t.label}</div>
-                      <div style={{ fontSize: 11, color: "#6B6358", lineHeight: 1.35 }}>{t.nomes.length ? (t.nomes.slice(0, 3).map((x) => x.nome).join(" · ") + (t.nomes.length > 3 ? " +" + (t.nomes.length - 3) : "")) : "—"}</div>
+                    <button key={i} className="hoje-tile" onClick={() => { setModalItens(t.nomes); setEntradasDadas(new Set()); setResumoModal(t.cat); }} style={{ minWidth: 0, textAlign: "left" as const, border: "none", cursor: "pointer", borderRadius: 11, padding: "8px 8px", background: t.bg, fontFamily: "'Inter', sans-serif" }}>
+                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 800, lineHeight: 1, color: t.col }}>{t.n}</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#4A443B", marginTop: 3, lineHeight: 1.15 }}>{t.label}</div>
                     </button>
                   ))}
                 </div>
               </div>
             )}
             {resumoModal && (() => {
-              const titulos = { fora: "🚪 Utentes fora agora", regressos: "🏠 Regressos previstos hoje", consultas: "🩺 Consultas de hoje" } as const;
+              const titulos = { fora: "🚪 Utentes fora agora", regressos: "🏠 Regressos previstos hoje", consultas: "🩺 Consultas de hoje", proximas: "📅 Próximas saídas" } as const;
               return (
                 <div onClick={() => closeResumo()} style={{ position: "fixed" as const, inset: 0, zIndex: 400, background: "rgba(20,30,20,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, animation: resumoClosing ? "popFadeOut 0.16s ease both" : "popFade 0.18s ease both" }}>
                   <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 18, width: "100%", maxWidth: 440, maxHeight: "80vh", overflowY: "auto" as const, boxShadow: "0 20px 60px rgba(0,0,0,0.35)", animation: resumoClosing ? "popZoomOut 0.16s ease both" : "popZoom 0.24s cubic-bezier(0.34, 1.56, 0.64, 1) both" }}>
@@ -9364,9 +9366,9 @@ export default function App() {
                           </div>
                           {done ? (
                             <span style={{ color: "#2E7D32", fontWeight: 800, fontSize: 12, whiteSpace: "nowrap" as const, flexShrink: 0 }}>✓ Regressou</span>
-                          ) : (
+                          ) : (resumoModal === "proximas" ? null : (
                             <button onClick={() => darEntradaResumo(it.uid)} style={{ background: "#1F4D2E", color: "#FFFFFF", border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const, flexShrink: 0 }}>✓ Dar entrada</button>
-                          )}
+                          ))}
                         </div>
                         );
                       })}
