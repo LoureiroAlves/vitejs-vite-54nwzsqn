@@ -1363,6 +1363,7 @@ function loadUtentesData(): any {
 // Chave estável de cada registo diário (para não se perderem ao juntar)
 let _appCurrentUserName = "";
 let _appCurrentUserRole = "";
+let _saidasPreselUid: string | null = null;
 function _roleLabelCurto(role: string): string { if (role === "admin") return "Administração"; if (role === "enfermagem") return "Enfermagem"; if (role === "colaboradoras") return "Colaboradoras"; if (role === "saidas") return "Saída Utentes"; return "Outro"; }
 function _autorAtual(): string { const r = _roleLabelCurto(_appCurrentUserRole); return _appCurrentUserName ? (_appCurrentUserName + " (" + r + ")") : r; }
 function printDailyLogDay(utente: any, dateStr: string) {
@@ -4196,7 +4197,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
   const nowHM = () => new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
-  const [selId, setSelId] = useState<string | null>(null);
+  const [selId, setSelId] = useState<string | null>(() => { const u = _saidasPreselUid; _saidasPreselUid = null; return u; });
   const [pickOpen, setPickOpen] = useState(false);
   const [geralMenu, setGeralMenu] = useState(false);
   const [sheetClosing, setSheetClosing] = useState(false);
@@ -4222,7 +4223,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
   const saidasDe = (u: Utente | null): Saida[] => ((u && (u as any).saidas) ? (u as any).saidas : []);
   const updateSaidas = (fn: (prev: Saida[]) => Saida[]) => { if (!selId) return; setUtentes((prev) => prev.map((u) => u.id === selId ? ({ ...u, saidas: fn(saidasDe(u)) } as Utente) : u)); };
   const appendLog = (texto: string) => { if (!selId) return; setUtentes((prev) => prev.map((u) => { if (u.id !== selId) return u; const nova = { id: Date.now().toString() + Math.random().toString(36).slice(2), date: todayStr, time: new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" }), author: _appCurrentUserName || "", text: texto }; return { ...u, dailyLogs: [nova, ...(u.dailyLogs || [])] }; })); };
-  const effEnd = (s: Saida): number => s.regressado && s.dataRegresso ? _saidaDnum(s.dataRegresso) : (s.fim ? _saidaDnum(s.fim) : todayNum);
+  const effEnd = (s: Saida): number => s.regressado && s.dataRegresso ? _saidaDnum(s.dataRegresso) : (s.fim ? _saidaDnum(s.fim) : Math.max(_saidaDnum(s.inicio), todayNum));
   const saidaNoDia = (u: Utente | null, dnum: number): Saida | null => { const arr = saidasDe(u); for (let i = 0; i < arr.length; i++) { const s = arr[i]; const start = _saidaDnum(s.inicio); if (start && dnum >= start && dnum <= effEnd(s)) return s; } return null; };
   const isAberta = (s: Saida): boolean => !(s.regressado || (s.regressoAuto && !!s.fim && _saidaDnum(s.fim) < todayNum));
   const saidaAberta = (): Saida | null => saidasDe(selUtente).find(isAberta) || null;
@@ -4336,7 +4337,8 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
               const t = s ? tipoById(s.tipo) : null;
               const isToday = dnum === todayNum;
               const voltou = !!(s && s.regressado);
-              return (<button key={d} className="sd-cal-cell" onClick={() => abrirDia(d)} style={{ position: "relative" as const, minHeight: 54, border: voltou ? "2px solid #1F7A34" : ("1px solid " + (t ? t.cor : "#EAE3D5")), borderRadius: 10, background: t ? t.cor : "#FBF8F1", color: t ? t.corTexto : "#2A241C", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", boxShadow: isToday ? "0 0 0 2px #1F4D2E inset" : "none" }}>{d}{voltou ? <span style={{ position: "absolute" as const, top: 3, right: 3, width: 14, height: 14, borderRadius: "50%", background: "#FFFFFF", color: "#1F7A34", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>✓</span> : null}</button>);
+              const futuro = !!(s && _saidaDnum(s.inicio) > todayNum);
+              return (<button key={d} className="sd-cal-cell" onClick={() => abrirDia(d)} style={{ position: "relative" as const, minHeight: 54, border: voltou ? "2px solid #1F7A34" : ("1px solid " + (t ? t.cor : "#EAE3D5")), borderRadius: 10, background: t ? t.cor : "#FBF8F1", color: t ? t.corTexto : "#2A241C", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", boxShadow: isToday ? "0 0 0 2px #1F4D2E inset" : "none", animation: futuro ? "pulseDay 1.5s ease-in-out infinite" : undefined }}>{d}{voltou ? <span style={{ position: "absolute" as const, top: 3, right: 3, width: 14, height: 14, borderRadius: "50%", background: "#FFFFFF", color: "#1F7A34", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>✓</span> : null}</button>);
             })}
           </div>
         </div>
@@ -8717,6 +8719,7 @@ export default function App() {
         @keyframes popFade { 0% { opacity: 0; } 100% { opacity: 1; } }
         @keyframes popZoomOut { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.9); } }
         @keyframes popFadeOut { 0% { opacity: 1; } 100% { opacity: 0; } }
+        @keyframes pulseDay { 0%, 100% { box-shadow: 0 0 0 0 rgba(245,185,68,0.7); } 50% { box-shadow: 0 0 0 5px rgba(245,185,68,0); } }
         @keyframes popCenterIn { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.92); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
         @keyframes popCenterOut { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); } }
         @keyframes bounce {
@@ -9360,8 +9363,8 @@ export default function App() {
                         const done = entradasDadas.has(it.uid);
                         return (
                         <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 10px", marginBottom: 4, borderRadius: 10, border: done ? "2px solid #2E7D32" : "1px solid #EFEAE2", background: done ? "#EFF7EF" : "#FFFFFF", transition: "border-color 0.25s ease, background 0.25s ease" }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: "#2A241C" }}>{it.nome}</div>
+                          <div onClick={() => { _saidasPreselUid = it.uid; setResumoModal(null); setResumoClosing(false); setActivePage("saidas"); }} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: "#2A241C", display: "flex", alignItems: "center", gap: 5 }}><span style={{ color: "#3A5A70", fontSize: 13 }}>📅</span>{it.nome}</div>
                             <div style={{ fontSize: 12, color: done ? "#2E7D32" : "#8A8278" }}>{done ? "✓ Entrada registada" : it.sub}</div>
                           </div>
                           {done ? (
