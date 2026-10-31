@@ -2279,43 +2279,48 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   };
 
   const exportUtentesExcel = () => {
-    const esc = (v: any) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const cols: [string, (u: Utente) => any][] = [
-      ["Nº", (u) => u.id],
-      ["Nome", (u) => u.name],
-      ["Data de nascimento", (u) => u.birthDate],
-      ["Idade", (u) => calcularIdade(u.birthDate)],
-      ["Sexo", (u) => u.sexo],
-      ["Estado civil", (u) => u.estadoCivil],
-      ["Naturalidade", (u) => u.naturalidade],
-      ["Nacionalidade", (u) => u.nacionalidade],
-      ["Morada", (u) => u.morada],
-      ["Código postal", (u) => u.codigoPostal],
-      ["Localidade", (u) => u.localidade],
-      ["Concelho", (u) => u.concelho],
-      ["Distrito", (u) => u.distrito],
-      ["CC nº", (u) => u.ccNumber],
-      ["Validade CC", (u) => u.ccValidity],
-      ["NIF", (u) => u.nif],
-      ["Nº Segurança Social", (u) => u.ssNumero],
-      ["Nº utente SNS", (u) => u.numeroUtenteSaude],
-      ["Grupo sanguíneo", (u) => u.grupoSanguineo],
-      ["Centro de Saúde", (u) => u.centroSaude],
-      ["Médico", (u) => u.medicoAssistente],
-      ["Quarto", (u) => u.room],
-      ["Data de entrada", (u) => u.entryDate],
-      ["Data de inscrição", (u) => u.dataInscricao],
-      ["Nº inscrição", (u) => u.numeroInscricao],
-      ["Familiar", (u) => u.familyContact],
-      ["Parentesco", (u) => u.familyParentesco],
-      ["Telefone", (u) => u.familyPhone],
-      ["Email familiar", (u) => u.familyEmail],
-    ];
+    const esc = (v: any) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/\r?\n/g, " | ");
+    const cel = (v: any) => "<Cell><Data ss:Type=\"String\">" + esc(v) + "</Data></Cell>";
+    const linha = (arr: any[]) => "<Row>" + arr.map(cel).join("") + "</Row>";
+    const folha = (nome: string, header: string[], linhas: any[][]) => "<Worksheet ss:Name=\"" + esc(nome) + "\"><Table>" + linha(header) + linhas.map(linha).join("") + "</Table></Worksheet>";
     const lista = [...utentes].sort((a, b) => a.name.localeCompare(b.name));
-    const thead = "<tr>" + cols.map((c) => "<th style='background:#1F4D2E;color:#fff;padding:4px 8px'>" + esc(c[0]) + "</th>").join("") + "</tr>";
-    const rows = lista.map((u) => "<tr>" + cols.map((c) => "<td style='padding:3px 8px'>" + esc(c[1](u)) + "</td>").join("") + "</tr>").join("");
-    const html = "<html><head><meta charset='UTF-8'></head><body><table border='1' style='border-collapse:collapse;font-family:Arial;font-size:12px'><thead>" + thead + "</thead><tbody>" + rows + "</tbody></table></body></html>";
-    const blob = new Blob(["\ufeff" + html], { type: "application/vnd.ms-excel" });
+    const tipoLabel = (id: string) => { const t = SAIDA_TIPOS_BASE.find((x) => x.id === id); return t ? t.label : id; };
+
+    const colsU: [string, (u: Utente) => any][] = [
+      ["Nº", (u) => u.id], ["Nome", (u) => u.name], ["Data de nascimento", (u) => u.birthDate], ["Idade", (u) => calcularIdade(u.birthDate)],
+      ["Sexo", (u) => u.sexo], ["Estado civil", (u) => u.estadoCivil], ["Naturalidade", (u) => u.naturalidade], ["Nacionalidade", (u) => u.nacionalidade],
+      ["Morada", (u) => u.morada], ["Código postal", (u) => u.codigoPostal], ["Localidade", (u) => u.localidade], ["Concelho", (u) => u.concelho], ["Distrito", (u) => u.distrito],
+      ["CC nº", (u) => u.ccNumber], ["Validade CC", (u) => u.ccValidity], ["NIF", (u) => u.nif], ["Nº Segurança Social", (u) => u.ssNumero], ["Nº utente SNS", (u) => u.numeroUtenteSaude],
+      ["Grupo sanguíneo", (u) => u.grupoSanguineo], ["Centro de Saúde", (u) => u.centroSaude], ["Médico", (u) => u.medicoAssistente], ["Quarto", (u) => u.room],
+      ["Data de entrada", (u) => u.entryDate], ["Data de inscrição", (u) => u.dataInscricao], ["Nº inscrição", (u) => u.numeroInscricao],
+      ["Familiar", (u) => u.familyContact], ["Parentesco", (u) => u.familyParentesco], ["Telefone", (u) => u.familyPhone], ["Email familiar", (u) => u.familyEmail],
+    ];
+    const abaUtentes = folha("Utentes", colsU.map((c) => c[0]), lista.map((u) => colsU.map((c) => c[1](u))));
+
+    const saidasRows: any[][] = [];
+    lista.forEach((u) => (u.saidas || []).forEach((sx: any) => {
+      const estado = sx.regressado && sx.dataRegresso ? ("Regressou " + sx.dataRegresso + (sx.horaRegresso ? " " + sx.horaRegresso : "")) : (sx.fim ? ((sx.regressoAuto ? "Regresso automático " : "Regresso previsto ") + sx.fim) : "Fora (sem data de regresso)");
+      saidasRows.push([u.name, u.id, tipoLabel(sx.tipo), (sx.inicio || "") + (sx.horaInicio ? " " + sx.horaInicio : ""), (sx.dataRegresso || sx.fim || "") + (sx.horaRegresso ? " " + sx.horaRegresso : ""), estado, sx.notas || "", sx.autorSaida || "", sx.autorRegresso || ""]);
+    }));
+    const abaSaidas = folha("Saídas", ["Utente", "Nº", "Tipo de saída", "Saída", "Regresso", "Estado", "Notas", "Registou saída", "Registou entrada"], saidasRows);
+
+    const logsRows: any[][] = [];
+    lista.forEach((u) => (u.dailyLogs || []).forEach((l: any) => { logsRows.push([u.name, u.id, l.date || "", l.time || "", l.author || "", l.text || ""]); }));
+    const abaLogs = folha("Registo diário", ["Utente", "Nº", "Data", "Hora", "Autor", "Registo"], logsRows);
+
+    const medRows: any[][] = [];
+    lista.forEach((u) => {
+      (u.medications || []).forEach((m: any) => { medRows.push([u.name, u.id, m.name || "", m.administration || "", m.note || ""]); });
+      if (u.medicationNotes) medRows.push([u.name, u.id, "(Notas gerais)", "", u.medicationNotes]);
+    });
+    const abaMed = folha("Medicação", ["Utente", "Nº", "Medicamento", "Administração", "Nota"], medRows);
+
+    const agRows: any[][] = [];
+    lista.forEach((u) => (u.agregadoFamiliar || []).forEach((m: any) => { agRows.push([u.name, u.id, m.nome || "", m.parentesco || "", m.idade || "", m.profissao || ""]); }));
+    const abaAg = folha("Agregado familiar", ["Utente", "Nº", "Nome", "Parentesco", "Idade", "Profissão"], agRows);
+
+    const xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<?mso-application progid=\"Excel.Sheet\"?>\n<Workbook xmlns=\"urn:schemas-microsoft-com:office:spreadsheet\" xmlns:ss=\"urn:schemas-microsoft-com:office:spreadsheet\">" + abaUtentes + abaSaidas + abaLogs + abaMed + abaAg + "</Workbook>";
+    const blob = new Blob([xml], { type: "application/vnd.ms-excel" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = "utentes-aosm-" + new Date().toISOString().slice(0, 10) + ".xls";
