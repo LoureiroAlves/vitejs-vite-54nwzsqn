@@ -4292,7 +4292,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
               <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#F0E8D5", color: "#B08A4E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, overflow: "hidden", flexShrink: 0 }}>{selUtente && selUtente.photo ? <img src={selUtente.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" as const }} /> : (selUtente ? _iniciais(selUtente.name) : "—")}</div>
               <div style={{ flex: 1, textAlign: "left" as const }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "#2A241C" }}>{selUtente ? selUtente.name : "Escolher utente"}</div>
-                <div style={{ fontSize: 11, color: "#A39B8E" }}>{selUtente ? ("Nº " + selUtente.id + (selUtente.room ? (" · Quarto " + selUtente.room) : "")) : ""}</div>
+                <div style={{ fontSize: 11, color: "#A39B8E" }}>{selUtente ? ((selUtente.numeroUtenteSaude ? ("Nº SNS " + selUtente.numeroUtenteSaude) : (selUtente.birthDate || "")) + (selUtente.room ? (" · Quarto " + selUtente.room) : "")) : ""}</div>
               </div>
               <span style={{ color: "#A39B8E" }}>▾</span>
             </button>
@@ -4375,7 +4375,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
               {verSaida ? (() => { const t = tipoById(verSaida.tipo); const ongoing = !verSaida.regressado && (!verSaida.fim || !verSaida.regressoAuto); return (
                 <div>
                   <div style={{ background: t.cor, margin: "6px 12px 0", borderRadius: 14, padding: "13px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div><div style={{ fontSize: 15, fontWeight: 800, color: t.corTexto }}>{t.label}</div><div style={{ fontSize: 12, color: t.corTexto, opacity: 0.85 }}>{selUtente ? selUtente.name : ""} · Nº {selUtente ? selUtente.id : ""}</div></div>
+                    <div><div style={{ fontSize: 15, fontWeight: 800, color: t.corTexto }}>{t.label}</div><div style={{ fontSize: 12, color: t.corTexto, opacity: 0.85 }}>{selUtente ? selUtente.name : ""}{selUtente && selUtente.numeroUtenteSaude ? (" · Nº SNS " + selUtente.numeroUtenteSaude) : ""}</div></div>
                     <button onClick={() => closeSheet()} style={{ color: t.corTexto, background: "rgba(255,255,255,0.18)", border: "none", borderRadius: 8, width: 30, height: 30, fontSize: 17, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0, flexShrink: 0 }}>✕</button>
                   </div>
                   <div style={{ padding: "14px 16px 22px" }}>
@@ -9793,7 +9793,7 @@ export default function App() {
             {renderDayHeaderCells()}
             {renderStatHeaderCells()}
           </div>
-          {employees.map((emp) => renderEmployeeRow(emp, "main"))}
+          {[...employees].sort((a, b) => a.localeCompare(b, "pt")).map((emp) => renderEmployeeRow(emp, "main"))}
 
           {/* Coverage row */}
           <div style={{ ...styles.row, borderTop: "2px solid #E4DED3" }}>
@@ -9880,7 +9880,7 @@ export default function App() {
             {renderDayHeaderCells()}
             {renderStatHeaderCells()}
           </div>
-          {rvEmployees.map((emp) => renderEmployeeRow(emp, "rv"))}
+          {[...rvEmployees].sort((a, b) => a.localeCompare(b, "pt")).map((emp) => renderEmployeeRow(emp, "rv"))}
         </div>
       </div>
       <div style={styles.footer} className="no-print">
