@@ -1364,6 +1364,30 @@ function loadUtentesData(): any {
 let _appCurrentUserName = "";
 let _appCurrentUserRole = "";
 let _saidasPreselUid: string | null = null;
+
+// --- ID de utente: iniciais (1º + último nome) + 4 dígitos, único e nunca reatribuído ---
+const _usedUtenteIds = new Set<string>();
+let _usedIdsSaveTimer: any = null;
+function _persistUsedUtenteIds() {
+  if (_usedIdsSaveTimer) clearTimeout(_usedIdsSaveTimer);
+  _usedIdsSaveTimer = setTimeout(() => {
+    saveToSupabase("escala_data", { used_utente_ids: Array.from(_usedUtenteIds) }).catch(() => {});
+  }, 1500);
+}
+function _registarIdsExistentes(ids: any[]) { (ids || []).forEach((id) => { if (id) _usedUtenteIds.add(String(id)); }); }
+function _novoUtenteId(name: string): string {
+  const norm = String(name || "").normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const parts = norm.trim().split(/\s+/).filter(Boolean);
+  let ini = parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]) : (parts.length === 1 ? parts[0].slice(0, 2) : "XX");
+  ini = ini.toUpperCase().replace(/[^A-Z]/g, "");
+  if (ini.length < 2) ini = (ini + "XX").slice(0, 2);
+  let id = "";
+  do { id = ini + String(Math.floor(1000 + Math.random() * 9000)); } while (_usedUtenteIds.has(id));
+  _usedUtenteIds.add(id);
+  _persistUsedUtenteIds();
+  return id;
+}
+
 function _roleLabelCurto(role: string): string { if (role === "admin") return "Administração"; if (role === "enfermagem") return "Enfermagem"; if (role === "colaboradoras") return "Colaboradoras"; if (role === "saidas") return "Saída Utentes"; return "Outro"; }
 function _autorAtual(): string { const r = _roleLabelCurto(_appCurrentUserRole); return _appCurrentUserName ? (_appCurrentUserName + " (" + r + ")") : r; }
 function printDailyLogDay(utente: any, dateStr: string) {
@@ -1565,6 +1589,7 @@ async function loadUtentesFromDB(): Promise<any[]> {
     }
     list.sort((a: any, b: any) => String(a.name || "").localeCompare(String(b.name || ""), "pt"));
     list.forEach((u) => { if (u?.id) _utenteSavedCache[u.id] = JSON.stringify(u); });
+    _registarIdsExistentes(list.map((u: any) => u.id));
     try { window.localStorage?.setItem?.(UTENTES_STORAGE_KEY, JSON.stringify({ utentes: list })); } catch (e) {}
     return list;
   } catch (e) {
@@ -2169,9 +2194,10 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
           }
           const novos: Utente[] = lista.map((u: any) => {
             const initialNote = u.notes || u.observacoes;
+            const _nome = u.name || u.nome || "Nome desconhecido";
             return {
-              id: Date.now().toString() + Math.random().toString(36).slice(2),
-              name: u.name || u.nome || "Nome desconhecido",
+              id: _novoUtenteId(_nome),
+              name: _nome,
               birthDate: u.birthDate || u.dataNascimento || undefined,
               room: u.room || u.quarto || undefined,
               entryDate: u.entryDate || u.dataEntrada || undefined,
@@ -2243,8 +2269,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
     if (!utAdmin) return;
     const trimmed = newName.trim();
     if (!trimmed) return;
-    let _nid = "";
-    do { _nid = String(Math.floor(10000 + Math.random() * 90000)); } while (utentes.some((x) => x.id === _nid));
+    const _nid = _novoUtenteId(trimmed);
     const utente: Utente = { id: _nid, name: trimmed };
     setUtentes((prev) => [...prev, utente]);
     setNewName("");
@@ -6549,6 +6574,7 @@ export default function App() {
       loadUtentesFromDB().then((l) => ({ utentes: l })),
     ]).then(([escala, stock, utentesRow]) => {
       if (escala?.app_users?.length) setAppUsersList(escala.app_users);
+      if (escala?.used_utente_ids) _registarIdsExistentes(escala.used_utente_ids);
       if (escala) {
         if (escala.employees?.length) setEmployees(escala.employees);
         if (escala.rv_employees?.length) setRvEmployees(escala.rv_employees);
