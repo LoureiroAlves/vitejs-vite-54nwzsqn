@@ -693,7 +693,7 @@ function StockPage({ onBack }: { onBack: () => void }) {
     const term = stockSearch.trim().toLowerCase();
     const matchesSearch = !term || p.name.toLowerCase().includes(term) || p.category.toLowerCase().includes(term);
     return matchesCategory && matchesSearch;
-  });
+  }).sort((a, b) => a.name.localeCompare(b.name, "pt"));
 
   const alerts = products.filter((p) => p.quantity <= p.minQuantity);
   const totalProducts = products.length;
@@ -1355,7 +1355,7 @@ const UTENTES_STORAGE_KEY = "turnos-utentes-data-v1";
 function loadUtentesData(): any {
   try {
     const raw = window.localStorage?.getItem?.(UTENTES_STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) { const d = JSON.parse(raw); if (d && Array.isArray(d.utentes)) d.utentes.sort((a: any, b: any) => String(a.name || "").localeCompare(String(b.name || ""), "pt")); return d; }
   } catch (e) {}
   return null;
 }
@@ -1563,6 +1563,7 @@ async function loadUtentesFromDB(): Promise<any[]> {
         list = oldUtentes;
       }
     }
+    list.sort((a: any, b: any) => String(a.name || "").localeCompare(String(b.name || ""), "pt"));
     list.forEach((u) => { if (u?.id) _utenteSavedCache[u.id] = JSON.stringify(u); });
     try { window.localStorage?.setItem?.(UTENTES_STORAGE_KEY, JSON.stringify({ utentes: list })); } catch (e) {}
     return list;
@@ -2701,11 +2702,10 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
     });
   };
 
-  const [sortAZ, setSortAZ] = useState(false);
   const filteredUtentes = utentes.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     (u.room && u.room.toLowerCase().includes(search.toLowerCase()))
-  ).sort((a, b) => sortAZ ? a.name.localeCompare(b.name, "pt") : 0);
+  ).sort((a, b) => a.name.localeCompare(b.name, "pt"));
 
   const getInitials = (name: string) => {
     const words = name.trim().split(/\s+/);
@@ -2953,14 +2953,6 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
           📊 Excel
         </button>
         )}
-        <button
-          onClick={() => setSortAZ((v) => !v)}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: sortAZ ? "#2A241C" : "#F7F5F0", color: sortAZ ? "#F5B944" : "#6B6358", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
-          onMouseEnter={(e) => showTip(e, "Ordenar os utentes por ordem alfabética")}
-          onMouseLeave={hideTip}
-        >
-          🔤 A→Z
-        </button>
 
         {showAdd ? (
           <div style={{ display: "flex", gap: 8 }}>
@@ -4280,7 +4272,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
   };
   const inputStyle = { width: "100%", border: "1px solid #E4DED3", borderRadius: 8, padding: "9px 11px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", color: "#2A241C", boxSizing: "border-box" as const };
   const WD = ["D", "S", "T", "Q", "Q", "S", "S"];
-  const filtrados = utentes.filter((u) => u.name.toLowerCase().includes(search.toLowerCase()));
+  const filtrados = utentes.filter((u) => u.name.toLowerCase().includes(search.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name, "pt"));
   const verSaida = (sheet && sheet.mode === "ver" && sheet.saidaId) ? (saidasDe(selUtente).find((s) => s.id === sheet.saidaId) || null) : null;
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#EFE7D4", minHeight: "100vh", color: "#2A241C", width: "100%", maxWidth: "100vw", overflowX: "hidden", boxSizing: "border-box" as const }}>
@@ -5977,7 +5969,7 @@ function MapaGeralPage() {
   const monthData = schedule[monthKey] || {};
   const numDays = new Date(year, month + 1, 0).getDate();
   const days = Array.from({ length: numDays }, (_, i) => i + 1);
-  const allNames = [...rvEmployees, ...employees];
+  const allNames = [...rvEmployees, ...employees].sort((a, b) => a.localeCompare(b, "pt"));
 
   const goPrev = () => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); };
   const goNext = () => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); };
@@ -6635,7 +6627,7 @@ export default function App() {
   const numDays = daysInMonth(year, month);
   const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
   const days = Array.from({ length: numDays }, (_, i) => i + 1);
-  const allEmployees = useMemo(() => [...rvEmployees, ...employees], [rvEmployees, employees]);
+  const allEmployees = useMemo(() => [...rvEmployees, ...employees].sort((a, b) => a.localeCompare(b, "pt")), [rvEmployees, employees]);
 
   // ---------- Turnos ----------
   const getShift = (employee: string, day: number) => {
