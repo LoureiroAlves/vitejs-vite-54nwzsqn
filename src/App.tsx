@@ -2701,10 +2701,11 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
     });
   };
 
+  const [sortAZ, setSortAZ] = useState(false);
   const filteredUtentes = utentes.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     (u.room && u.room.toLowerCase().includes(search.toLowerCase()))
-  );
+  ).sort((a, b) => sortAZ ? a.name.localeCompare(b.name, "pt") : 0);
 
   const getInitials = (name: string) => {
     const words = name.trim().split(/\s+/);
@@ -2952,6 +2953,14 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
           📊 Excel
         </button>
         )}
+        <button
+          onClick={() => setSortAZ((v) => !v)}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: sortAZ ? "#2A241C" : "#F7F5F0", color: sortAZ ? "#F5B944" : "#6B6358", border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}
+          onMouseEnter={(e) => showTip(e, "Ordenar os utentes por ordem alfabética")}
+          onMouseLeave={hideTip}
+        >
+          🔤 A→Z
+        </button>
 
         {showAdd ? (
           <div style={{ display: "flex", gap: 8 }}>
