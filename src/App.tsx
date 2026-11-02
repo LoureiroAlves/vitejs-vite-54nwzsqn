@@ -1375,17 +1375,30 @@ function _persistUsedUtenteIds() {
   }, 1500);
 }
 function _registarIdsExistentes(ids: any[]) { (ids || []).forEach((id) => { if (id) _usedUtenteIds.add(String(id)); }); }
-function _novoUtenteId(name: string): string {
+function _iniciaisId(name: string): string {
   const norm = String(name || "").normalize("NFD").replace(/[̀-ͯ]/g, "");
   const parts = norm.trim().split(/\s+/).filter(Boolean);
   let ini = parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]) : (parts.length === 1 ? parts[0].slice(0, 2) : "XX");
   ini = ini.toUpperCase().replace(/[^A-Z]/g, "");
   if (ini.length < 2) ini = (ini + "XX").slice(0, 2);
+  return ini;
+}
+// Gera um ID candidato (não o reserva ainda) — para pré-visualizar no formulário
+function _previewUtenteId(name: string): string {
+  const ini = _iniciaisId(name);
   let id = "";
   do { id = ini + String(Math.floor(1000 + Math.random() * 9000)); } while (_usedUtenteIds.has(id));
+  return id;
+}
+// Reserva definitivamente um ID (valida unicidade e guarda no registo permanente)
+function _commitUtenteId(id: string, name: string): string {
+  if (!id || _usedUtenteIds.has(id) || id.slice(0, 2) !== _iniciaisId(name)) id = _previewUtenteId(name);
   _usedUtenteIds.add(id);
   _persistUsedUtenteIds();
   return id;
+}
+function _novoUtenteId(name: string): string {
+  return _commitUtenteId(_previewUtenteId(name), name);
 }
 
 function _roleLabelCurto(role: string): string { if (role === "admin") return "Administração"; if (role === "enfermagem") return "Enfermagem"; if (role === "colaboradoras") return "Colaboradoras"; if (role === "saidas") return "Saída Utentes"; return "Outro"; }
@@ -2134,6 +2147,13 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
   const [printCols, setPrintCols] = useState<Record<string, boolean>>({ name: true, birthDate: true, room: true, entryDate: true, familyContact: true, ultimaObs: true, numDocs: true });
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState("");
+  const [addId, setAddId] = useState("");
+  // Atualiza o ID previsto: só gera novos 4 dígitos quando as iniciais mudam (estável ao escrever)
+  const onNewNameChange = (val: string) => {
+    setNewName(val);
+    const ini = _iniciaisId(val);
+    setAddId((prev) => (prev && prev.slice(0, 2) === ini ? prev : (val.trim() ? _previewUtenteId(val) : "")));
+  };
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -2269,10 +2289,11 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
     if (!utAdmin) return;
     const trimmed = newName.trim();
     if (!trimmed) return;
-    const _nid = _novoUtenteId(trimmed);
+    const _nid = _commitUtenteId(addId, trimmed);
     const utente: Utente = { id: _nid, name: trimmed };
     setUtentes((prev) => [...prev, utente]);
     setNewName("");
+    setAddId("");
     setShowAdd(false);
   };
 
@@ -2980,13 +3001,16 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
         )}
 
         {showAdd ? (
-          <div style={{ display: "flex", gap: 8 }}>
-            <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") addUtente(); if (e.key === "Escape") { setShowAdd(false); setNewName(""); } }}
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" as const }}>
+            <input autoFocus value={newName} onChange={(e) => onNewNameChange(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addUtente(); if (e.key === "Escape") { setShowAdd(false); setNewName(""); setAddId(""); } }}
               placeholder="Nome do utente"
               style={{ border: "1px solid #E4DED3", borderRadius: 10, padding: "10px 14px", fontSize: 14, fontFamily: "'Inter', sans-serif", outline: "none", background: "#FFFFFF", color: "#2A241C", colorScheme: "light" as const, width: 220 }} />
+            {addId && (
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#1F4D2E", background: "#E8F0E8", border: "1px solid #CFE2CF", borderRadius: 8, padding: "6px 10px", fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "0.04em" }} title="ID atribuído automaticamente a este utente (não se repete)">ID: {addId}</span>
+            )}
             <button onMouseDown={(e) => e.preventDefault()} onClick={addUtente} style={{ background: "#2A241C", color: "#FBF9F5", border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Adicionar</button>
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => { setShowAdd(false); setNewName(""); }} style={{ background: "transparent", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 14px", fontSize: 13, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => { setShowAdd(false); setNewName(""); setAddId(""); }} style={{ background: "transparent", border: "1px solid #E4DED3", borderRadius: 8, padding: "10px 14px", fontSize: 13, cursor: "pointer", color: "#6B6358", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
           </div>
         ) : (
           <button onClick={() => setShowAdd(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#2A241C", color: "#FBF9F5", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" as const }}>
