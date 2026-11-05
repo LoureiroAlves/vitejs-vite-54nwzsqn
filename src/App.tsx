@@ -5193,7 +5193,7 @@ function FloatingWordCycler({ words, interval, delay = 0 }: { words: string[]; i
 }
 
 function QuickSearchPanel({ target, schedule, onClose }: {
-  target: { type: "utente" | "colaborador"; name: string; photo?: string };
+  target: { type: "utente" | "colaborador"; name: string; photo?: string; id?: string };
   schedule: Record<string, Record<string, Record<number, string>>>;
   onClose: () => void;
 }) {
@@ -5227,7 +5227,9 @@ function QuickSearchPanel({ target, schedule, onClose }: {
   useEffect(() => {
     if (target.type === "utente") {
       const stored = loadUtentesData()?.utentes ?? [];
-      const found = stored.find((u: any) => u.name === target.name);
+      const found = target.id
+        ? stored.find((u: any) => u.id === target.id)
+        : stored.find((u: any) => u.name === target.name);
       setUtenteData(found || null);
     }
   }, [target]);
@@ -6519,7 +6521,7 @@ export default function App() {
   const [syncDone, setSyncDone] = useState(false);
   const [quickSearch, setQuickSearch] = useState("");
   const [quickSearchOpen, setQuickSearchOpen] = useState(false);
-  const [quickSearchTarget, setQuickSearchTarget] = useState<{ type: "utente" | "colaborador"; name: string; photo?: string } | null>(null);
+  const [quickSearchTarget, setQuickSearchTarget] = useState<{ type: "utente" | "colaborador"; name: string; photo?: string; id?: string } | null>(null);
   const [quickSearchHighlight, setQuickSearchHighlight] = useState(-1);
 
   const [employees, setEmployees] = useState<string[]>(() => {
@@ -8587,7 +8589,7 @@ export default function App() {
   const quickSearchResults = useMemo(() => {
     const term = quickSearch.trim().toLowerCase();
     if (!term) return [];
-    const results: { type: "utente" | "colaborador"; name: string; photo?: string }[] = [];
+    const results: { type: "utente" | "colaborador"; name: string; photo?: string; id?: string }[] = [];
 
     // Colaboradores (escala + recibo verde)
     [...employees, ...rvEmployees].forEach((name) => {
@@ -8600,7 +8602,7 @@ export default function App() {
     const storedUtentes = loadUtentesData()?.utentes ?? [];
     storedUtentes.forEach((u: any) => {
       if (u.name?.toLowerCase().includes(term)) {
-        results.push({ type: "utente", name: u.name, photo: u.photo });
+        results.push({ type: "utente", name: u.name, photo: u.photo, id: u.id });
       }
     });
 
