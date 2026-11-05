@@ -8575,11 +8575,13 @@ export default function App() {
       const month = parseInt(parts[1]);
       const birthYear = parseInt(parts[2]);
       if (isNaN(day) || isNaN(month) || isNaN(birthYear)) return;
-      const age = now.getFullYear() - birthYear + (month < todayMonth || (month === todayMonth && day <= todayDay) ? 0 : -1) + 1;
       const isToday = day === todayDay && month === todayMonth;
       const isTomorrow = day === tomorrowDay && month === tomorrowMonth;
       if (isToday || isTomorrow) {
-        alerts.push({ name: u.name, age: isToday ? age : age, isToday, isTomorrow, photo: u.photo });
+        // Idade que a pessoa completa no próprio dia do aniversário (hoje ou amanhã)
+        const refYear = isToday ? now.getFullYear() : tomorrowDate.getFullYear();
+        const age = refYear - birthYear;
+        alerts.push({ name: u.name, age, isToday, isTomorrow, photo: u.photo });
       }
     });
     return alerts;
