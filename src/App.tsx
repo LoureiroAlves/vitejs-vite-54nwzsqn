@@ -4303,7 +4303,6 @@ function ChatPage({ onBack }: { onBack: () => void }) {
   }, []);
 
   const avCor = (role: string) => role === "admin" ? "#3A5A70" : role === "enfermagem" ? "#1C7F7F" : role === "colaboradoras" ? "#B08A4E" : "#7E8A6B";
-  const tagCor = (role: string) => role === "admin" ? { bg: "#E8EEF5", c: "#3A5A70" } : role === "enfermagem" ? { bg: "#E1F5EE", c: "#1C7F7F" } : role === "colaboradoras" ? { bg: "#F0E8D5", c: "#B08A4E" } : { bg: "#ECEAE3", c: "#6B6358" };
   const horaDe = (iso: string) => { try { return new Date(iso).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
   const diaDe = (iso: string) => { try { return new Date(iso).toLocaleDateString("pt-PT"); } catch (e) { return ""; } };
 
@@ -4391,7 +4390,6 @@ function ChatPage({ onBack }: { onBack: () => void }) {
         )}
         {mensagens.map((m) => {
           const eu = m.autor_nome === (_appCurrentUserName || "—");
-          const tc = tagCor(m.autor_role);
           const dia = diaDe(m.created_at);
           const mostrarDia = dia !== ultimoDia;
           ultimoDia = dia;
