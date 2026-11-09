@@ -4343,7 +4343,7 @@ function ChatPage({ onBack }: { onBack: () => void }) {
   let ultimoDia = "";
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" as const, background: "#F3EFE7", animation: "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1) both" }}>
+    <div style={{ position: "fixed" as const, inset: 0, zIndex: 60, display: "flex", flexDirection: "column" as const, background: "#F3EFE7", animation: "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1) both" }}>
       {/* Topo */}
       <div style={{ background: "#2A241C", color: "#fff", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
         <button onClick={onBack} style={{ background: "transparent", border: "none", color: "#C9C1B4", fontSize: 24, cursor: "pointer", padding: 0, lineHeight: 1 }}>‹</button>
