@@ -1403,6 +1403,46 @@ function _novoUtenteId(name: string): string {
 
 function _roleLabelCurto(role: string): string { if (role === "admin") return "Administração"; if (role === "enfermagem") return "Enfermagem"; if (role === "colaboradoras") return "Colaboradoras"; if (role === "saidas") return "Saída Utentes"; return "Outro"; }
 function _autorAtual(): string { const r = _roleLabelCurto(_appCurrentUserRole); return _appCurrentUserName ? (_appCurrentUserName + " (" + r + ")") : r; }
+
+// ---------- Chat interno da equipa ----------
+const CHAT_CANAIS: { id: string; label: string; icon: string; cor: string; corTxt: string }[] = [
+  { id: "equipa", label: "Equipa", icon: "👥", cor: "#1E3A1E", corTxt: "#fff" },
+  { id: "enfermagem", label: "Enfermagem", icon: "🩺", cor: "#E1F5EE", corTxt: "#1C7F7F" },
+  { id: "colaboradoras", label: "Colaboradoras", icon: "🧹", cor: "#F0E8D5", corTxt: "#B08A4E" },
+];
+function _chatSeenKey(canal: string) { return "chat_seen_" + canal; }
+function _chatGetSeen(canal: string): string { try { return window.localStorage?.getItem?.(_chatSeenKey(canal)) || ""; } catch (e) { return ""; } }
+function _chatSetSeen(canal: string, iso: string) { try { window.localStorage?.setItem?.(_chatSeenKey(canal), iso); } catch (e) {} }
+async function chatFetchMensagens(canal: string): Promise<any[]> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/chat_mensagens?canal=eq.${encodeURIComponent(canal)}&order=created_at.asc&limit=300`, { headers: sbHeaders });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (e) { return []; }
+}
+async function chatEnviar(canal: string, texto: string): Promise<boolean> {
+  const row = {
+    id: Date.now().toString() + Math.random().toString(36).slice(2),
+    canal, autor_nome: _appCurrentUserName || "—", autor_role: _appCurrentUserRole || "",
+    texto, created_at: new Date().toISOString(),
+  };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/chat_mensagens`, { method: "POST", headers: sbHeaders, body: JSON.stringify(row) });
+    return res.ok;
+  } catch (e) { return false; }
+}
+// Conta não-lidas por canal (mensagens mais recentes do que a última vez que o canal foi aberto)
+async function chatNaoLidasPorCanal(): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  for (const c of CHAT_CANAIS) {
+    const seen = _chatGetSeen(c.id) || "1970-01-01T00:00:00Z";
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/chat_mensagens?canal=eq.${encodeURIComponent(c.id)}&created_at=gt.${encodeURIComponent(seen)}&select=id`, { headers: sbHeaders });
+      out[c.id] = res.ok ? ((await res.json()) || []).length : 0;
+    } catch (e) { out[c.id] = 0; }
+  }
+  return out;
+}
 function printDailyLogDay(utente: any, dateStr: string) {
   const esc = (s: any) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
   const logs = ((utente.dailyLogs || []) as any[]).filter((l) => l.date === dateStr);
@@ -4237,6 +4277,145 @@ function _printSaidasGeral(subtitulo: string, linhas: { utente: string; tipoLabe
   w.document.open(); w.document.write(html); w.document.close(); w.focus();
   setTimeout(() => w.print(), 300);
 }
+function ChatPage({ onBack }: { onBack: () => void }) {
+  const [canal, setCanal] = useState<string>("equipa");
+  const [mensagens, setMensagens] = useState<any[]>([]);
+  const [texto, setTexto] = useState("");
+  const [naoLidas, setNaoLidas] = useState<Record<string, number>>({});
+  const [aEnviar, setAEnviar] = useState(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const canalRef = useRef(canal);
+  canalRef.current = canal;
+
+  const avCor = (role: string) => role === "admin" ? "#3A5A70" : role === "enfermagem" ? "#1C7F7F" : role === "colaboradoras" ? "#B08A4E" : "#7E8A6B";
+  const tagCor = (role: string) => role === "admin" ? { bg: "#E8EEF5", c: "#3A5A70" } : role === "enfermagem" ? { bg: "#E1F5EE", c: "#1C7F7F" } : role === "colaboradoras" ? { bg: "#F0E8D5", c: "#B08A4E" } : { bg: "#ECEAE3", c: "#6B6358" };
+  const horaDe = (iso: string) => { try { return new Date(iso).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
+  const diaDe = (iso: string) => { try { return new Date(iso).toLocaleDateString("pt-PT"); } catch (e) { return ""; } };
+
+  const marcarLido = (lista: any[]) => {
+    if (lista.length) { _chatSetSeen(canalRef.current, lista[lista.length - 1].created_at); }
+    else { _chatSetSeen(canalRef.current, new Date().toISOString()); }
+  };
+
+  const carregar = async (scrollToEnd: boolean) => {
+    const lista = await chatFetchMensagens(canalRef.current);
+    setMensagens(lista);
+    marcarLido(lista);
+    setNaoLidas((prev) => ({ ...prev, [canalRef.current]: 0 }));
+    if (scrollToEnd) setTimeout(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, 50);
+  };
+
+  // Carregar ao mudar de canal
+  useEffect(() => { carregar(true); /* eslint-disable-next-line */ }, [canal]);
+
+  // Atualização quase-instantânea (a cada 2,5s) do canal aberto
+  useEffect(() => {
+    const t = setInterval(() => { carregar(true); }, 2500);
+    return () => clearInterval(t);
+    // eslint-disable-next-line
+  }, []);
+
+  // Contador de não-lidas dos outros canais (a cada 6s)
+  useEffect(() => {
+    const atualiza = () => chatNaoLidasPorCanal().then((m) => setNaoLidas({ ...m, [canalRef.current]: 0 }));
+    atualiza();
+    const t = setInterval(atualiza, 6000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line
+  }, []);
+
+  const enviar = async () => {
+    const t = texto.trim();
+    if (!t || aEnviar) return;
+    setAEnviar(true);
+    // Mostrar logo a mensagem (otimista)
+    const otim = { id: "tmp_" + Date.now(), canal: canalRef.current, autor_nome: _appCurrentUserName || "—", autor_role: _appCurrentUserRole || "", texto: t, created_at: new Date().toISOString(), _pendente: true };
+    setMensagens((prev) => [...prev, otim]);
+    setTexto("");
+    setTimeout(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, 30);
+    const ok = await chatEnviar(canalRef.current, t);
+    if (ok) { await carregar(true); }
+    else { setMensagens((prev) => prev.map((m) => m.id === otim.id ? { ...m, _falhou: true, _pendente: false } : m)); }
+    setAEnviar(false);
+  };
+
+  // Separadores de dia
+  let ultimoDia = "";
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" as const, background: "#F3EFE7", animation: "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1) both" }}>
+      {/* Topo */}
+      <div style={{ background: "#2A241C", color: "#fff", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+        <button onClick={onBack} style={{ background: "transparent", border: "none", color: "#C9C1B4", fontSize: 24, cursor: "pointer", padding: 0, lineHeight: 1 }}>‹</button>
+        <div style={{ width: 40, height: 40, borderRadius: 12, background: "#1E3A1E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19 }}>💬</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, lineHeight: 1.15 }}>Chat da Equipa</div>
+          <div style={{ fontSize: 11, color: "#8FBF8F", marginTop: 2 }}>{_appCurrentUserName || ""}{_appCurrentUserRole ? (" · " + _roleLabelCurto(_appCurrentUserRole)) : ""}</div>
+        </div>
+      </div>
+
+      {/* Abas de canais */}
+      <div style={{ display: "flex", gap: 7, padding: "10px 14px", background: "#EDE7DB", flexShrink: 0, overflowX: "auto" as const }}>
+        {CHAT_CANAIS.map((c) => {
+          const on = c.id === canal;
+          const n = naoLidas[c.id] || 0;
+          return (
+            <button key={c.id} onClick={() => setCanal(c.id)}
+              style={{ whiteSpace: "nowrap" as const, fontSize: 12, fontWeight: 600, padding: "7px 13px", borderRadius: 20, border: on ? "1px solid #1E3A1E" : "1px solid #DED6C6", background: on ? "#1E3A1E" : "#FBF9F5", color: on ? "#fff" : "#6B6358", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "'Inter', sans-serif" }}>
+              <span>{c.icon}</span>{c.label}
+              {n > 0 && !on && <span style={{ background: "#E26C5A", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 10, padding: "0 6px", minWidth: 16, textAlign: "center" as const }}>{n}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Mensagens */}
+      <div ref={scrollRef} style={{ flex: 1, overflowY: "auto" as const, padding: 14, display: "flex", flexDirection: "column" as const, gap: 12 }}>
+        {mensagens.length === 0 && (
+          <div style={{ textAlign: "center" as const, color: "#A39B8E", fontSize: 13, marginTop: 30 }}>Ainda não há mensagens neste canal.<br />Sê o primeiro a escrever 🙂</div>
+        )}
+        {mensagens.map((m) => {
+          const eu = m.autor_nome === (_appCurrentUserName || "—");
+          const tc = tagCor(m.autor_role);
+          const dia = diaDe(m.created_at);
+          const mostrarDia = dia !== ultimoDia;
+          ultimoDia = dia;
+          return (
+            <React.Fragment key={m.id}>
+              {mostrarDia && <div style={{ textAlign: "center" as const, fontSize: 10, color: "#A39B8E", fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.05em", margin: "2px 0" }}>{dia === diaDe(new Date().toISOString()) ? "Hoje" : dia}</div>}
+              <div style={{ display: "flex", gap: 9, maxWidth: "85%", alignSelf: eu ? "flex-end" : "flex-start", flexDirection: eu ? "row-reverse" as const : "row" as const }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, fontFamily: "'Space Grotesk', sans-serif", color: "#fff", background: avCor(m.autor_role) }}>{_iniciais(m.autor_nome)}</div>
+                <div style={{ background: eu ? "#DCEEDC" : "#fff", border: "1px solid " + (eu ? "#C4E2C4" : "#E7E0D3"), borderRadius: 14, borderTopLeftRadius: eu ? 14 : 4, borderTopRightRadius: eu ? 4 : 14, padding: "8px 11px", boxShadow: "0 1px 3px rgba(0,0,0,.05)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#2A241C", marginBottom: 2, display: "flex", alignItems: "center", gap: 6, justifyContent: eu ? "flex-end" as const : "flex-start" as const }}>
+                    {eu ? (_appCurrentUserName ? _appCurrentUserName + " (eu)" : "Eu") : m.autor_nome}
+                    <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 8, textTransform: "uppercase" as const, letterSpacing: "0.03em", background: tc.bg, color: tc.c }}>{_roleLabelCurto(m.autor_role)}</span>
+                  </div>
+                  <div style={{ fontSize: 13.5, color: "#2A241C", lineHeight: 1.35, whiteSpace: "pre-wrap" as const, wordBreak: "break-word" as const }}>{m.texto}</div>
+                  <div style={{ fontSize: 9.5, color: m._falhou ? "#C2554A" : "#A39B8E", marginTop: 3, textAlign: "right" as const }}>{m._pendente ? "a enviar…" : m._falhou ? "falhou — toque para tentar" : horaDe(m.created_at)}</div>
+                </div>
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      {/* Escrever */}
+      <div style={{ flexShrink: 0, background: "#EDE7DB", borderTop: "1px solid #DED6C6", padding: "10px 12px", display: "flex", alignItems: "flex-end", gap: 9 }}>
+        <textarea
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }}
+          placeholder="Escrever mensagem…"
+          rows={1}
+          style={{ flex: 1, background: "#fff", border: "1px solid #DED6C6", borderRadius: 18, padding: "10px 15px", fontSize: 13, color: "#2A241C", fontFamily: "'Inter', sans-serif", resize: "none" as const, outline: "none", maxHeight: 110, colorScheme: "light" as const }}
+        />
+        <button onClick={enviar} disabled={!texto.trim() || aEnviar}
+          style={{ width: 42, height: 42, borderRadius: "50%", background: texto.trim() ? "#1E3A1E" : "#B9B2A4", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, cursor: texto.trim() ? "pointer" : "default" }}>➤</button>
+      </div>
+    </div>
+  );
+}
+
 function SaidasPage({ onBack }: { onBack: () => void }) {
   const [utentes, setUtentes] = useState<Utente[]>(() => loadUtentesData()?.utentes ?? []);
   const _saidasReady = useRef(false);
@@ -6514,7 +6693,8 @@ export default function App() {
   const [changePassConfirm, setChangePassConfirm] = useState("");
 
   const today = new Date();
-  const [activePage, setActivePage] = useState<"home" | "schedule" | "stock" | "utentes" | "sugestoes" | "enfermagem" | "saidas">("home");
+  const [activePage, setActivePage] = useState<"home" | "schedule" | "stock" | "utentes" | "sugestoes" | "enfermagem" | "saidas" | "chat">("home");
+  const [chatNaoLidas, setChatNaoLidas] = useState(0);
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
@@ -8655,6 +8835,16 @@ export default function App() {
     return () => { alive = false; };
   }, [currentUser]);
 
+  // Contador de mensagens por ler do chat (atualiza a cada 10s)
+  useEffect(() => {
+    if (!currentUser) { setChatNaoLidas(0); return; }
+    let alive = true;
+    const atualiza = () => chatNaoLidasPorCanal().then((m) => { if (alive) setChatNaoLidas(Object.values(m).reduce((a: number, b: number) => a + b, 0)); }).catch(() => {});
+    atualiza();
+    const t = setInterval(atualiza, 10000);
+    return () => { alive = false; clearInterval(t); };
+  }, [currentUser, activePage]);
+
   const darEntradaResumo = (uid: string) => {
     const data = loadUtentesData() || { utentes: [] };
     const utentes: any[] = data.utentes || [];
@@ -8679,6 +8869,7 @@ export default function App() {
   const isSugestoesPage = (activePage as string) === "sugestoes";
   const isEnfermagemPage = (activePage as string) === "enfermagem";
   const isSaidasPage = (activePage as string) === "saidas";
+  const isChatPage = (activePage as string) === "chat";
 
   // Dia de hoje neste mês/ano (null se estamos a ver outro mês)
   const todayDay = today.getFullYear() === year && today.getMonth() === month
@@ -9531,6 +9722,24 @@ export default function App() {
                 <div style={{ width: 40, height: 4, borderRadius: 2, background: "#1F4D2E" }} />
               </button>
               )}
+
+              {currentUser && (
+              <button onClick={() => setActivePage("chat")} className="home-btn"
+                style={{ background: "#FFFFFF", border: "2px solid rgba(255,255,255,0.2)", borderRadius: 22, padding: "22px 14px", cursor: "pointer", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, minHeight: 142, width: 158, flex: "0 0 158px", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 20px rgba(0,0,0,0.3)", position: "relative" as const }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08) translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(126,87,194,0.5)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)"; }}>
+                {chatNaoLidas > 0 && (
+                  <span style={{ position: "absolute" as const, top: 12, right: 12, background: "#E26C5A", color: "#fff", fontSize: 12, fontWeight: 800, borderRadius: 14, minWidth: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 7px", boxShadow: "0 2px 8px rgba(226,108,90,0.5)", fontFamily: "'Space Grotesk', sans-serif" }}>{chatNaoLidas > 99 ? "99+" : chatNaoLidas}</span>
+                )}
+                <div className="home-btn-icon" style={{ width: 50, height: 50, borderRadius: 15, background: "#EDE7F6", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 22 }}>💬</span>
+                </div>
+                <div className="home-btn-label" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: "#2A241C", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                  Chat
+                </div>
+                <div style={{ width: 40, height: 4, borderRadius: 2, background: "#7E57C2" }} />
+              </button>
+              )}
             </div>
           </div>
         </div>
@@ -9569,6 +9778,11 @@ export default function App() {
       {isSaidasPage && (
         <div className="page-enter" style={{ background: "#EFE7D4" }}>
           <SaidasPage key={"saidas-" + syncDone} onBack={() => navigateHome()} />
+        </div>
+      )}
+      {isChatPage && (
+        <div className="page-enter" style={{ background: "#F3EFE7" }}>
+          <ChatPage onBack={() => navigateHome()} />
         </div>
       )}
       {isEnfermagemPage && (
