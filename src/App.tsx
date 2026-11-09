@@ -4283,9 +4283,24 @@ function ChatPage({ onBack }: { onBack: () => void }) {
   const [texto, setTexto] = useState("");
   const [naoLidas, setNaoLidas] = useState<Record<string, number>>({});
   const [aEnviar, setAEnviar] = useState(false);
+  const [vp, setVp] = useState<{ h: number; top: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const canalRef = useRef(canal);
   canalRef.current = canal;
+
+  // Ajustar o ecrã à área visível quando o teclado do telemóvel abre (fica acima do teclado)
+  useEffect(() => {
+    const vv = (window as any).visualViewport;
+    if (!vv) return;
+    const update = () => {
+      setVp({ h: vv.height, top: vv.offsetTop || 0 });
+      setTimeout(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, 30);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => { vv.removeEventListener("resize", update); vv.removeEventListener("scroll", update); };
+  }, []);
 
   const avCor = (role: string) => role === "admin" ? "#3A5A70" : role === "enfermagem" ? "#1C7F7F" : role === "colaboradoras" ? "#B08A4E" : "#7E8A6B";
   const tagCor = (role: string) => role === "admin" ? { bg: "#E8EEF5", c: "#3A5A70" } : role === "enfermagem" ? { bg: "#E1F5EE", c: "#1C7F7F" } : role === "colaboradoras" ? { bg: "#F0E8D5", c: "#B08A4E" } : { bg: "#ECEAE3", c: "#6B6358" };
@@ -4343,7 +4358,7 @@ function ChatPage({ onBack }: { onBack: () => void }) {
   let ultimoDia = "";
 
   return (
-    <div style={{ position: "fixed" as const, inset: 0, zIndex: 60, display: "flex", flexDirection: "column" as const, background: "#F3EFE7", animation: "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1) both" }}>
+    <div style={{ position: "fixed" as const, left: 0, width: "100%", top: vp ? vp.top : 0, height: vp ? vp.h : "100%", bottom: vp ? undefined : 0, zIndex: 60, display: "flex", flexDirection: "column" as const, background: "#F3EFE7", animation: "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1) both" }}>
       {/* Topo */}
       <div style={{ background: "#2A241C", color: "#fff", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
         <button onClick={onBack} style={{ background: "transparent", border: "none", color: "#C9C1B4", fontSize: 24, cursor: "pointer", padding: 0, lineHeight: 1 }}>‹</button>
@@ -4388,7 +4403,6 @@ function ChatPage({ onBack }: { onBack: () => void }) {
                 <div style={{ background: eu ? "#DCEEDC" : "#fff", border: "1px solid " + (eu ? "#C4E2C4" : "#E7E0D3"), borderRadius: 14, borderTopLeftRadius: eu ? 14 : 4, borderTopRightRadius: eu ? 4 : 14, padding: "8px 11px", boxShadow: "0 1px 3px rgba(0,0,0,.05)" }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#2A241C", marginBottom: 2, display: "flex", alignItems: "center", gap: 6, justifyContent: eu ? "flex-end" as const : "flex-start" as const }}>
                     {eu ? (_appCurrentUserName ? _appCurrentUserName + " (eu)" : "Eu") : m.autor_nome}
-                    <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 8, textTransform: "uppercase" as const, letterSpacing: "0.03em", background: tc.bg, color: tc.c }}>{_roleLabelCurto(m.autor_role)}</span>
                   </div>
                   <div style={{ fontSize: 13.5, color: "#2A241C", lineHeight: 1.35, whiteSpace: "pre-wrap" as const, wordBreak: "break-word" as const }}>{m.texto}</div>
                   <div style={{ fontSize: 9.5, color: m._falhou ? "#C2554A" : "#A39B8E", marginTop: 3, textAlign: "right" as const }}>{m._pendente ? "a enviar…" : m._falhou ? "falhou — toque para tentar" : horaDe(m.created_at)}</div>
@@ -4407,7 +4421,7 @@ function ChatPage({ onBack }: { onBack: () => void }) {
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }}
           placeholder="Escrever mensagem…"
           rows={1}
-          style={{ flex: 1, background: "#fff", border: "1px solid #DED6C6", borderRadius: 18, padding: "10px 15px", fontSize: 13, color: "#2A241C", fontFamily: "'Inter', sans-serif", resize: "none" as const, outline: "none", maxHeight: 110, colorScheme: "light" as const }}
+          style={{ flex: 1, minWidth: 0, background: "#fff", border: "1px solid #DED6C6", borderRadius: 18, padding: "10px 15px", fontSize: 16, color: "#2A241C", fontFamily: "'Inter', sans-serif", resize: "none" as const, outline: "none", maxHeight: 110, colorScheme: "light" as const }}
         />
         <button onClick={enviar} disabled={!texto.trim() || aEnviar}
           style={{ width: 42, height: 42, borderRadius: "50%", background: texto.trim() ? "#1E3A1E" : "#B9B2A4", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, cursor: texto.trim() ? "pointer" : "default" }}>➤</button>
