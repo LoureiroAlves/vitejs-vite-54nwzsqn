@@ -4283,21 +4283,9 @@ function ChatPage({ onBack }: { onBack: () => void }) {
   const [texto, setTexto] = useState("");
   const [naoLidas, setNaoLidas] = useState<Record<string, number>>({});
   const [aEnviar, setAEnviar] = useState(false);
-  const [vp, setVp] = useState<{ h: number; top: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const canalRef = useRef(canal);
   canalRef.current = canal;
-
-  // Ajustar o ecrã à área visível quando o teclado do telemóvel abre (fica acima do teclado)
-  useEffect(() => {
-    const vv = (window as any).visualViewport;
-    if (!vv) return;
-    // Só reage a abrir/fechar o teclado (resize), não a cada gesto de scroll
-    const update = () => { setVp({ h: vv.height, top: vv.offsetTop || 0 }); };
-    update();
-    vv.addEventListener("resize", update);
-    return () => { vv.removeEventListener("resize", update); };
-  }, []);
 
   const avCor = (role: string) => role === "admin" ? "#3A5A70" : role === "enfermagem" ? "#1C7F7F" : role === "colaboradoras" ? "#B08A4E" : "#7E8A6B";
   const horaDe = (iso: string) => { try { return new Date(iso).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
@@ -4358,7 +4346,7 @@ function ChatPage({ onBack }: { onBack: () => void }) {
   let ultimoDia = "";
 
   return (
-    <div style={{ position: "fixed" as const, left: 0, width: "100%", top: vp ? vp.top : 0, height: vp ? vp.h : "100%", bottom: vp ? undefined : 0, zIndex: 60, display: "flex", flexDirection: "column" as const, background: "#F3EFE7", animation: "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1) both" }}>
+    <div style={{ position: "fixed" as const, inset: 0, zIndex: 60, display: "flex", flexDirection: "column" as const, background: "#F3EFE7", animation: "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1) both" }}>
       {/* Topo */}
       <div style={{ background: "#2A241C", color: "#fff", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
         <button onClick={onBack} style={{ background: "transparent", border: "none", color: "#C9C1B4", fontSize: 24, cursor: "pointer", padding: 0, lineHeight: 1 }}>‹</button>
