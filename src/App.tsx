@@ -4292,14 +4292,11 @@ function ChatPage({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     const vv = (window as any).visualViewport;
     if (!vv) return;
-    const update = () => {
-      setVp({ h: vv.height, top: vv.offsetTop || 0 });
-      setTimeout(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, 30);
-    };
+    // Só reage a abrir/fechar o teclado (resize), não a cada gesto de scroll
+    const update = () => { setVp({ h: vv.height, top: vv.offsetTop || 0 }); };
     update();
     vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-    return () => { vv.removeEventListener("resize", update); vv.removeEventListener("scroll", update); };
+    return () => { vv.removeEventListener("resize", update); };
   }, []);
 
   const avCor = (role: string) => role === "admin" ? "#3A5A70" : role === "enfermagem" ? "#1C7F7F" : role === "colaboradoras" ? "#B08A4E" : "#7E8A6B";
@@ -4311,12 +4308,16 @@ function ChatPage({ onBack }: { onBack: () => void }) {
     else { _chatSetSeen(canalRef.current, new Date().toISOString()); }
   };
 
-  const carregar = async (scrollToEnd: boolean) => {
+  const irAoFundo = () => { setTimeout(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, 50); };
+  const carregar = async (forcar: boolean) => {
+    // Só salta para o fundo se o utilizador já lá estava (ou se forçado) — não interrompe a leitura
+    const el = scrollRef.current;
+    const pertoDoFundo = el ? (el.scrollHeight - el.scrollTop - el.clientHeight < 90) : true;
     const lista = await chatFetchMensagens(canalRef.current);
     setMensagens(lista);
     marcarLido(lista);
     setNaoLidas((prev) => ({ ...prev, [canalRef.current]: 0 }));
-    if (scrollToEnd) setTimeout(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, 50);
+    if (forcar || pertoDoFundo) irAoFundo();
   };
 
   // Carregar ao mudar de canal
@@ -4324,7 +4325,7 @@ function ChatPage({ onBack }: { onBack: () => void }) {
 
   // Atualização quase-instantânea (a cada 2,5s) do canal aberto
   useEffect(() => {
-    const t = setInterval(() => { carregar(true); }, 2500);
+    const t = setInterval(() => { carregar(false); }, 2500);
     return () => clearInterval(t);
     // eslint-disable-next-line
   }, []);
@@ -4384,7 +4385,7 @@ function ChatPage({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Mensagens */}
-      <div ref={scrollRef} style={{ flex: 1, overflowY: "auto" as const, padding: 14, display: "flex", flexDirection: "column" as const, gap: 12 }}>
+      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto" as const, WebkitOverflowScrolling: "touch" as const, padding: 14, display: "flex", flexDirection: "column" as const, gap: 12 }}>
         {mensagens.length === 0 && (
           <div style={{ textAlign: "center" as const, color: "#A39B8E", fontSize: 13, marginTop: 30 }}>Ainda não há mensagens neste canal.<br />Sê o primeiro a escrever 🙂</div>
         )}
