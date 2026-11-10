@@ -41,7 +41,8 @@ function presign(method, key, expires) {
   };
   const canonicalQuery = Object.keys(q).sort().map((k) => `${enc(k)}=${enc(q[k])}`).join("&");
   const canonicalHeaders = `host:${host}\n`;
-  const canonicalRequest = [method, canonicalUri, canonicalQuery, canonicalHeaders, "host", "UNSIGNED-PAYLOAD"].join("\n");
+  const emptyHash = sha256hex(""); // para URLs assinados, usa-se o hash do corpo vazio
+  const canonicalRequest = [method, canonicalUri, canonicalQuery, canonicalHeaders, "host", emptyHash].join("\n");
   const stringToSign = ["AWS4-HMAC-SHA256", amzDate, scope, sha256hex(canonicalRequest)].join("\n");
   const kDate = hmac("AWS4" + SECRET_KEY, dateStamp);
   const kRegion = hmac(kDate, REGION);
