@@ -97,7 +97,13 @@ export default async function handler(req, res) {
         headers: { "Content-Type": String(b.contentType || "application/octet-stream") },
         body: bytes,
       });
-      if (!r.ok) return send(res, 500, { error: "falha ao guardar (" + r.status + ")" });
+      if (!r.ok) {
+        let det = "";
+        try { det = await r.text(); } catch (e3) {}
+        const code = (det.match(/<Code>([^<]+)<\/Code>/) || [])[1] || "";
+        const host = (() => { try { return new URL(ENDPOINT).host; } catch (e4) { return "?"; } })();
+        return send(res, 500, { error: "R2 " + r.status + (code ? " " + code : "") + " | host=" + host + " bucket=" + BUCKET });
+      }
       return send(res, 200, { ok: true, key });
     }
 
