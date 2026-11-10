@@ -1443,10 +1443,12 @@ function _blobToBase64(blob: Blob): Promise<string> {
   });
 }
 // Envia um anexo para o R2 (via função /api/api/r2). Comprime imagens antes.
+let _chatUploadErro = "";
 async function chatUploadAnexo(canal: string, file: File): Promise<ChatAnexo | null> {
+  _chatUploadErro = "";
   try {
     const tok = (_authSession && _authSession.access_token) || "";
-    if (!tok) return null;
+    if (!tok) { _chatUploadErro = "sem sessão (faça login outra vez)"; return null; }
     let blob: Blob = file;
     let tipo = file.type || "application/octet-stream";
     if (tipo.indexOf("image/") === 0) {
@@ -1461,9 +1463,14 @@ async function chatUploadAnexo(canal: string, file: File): Promise<ChatAnexo | n
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
       body: JSON.stringify({ key, contentType: tipo, dataBase64 }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      let det = "erro " + res.status;
+      try { const d = await res.json(); if (d && d.error) det = d.error; } catch (e2) {}
+      _chatUploadErro = det;
+      return null;
+    }
     return { key, nome: file.name || "ficheiro", tipo };
-  } catch (e) { return null; }
+  } catch (e) { _chatUploadErro = String(e); return null; }
 }
 // Link temporário para ver um anexo (com cache, porque o link é válido 1h)
 const _anexoUrlCache: Record<string, { url: string; exp: number }> = {};
@@ -4375,7 +4382,7 @@ function ChatPage({ onBack }: { onBack: () => void }) {
     const a = await chatUploadAnexo(canalRef.current, file);
     setAAnexar(false);
     if (a) setAnexo(a);
-    else alert("Não foi possível anexar o ficheiro. Tenta novamente.");
+    else alert("Não foi possível anexar: " + (_chatUploadErro || "erro desconhecido"));
   };
 
   const avCor = (role: string) => role === "admin" ? "#3A5A70" : role === "enfermagem" ? "#1C7F7F" : role === "colaboradoras" ? "#B08A4E" : "#7E8A6B";
