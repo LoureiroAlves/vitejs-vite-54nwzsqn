@@ -12,10 +12,10 @@ const SUPABASE_URL = process.env.SUPABASE_URL || "https://kfbuvbtdsfrkzrcrwifs.s
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 // Lê as variáveis aceitando maiúsculas ou a forma com que foram guardadas
-const ACCESS_KEY = process.env.R2_ACCESS_KEY_ID || process.env.R2_Access_Key_ID || "";
-const SECRET_KEY = process.env.R2_SECRET_ACCESS_KEY || process.env.R2_Secret_Access_Key || "";
-const ENDPOINT = process.env.R2_ENDPOINT || "";
-const BUCKET = process.env.R2_BUCKET || "";
+const ACCESS_KEY = (process.env.R2_ACCESS_KEY_ID || process.env.R2_Access_Key_ID || "").trim();
+const SECRET_KEY = (process.env.R2_SECRET_ACCESS_KEY || process.env.R2_Secret_Access_Key || "").trim();
+const ENDPOINT = (process.env.R2_ENDPOINT || "").trim();
+const BUCKET = (process.env.R2_BUCKET || "").trim();
 const REGION = "auto";
 
 function hmac(key, str) { return crypto.createHmac("sha256", key).update(str, "utf8").digest(); }
@@ -34,6 +34,7 @@ function presign(method, key, expires) {
   const canonicalUri = `/${BUCKET}/${encPath(key)}`;
   const q = {
     "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
+    "X-Amz-Content-Sha256": "UNSIGNED-PAYLOAD",
     "X-Amz-Credential": `${ACCESS_KEY}/${scope}`,
     "X-Amz-Date": amzDate,
     "X-Amz-Expires": String(expires),
@@ -41,8 +42,7 @@ function presign(method, key, expires) {
   };
   const canonicalQuery = Object.keys(q).sort().map((k) => `${enc(k)}=${enc(q[k])}`).join("&");
   const canonicalHeaders = `host:${host}\n`;
-  const emptyHash = sha256hex(""); // para URLs assinados, usa-se o hash do corpo vazio
-  const canonicalRequest = [method, canonicalUri, canonicalQuery, canonicalHeaders, "host", emptyHash].join("\n");
+  const canonicalRequest = [method, canonicalUri, canonicalQuery, canonicalHeaders, "host", "UNSIGNED-PAYLOAD"].join("\n");
   const stringToSign = ["AWS4-HMAC-SHA256", amzDate, scope, sha256hex(canonicalRequest)].join("\n");
   const kDate = hmac("AWS4" + SECRET_KEY, dateStamp);
   const kRegion = hmac(kDate, REGION);
