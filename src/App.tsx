@@ -1420,16 +1420,64 @@ async function chatFetchMensagens(canal: string): Promise<any[]> {
     return await res.json();
   } catch (e) { return []; }
 }
-async function chatEnviar(canal: string, texto: string): Promise<boolean> {
-  const row = {
+interface ChatAnexo { key: string; nome: string; tipo: string }
+async function chatEnviar(canal: string, texto: string, anexo?: ChatAnexo | null): Promise<boolean> {
+  const row: any = {
     id: Date.now().toString() + Math.random().toString(36).slice(2),
     canal, autor_nome: _appCurrentUserName || "—", autor_role: _appCurrentUserRole || "",
     texto, created_at: new Date().toISOString(),
   };
+  if (anexo) { row.anexo_key = anexo.key; row.anexo_nome = anexo.nome; row.anexo_tipo = anexo.tipo; }
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/chat_mensagens`, { method: "POST", headers: sbHeaders, body: JSON.stringify(row) });
     return res.ok;
   } catch (e) { return false; }
+}
+// Converte um ficheiro em base64 (sem o prefixo data:)
+function _blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => { const s = String(r.result || ""); const i = s.indexOf(","); resolve(i >= 0 ? s.slice(i + 1) : s); };
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+// Envia um anexo para o R2 (via função /api/api/r2). Comprime imagens antes.
+async function chatUploadAnexo(canal: string, file: File): Promise<ChatAnexo | null> {
+  try {
+    const tok = (_authSession && _authSession.access_token) || "";
+    if (!tok) return null;
+    let blob: Blob = file;
+    let tipo = file.type || "application/octet-stream";
+    if (tipo.indexOf("image/") === 0) {
+      const c = await _compressImage(file);
+      if (c) { blob = c; tipo = "image/jpeg"; }
+    }
+    const ext = tipo === "image/jpeg" ? "jpg" : ((file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "bin");
+    const key = `chat/${canal}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const dataBase64 = await _blobToBase64(blob);
+    const res = await fetch("/api/api/r2?op=put&key=" + encodeURIComponent(key), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
+      body: JSON.stringify({ key, contentType: tipo, dataBase64 }),
+    });
+    if (!res.ok) return null;
+    return { key, nome: file.name || "ficheiro", tipo };
+  } catch (e) { return null; }
+}
+// Link temporário para ver um anexo (com cache, porque o link é válido 1h)
+const _anexoUrlCache: Record<string, { url: string; exp: number }> = {};
+async function chatGetAnexoUrl(key: string): Promise<string | null> {
+  const cached = _anexoUrlCache[key];
+  if (cached && cached.exp > Date.now()) return cached.url;
+  try {
+    const tok = (_authSession && _authSession.access_token) || "";
+    const res = await fetch("/api/api/r2?op=get&key=" + encodeURIComponent(key), { headers: { Authorization: "Bearer " + tok } });
+    if (!res.ok) return null;
+    const d = await res.json();
+    if (d && d.url) { _anexoUrlCache[key] = { url: d.url, exp: Date.now() + 50 * 60 * 1000 }; return d.url; }
+    return null;
+  } catch (e) { return null; }
 }
 // Conta não-lidas por canal (mensagens mais recentes do que a última vez que o canal foi aberto)
 async function chatNaoLidasPorCanal(): Promise<Record<string, number>> {
@@ -4277,15 +4325,58 @@ function _printSaidasGeral(subtitulo: string, linhas: { utente: string; tipoLabe
   w.document.open(); w.document.write(html); w.document.close(); w.focus();
   setTimeout(() => w.print(), 300);
 }
+function ChatAnexoView({ anexoKey, nome, tipo }: { anexoKey: string; nome: string; tipo: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const ehImagem = (tipo || "").indexOf("image/") === 0;
+  useEffect(() => {
+    let alive = true;
+    chatGetAnexoUrl(anexoKey).then((u) => { if (alive) setUrl(u); });
+    return () => { alive = false; };
+  }, [anexoKey]);
+  if (ehImagem) {
+    return (
+      <a href={url || undefined} target="_blank" rel="noreferrer" style={{ display: "block", marginTop: 6 }}>
+        {url
+          ? <img src={url} alt={nome} style={{ maxWidth: "100%", maxHeight: 240, borderRadius: 10, display: "block" }} />
+          : <div style={{ width: 180, height: 120, borderRadius: 10, background: "#EEE9DF", display: "flex", alignItems: "center", justifyContent: "center", color: "#A39B8E", fontSize: 12 }}>a carregar imagem…</div>}
+      </a>
+    );
+  }
+  return (
+    <a href={url || undefined} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, padding: "8px 10px", background: "#F4F0E8", border: "1px solid #E4DED3", borderRadius: 10, textDecoration: "none", color: "#2A241C", fontSize: 12.5, fontWeight: 600 }}>
+      <span style={{ fontSize: 16 }}>📎</span>
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{nome || "ficheiro"}</span>
+    </a>
+  );
+}
+
 function ChatPage({ onBack }: { onBack: () => void }) {
   const [canal, setCanal] = useState<string>("equipa");
   const [mensagens, setMensagens] = useState<any[]>([]);
   const [texto, setTexto] = useState("");
   const [naoLidas, setNaoLidas] = useState<Record<string, number>>({});
   const [aEnviar, setAEnviar] = useState(false);
+  const [anexo, setAnexo] = useState<ChatAnexo | null>(null);
+  const [aAnexar, setAAnexar] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
   const canalRef = useRef(canal);
   canalRef.current = canal;
+
+  const onFicheiro = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    if ((file.type || "").indexOf("image/") !== 0 && file.size > 3 * 1024 * 1024) {
+      alert("Ficheiro demasiado grande (máximo ~3 MB para documentos). As fotos são comprimidas automaticamente.");
+      return;
+    }
+    setAAnexar(true);
+    const a = await chatUploadAnexo(canalRef.current, file);
+    setAAnexar(false);
+    if (a) setAnexo(a);
+    else alert("Não foi possível anexar o ficheiro. Tenta novamente.");
+  };
 
   const avCor = (role: string) => role === "admin" ? "#3A5A70" : role === "enfermagem" ? "#1C7F7F" : role === "colaboradoras" ? "#B08A4E" : "#7E8A6B";
   const horaDe = (iso: string) => { try { return new Date(iso).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
@@ -4329,14 +4420,17 @@ function ChatPage({ onBack }: { onBack: () => void }) {
 
   const enviar = async () => {
     const t = texto.trim();
-    if (!t || aEnviar) return;
+    if ((!t && !anexo) || aEnviar) return;
     setAEnviar(true);
+    const ax = anexo;
     // Mostrar logo a mensagem (otimista)
-    const otim = { id: "tmp_" + Date.now(), canal: canalRef.current, autor_nome: _appCurrentUserName || "—", autor_role: _appCurrentUserRole || "", texto: t, created_at: new Date().toISOString(), _pendente: true };
+    const otim: any = { id: "tmp_" + Date.now(), canal: canalRef.current, autor_nome: _appCurrentUserName || "—", autor_role: _appCurrentUserRole || "", texto: t, created_at: new Date().toISOString(), _pendente: true };
+    if (ax) { otim.anexo_key = ax.key; otim.anexo_nome = ax.nome; otim.anexo_tipo = ax.tipo; }
     setMensagens((prev) => [...prev, otim]);
     setTexto("");
+    setAnexo(null);
     setTimeout(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, 30);
-    const ok = await chatEnviar(canalRef.current, t);
+    const ok = await chatEnviar(canalRef.current, t, ax);
     if (ok) { await carregar(true); }
     else { setMensagens((prev) => prev.map((m) => m.id === otim.id ? { ...m, _falhou: true, _pendente: false } : m)); }
     setAEnviar(false);
@@ -4391,7 +4485,8 @@ function ChatPage({ onBack }: { onBack: () => void }) {
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#2A241C", marginBottom: 2, display: "flex", alignItems: "center", gap: 6, justifyContent: eu ? "flex-end" as const : "flex-start" as const }}>
                     {eu ? (_appCurrentUserName ? _appCurrentUserName + " (eu)" : "Eu") : m.autor_nome}
                   </div>
-                  <div style={{ fontSize: 13.5, color: "#2A241C", lineHeight: 1.35, whiteSpace: "pre-wrap" as const, wordBreak: "break-word" as const }}>{m.texto}</div>
+                  {m.texto ? <div style={{ fontSize: 13.5, color: "#2A241C", lineHeight: 1.35, whiteSpace: "pre-wrap" as const, wordBreak: "break-word" as const }}>{m.texto}</div> : null}
+                  {m.anexo_key ? <ChatAnexoView anexoKey={m.anexo_key} nome={m.anexo_nome} tipo={m.anexo_tipo} /> : null}
                   <div style={{ fontSize: 9.5, color: m._falhou ? "#C2554A" : "#A39B8E", marginTop: 3, textAlign: "right" as const }}>{m._pendente ? "a enviar…" : m._falhou ? "falhou — toque para tentar" : horaDe(m.created_at)}</div>
                 </div>
               </div>
@@ -4401,17 +4496,29 @@ function ChatPage({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Escrever */}
-      <div style={{ flexShrink: 0, background: "#EDE7DB", borderTop: "1px solid #DED6C6", padding: "10px 12px", display: "flex", alignItems: "flex-end", gap: 9 }}>
-        <textarea
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }}
-          placeholder="Escrever mensagem…"
-          rows={1}
-          style={{ flex: 1, minWidth: 0, background: "#fff", border: "1px solid #DED6C6", borderRadius: 18, padding: "10px 15px", fontSize: 16, color: "#2A241C", fontFamily: "'Inter', sans-serif", resize: "none" as const, outline: "none", maxHeight: 110, colorScheme: "light" as const }}
-        />
-        <button onClick={enviar} disabled={!texto.trim() || aEnviar}
-          style={{ width: 42, height: 42, borderRadius: "50%", background: texto.trim() ? "#1E3A1E" : "#B9B2A4", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, cursor: texto.trim() ? "pointer" : "default" }}>➤</button>
+      <div style={{ flexShrink: 0, background: "#EDE7DB", borderTop: "1px solid #DED6C6", padding: "10px 12px" }}>
+        {(anexo || aAnexar) && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, background: "#fff", border: "1px solid #DED6C6", borderRadius: 10, padding: "6px 10px", fontSize: 12.5, color: "#2A241C" }}>
+            <span style={{ fontSize: 15 }}>📎</span>
+            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const, fontWeight: 600 }}>{aAnexar ? "A anexar…" : (anexo ? anexo.nome : "")}</span>
+            {anexo && !aAnexar && <button onClick={() => setAnexo(null)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#A39B8E", fontSize: 16, lineHeight: 1 }}>✕</button>}
+          </div>
+        )}
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 9 }}>
+          <input ref={fileRef} type="file" onChange={onFicheiro} style={{ display: "none" }} />
+          <button onClick={() => fileRef.current && fileRef.current.click()} disabled={aAnexar} title="Anexar ficheiro ou foto"
+            style={{ width: 42, height: 42, borderRadius: "50%", background: "#fff", border: "1px solid #DED6C6", color: "#6B6358", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, flexShrink: 0, cursor: aAnexar ? "default" : "pointer" }}>📎</button>
+          <textarea
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }}
+            placeholder="Escrever mensagem…"
+            rows={1}
+            style={{ flex: 1, minWidth: 0, background: "#fff", border: "1px solid #DED6C6", borderRadius: 18, padding: "10px 15px", fontSize: 16, color: "#2A241C", fontFamily: "'Inter', sans-serif", resize: "none" as const, outline: "none", maxHeight: 110, colorScheme: "light" as const }}
+          />
+          <button onClick={enviar} disabled={(!texto.trim() && !anexo) || aEnviar}
+            style={{ width: 42, height: 42, borderRadius: "50%", background: (texto.trim() || anexo) ? "#1E3A1E" : "#B9B2A4", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, cursor: (texto.trim() || anexo) ? "pointer" : "default" }}>➤</button>
+        </div>
       </div>
     </div>
   );
