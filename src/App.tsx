@@ -2441,7 +2441,7 @@ function UtentesPage({ onBack, onGerarERPI }: { onBack: () => void; onGerarERPI:
 
     const saidasRows: any[][] = [];
     lista.forEach((u) => (u.saidas || []).forEach((sx: any) => {
-      const estado = sx.regressado && sx.dataRegresso ? ("Regressou " + sx.dataRegresso + (sx.horaRegresso ? " " + sx.horaRegresso : "")) : (sx.fim ? ((sx.regressoAuto ? "Regresso automático " : "Regresso previsto ") + sx.fim) : "Fora (sem data de regresso)");
+      const estado = sx.encerrada ? ("Óbito " + (sx.dataEncerrada || "") + (sx.motivoEncerrada ? " — " + sx.motivoEncerrada : "")) : (sx.regressado && sx.dataRegresso ? ("Regressou " + sx.dataRegresso + (sx.horaRegresso ? " " + sx.horaRegresso : "")) : (sx.fim ? ((sx.regressoAuto ? "Regresso automático " : "Regresso previsto ") + sx.fim) : "Fora (sem data de regresso)"));
       saidasRows.push([u.name, u.id, tipoLabel(sx.tipo), (sx.inicio || "") + (sx.horaInicio ? " " + sx.horaInicio : ""), (sx.dataRegresso || sx.fim || "") + (sx.horaRegresso ? " " + sx.horaRegresso : ""), estado, sx.notas || "", sx.autorSaida || "", sx.autorRegresso || ""]);
     }));
     const abaSaidas = folha("Saídas", ["Utente", "Nº", "Tipo de saída", "Saída", "Regresso", "Estado", "Notas", "Registou saída", "Registou entrada"], saidasRows);
@@ -4293,6 +4293,7 @@ function handleImprimirFolhaRosto(u: Utente) {
 
 interface Saida {
   id: string; tipo: string; inicio: string; fim?: string; regressoAuto: boolean; regressado?: boolean; dataRegresso?: string; notas?: string; horaInicio?: string; horaRegresso?: string; autorSaida?: string; autorRegresso?: string;
+  encerrada?: boolean; dataEncerrada?: string; motivoEncerrada?: string; autorEncerramento?: string;
 }
 const SAIDA_TIPOS_BASE: { id: string; label: string; cor: string; corTexto: string }[] = [
   { id: "familiares", label: "Saída com familiares", cor: "#E8B14A", corTexto: "#5A3E0A" },
@@ -4554,7 +4555,9 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
   const [search, setSearch] = useState("");
   useEffect(() => { if (!selId && utentes.length) setSelId(utentes[0].id); }, [utentes, selId]);
   const selUtente = utentes.find((u) => u.id === selId) || null;
-  const [sheet, setSheet] = useState<{ mode: "ver" | "novo" | "editar"; saidaId?: string } | null>(null);
+  const [sheet, setSheet] = useState<{ mode: "ver" | "novo" | "editar" | "obito"; saidaId?: string } | null>(null);
+  const [fObData, setFObData] = useState("");
+  const [fObNota, setFObNota] = useState("");
   const [fTipo, setFTipo] = useState("familiares");
   const [fInicio, setFInicio] = useState("");
   const [fFim, setFFim] = useState("");
@@ -4572,22 +4575,23 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
   const saidasDe = (u: Utente | null): Saida[] => ((u && (u as any).saidas) ? (u as any).saidas : []);
   const updateSaidas = (fn: (prev: Saida[]) => Saida[]) => { if (!selId) return; setUtentes((prev) => prev.map((u) => u.id === selId ? ({ ...u, saidas: fn(saidasDe(u)) } as Utente) : u)); };
   const appendLog = (texto: string) => { if (!selId) return; setUtentes((prev) => prev.map((u) => { if (u.id !== selId) return u; const nova = { id: Date.now().toString() + Math.random().toString(36).slice(2), date: todayStr, time: new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" }), author: _appCurrentUserName || "", text: texto }; return { ...u, dailyLogs: [nova, ...(u.dailyLogs || [])] }; })); };
-  const effEnd = (s: Saida): number => s.regressado && s.dataRegresso ? _saidaDnum(s.dataRegresso) : (s.fim ? _saidaDnum(s.fim) : Math.max(_saidaDnum(s.inicio), todayNum));
+  const effEnd = (s: Saida): number => s.encerrada && s.dataEncerrada ? _saidaDnum(s.dataEncerrada) : (s.regressado && s.dataRegresso ? _saidaDnum(s.dataRegresso) : (s.fim ? _saidaDnum(s.fim) : Math.max(_saidaDnum(s.inicio), todayNum)));
   const saidaNoDia = (u: Utente | null, dnum: number): Saida | null => { const arr = saidasDe(u); for (let i = 0; i < arr.length; i++) { const s = arr[i]; const start = _saidaDnum(s.inicio); if (start && dnum >= start && dnum <= effEnd(s)) return s; } return null; };
-  const isAberta = (s: Saida): boolean => !(s.regressado || (s.regressoAuto && !!s.fim && _saidaDnum(s.fim) < todayNum));
+  const isAberta = (s: Saida): boolean => !(s.regressado || s.encerrada || (s.regressoAuto && !!s.fim && _saidaDnum(s.fim) < todayNum));
   const saidaAberta = (): Saida | null => saidasDe(selUtente).find(isAberta) || null;
   const numDays = new Date(year, month + 1, 0).getDate();
   const firstDow = new Date(year, month, 1).getDay();
   const goPrev = () => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); };
   const goNext = () => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); };
-  const estadoTexto = (s: Saida): string => { if (s.regressado && s.dataRegresso) return "Regressou a " + s.dataRegresso + (s.horaRegresso ? " às " + s.horaRegresso : ""); if (s.fim && s.regressoAuto) return "Regresso automático a " + s.fim + (s.horaRegresso ? " às " + s.horaRegresso : ""); if (s.fim) return "Regresso previsto " + s.fim + (s.horaRegresso ? " às " + s.horaRegresso : ""); return "Fora (sem data de regresso)"; };
+  const estadoTexto = (s: Saida): string => { if (s.encerrada) return "✝️ Óbito a " + (s.dataEncerrada || "—") + (s.motivoEncerrada ? " — " + s.motivoEncerrada : ""); if (s.regressado && s.dataRegresso) return "Regressou a " + s.dataRegresso + (s.horaRegresso ? " às " + s.horaRegresso : ""); if (s.fim && s.regressoAuto) return "Regresso automático a " + s.fim + (s.horaRegresso ? " às " + s.horaRegresso : ""); if (s.fim) return "Regresso previsto " + s.fim + (s.horaRegresso ? " às " + s.horaRegresso : ""); return "Fora (sem data de regresso)"; };
   const abrirDia = (d: number) => { const dnum = year * 10000 + (month + 1) * 100 + d; const s = saidaNoDia(selUtente, dnum); if (s) { setDragY(0); setSheet({ mode: "ver", saidaId: s.id }); } else { const ab = saidaAberta(); if (ab) { alert("Este utente ainda está fora — " + tipoById(ab.tipo).label + " desde " + ab.inicio + ". Dê primeiro a entrada (regresso) antes de registar nova saída."); setDragY(0); setSheet({ mode: "ver", saidaId: ab.id }); return; } const dd = new Date(year, month, d); setFTipo("familiares"); setFInicio(dd.toLocaleDateString("pt-PT")); setFHoraI(nowHM()); setFFim(""); setFHoraF(""); setFAuto(true); setFNotas(""); setDragY(0); setSheet({ mode: "novo" }); } };
   const guardarNova = () => { if (!selId) { alert("Escolha primeiro um utente."); return; } if (!fInicio.trim()) { alert("Indique a data de saída (DD/MM/AAAA)."); return; } const ab = saidaAberta(); if (ab) { alert("Este utente ainda está fora — dê primeiro a entrada (regresso) da saída anterior (" + tipoById(ab.tipo).label + " desde " + ab.inicio + ")."); return; } const nova: Saida = { id: Date.now().toString() + Math.random().toString(36).slice(2), tipo: fTipo, inicio: fInicio.trim(), horaInicio: fHoraI.trim() || undefined, fim: fFim.trim() || undefined, horaRegresso: fFim.trim() ? (fHoraF.trim() || undefined) : undefined, regressoAuto: fAuto && !!fFim.trim(), notas: fNotas.trim() || undefined, autorSaida: _autorAtual() }; updateSaidas((prev) => [...prev, nova]); appendLog("📋 SAÍDA DO UTENTE" + _SNL + "🚪 " + tipoById(fTipo).label + " — saída a " + nova.inicio + (nova.horaInicio ? (" às " + nova.horaInicio) : "") + (nova.fim ? (" · regresso previsto " + nova.fim + (nova.horaRegresso ? (" às " + nova.horaRegresso) : "")) : "") + (nova.notas ? (_SNL + nova.notas) : "")); closeSheet(); };
   const guardarEdicao = () => { if (!sheet || !sheet.saidaId) return; const id = sheet.saidaId; updateSaidas((prev) => prev.map((s) => s.id === id ? { ...s, tipo: fTipo, inicio: fInicio.trim(), horaInicio: fHoraI.trim() || undefined, fim: fFim.trim() || undefined, horaRegresso: fFim.trim() ? (fHoraF.trim() || undefined) : undefined, regressoAuto: fAuto && !!fFim.trim(), notas: fNotas.trim() || undefined } : s)); setSheet({ mode: "ver", saidaId: id }); };
   const apagarSaida = (id: string) => { if (!window.confirm("Apagar esta saída?")) return; updateSaidas((prev) => prev.filter((s) => s.id !== id)); closeSheet(); };
   const confirmarRegresso = (s: Saida) => { const hm = nowHM(); updateSaidas((prev) => prev.map((x) => x.id === s.id ? { ...x, regressado: true, dataRegresso: todayStr, horaRegresso: hm, autorRegresso: _autorAtual() } : x)); appendLog("📋 ENTRADA DO UTENTE" + _SNL + "🏠 Regresso (entrada) a " + todayStr + " às " + hm + " (" + tipoById(s.tipo).label + ")"); closeSheet(); };
+  const confirmarObito = () => { if (!sheet || !sheet.saidaId) return; const d = fObData.trim(); if (!d) { alert("Indique a data do óbito (DD/MM/AAAA)."); return; } if (!window.confirm("Encerrar a saída por óbito a " + d + "? O utente deixa de aparecer como \"fora\".")) return; const id = sheet.saidaId; updateSaidas((prev) => prev.map((x) => x.id === id ? { ...x, encerrada: true, dataEncerrada: d, motivoEncerrada: fObNota.trim() || undefined, autorEncerramento: _autorAtual() } : x)); appendLog("📋 SAÍDA ENCERRADA — ÓBITO" + _SNL + "✝️ Óbito a " + d + (fObNota.trim() ? (_SNL + fObNota.trim()) : "")); setSheet({ mode: "ver", saidaId: id }); };
   const adicionarTipo = () => { const nome = novoNome.trim(); if (!nome) return; const id = "c" + Date.now().toString(36); const novos = [...tiposCustom, { id, label: nome, cor: novoCor, corTexto: "#FFFFFF" }]; setTiposCustom(novos); saveToSupabase("escala_data", { saida_tipos: novos }).catch(() => {}); setNovoNome(""); setAddTipo(false); };
-  const linhaDe = (s: Saida) => ({ tipoLabel: tipoById(s.tipo).label, cor: tipoById(s.tipo).cor, inicio: s.inicio + (s.horaInicio ? " " + s.horaInicio : ""), fim: (s.dataRegresso || s.fim) ? ((s.dataRegresso || s.fim) + (s.horaRegresso ? " " + s.horaRegresso : "")) : "—", estado: estadoTexto(s), notas: s.notas || "", registo: (s.autorSaida ? "Saída: " + s.autorSaida : "") + (s.autorRegresso ? ((s.autorSaida ? _SNL : "") + "Entrada: " + s.autorRegresso) : "") });
+  const linhaDe = (s: Saida) => ({ tipoLabel: tipoById(s.tipo).label, cor: tipoById(s.tipo).cor, inicio: s.inicio + (s.horaInicio ? " " + s.horaInicio : ""), fim: s.encerrada ? ("✝️ " + (s.dataEncerrada || "")) : ((s.dataRegresso || s.fim) ? ((s.dataRegresso || s.fim) + (s.horaRegresso ? " " + s.horaRegresso : "")) : "—"), estado: estadoTexto(s), notas: s.encerrada && s.motivoEncerrada ? (s.notas ? (s.notas + _SNL + "Óbito: " + s.motivoEncerrada) : ("Óbito: " + s.motivoEncerrada)) : (s.notas || ""), registo: (s.autorSaida ? "Saída: " + s.autorSaida : "") + (s.autorRegresso ? ((s.autorSaida ? _SNL : "") + "Entrada: " + s.autorRegresso) : "") + (s.autorEncerramento ? ((s.autorSaida ? _SNL : "") + "Encerrou: " + s.autorEncerramento) : "") });
   const imprimirMes = () => { if (!selUtente) return; const ms = year * 10000 + (month + 1) * 100 + 1; const me = year * 10000 + (month + 1) * 100 + numDays; const linhas = saidasDe(selUtente).filter((s) => { const st = _saidaDnum(s.inicio); return st && st <= me && effEnd(s) >= ms; }).sort((a, b) => _saidaDnum(a.inicio) - _saidaDnum(b.inicio)).map(linhaDe); _printSaidas(selUtente.name, MONTH_NAMES[month] + " " + year, linhas); };
   const imprimirHoje = () => { if (!selUtente) return; const linhas = saidasDe(selUtente).filter((s) => { const st = _saidaDnum(s.inicio); return st && todayNum >= st && todayNum <= effEnd(s); }).map(linhaDe); _printSaidas(selUtente.name, "Dia " + todayStr, linhas); };
   const imprimirUma = (s: Saida) => { if (!selUtente) return; _printSaidas(selUtente.name, tipoById(s.tipo).label, [linhaDe(s)]); };
@@ -4687,7 +4691,8 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
               const isToday = dnum === todayNum;
               const voltou = !!(s && s.regressado);
               const futuro = !!(s && _saidaDnum(s.inicio) > todayNum);
-              return (<button key={d} className="sd-cal-cell" onClick={() => abrirDia(d)} style={{ position: "relative" as const, minHeight: 54, border: voltou ? "2px solid #1F7A34" : ("1px solid " + (t ? t.cor : "#EAE3D5")), borderRadius: 10, background: t ? t.cor : "#FBF8F1", color: t ? t.corTexto : "#2A241C", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", boxShadow: isToday ? "0 0 0 2px #1F4D2E inset" : "none", animation: futuro ? "pulseDay 1.5s ease-in-out infinite" : undefined }}>{d}{voltou ? <span style={{ position: "absolute" as const, top: 3, right: 3, width: 14, height: 14, borderRadius: "50%", background: "#FFFFFF", color: "#1F7A34", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>✓</span> : null}</button>);
+              const obitoDia = !!(s && s.encerrada && _saidaDnum(s.dataEncerrada) === dnum);
+              return (<button key={d} className="sd-cal-cell" onClick={() => abrirDia(d)} style={{ position: "relative" as const, minHeight: 54, border: obitoDia ? "2px solid #2A241C" : (voltou ? "2px solid #1F7A34" : ("1px solid " + (t ? t.cor : "#EAE3D5"))), borderRadius: 10, background: t ? t.cor : "#FBF8F1", color: t ? t.corTexto : "#2A241C", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", boxShadow: isToday ? "0 0 0 2px #1F4D2E inset" : "none", animation: futuro ? "pulseDay 1.5s ease-in-out infinite" : undefined }}>{d}{obitoDia ? <span style={{ position: "absolute" as const, top: 3, right: 3, width: 15, height: 15, borderRadius: "50%", background: "#2A241C", color: "#FFFFFF", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>✝</span> : (voltou ? <span style={{ position: "absolute" as const, top: 3, right: 3, width: 14, height: 14, borderRadius: "50%", background: "#FFFFFF", color: "#1F7A34", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>✓</span> : null)}</button>);
             })}
           </div>
         </div>
@@ -4715,7 +4720,7 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
               <div onTouchStart={(e) => { dragStart.current = e.touches[0].clientY; }} onTouchMove={(e) => { if (dragStart.current != null) setDragY(Math.max(0, e.touches[0].clientY - dragStart.current)); }} onTouchEnd={() => { if (dragY > 90) closeSheet(); else setDragY(0); dragStart.current = null; }} style={{ padding: "10px 0 2px", textAlign: "center" as const, cursor: "grab" }}>
                 <div style={{ width: 42, height: 5, borderRadius: 999, background: "#D8D1C4", margin: "0 auto" }} />
               </div>
-              {verSaida ? (() => { const t = tipoById(verSaida.tipo); const ongoing = !verSaida.regressado && (!verSaida.fim || !verSaida.regressoAuto); return (
+              {verSaida ? (() => { const t = tipoById(verSaida.tipo); const ongoing = !verSaida.regressado && !verSaida.encerrada && (!verSaida.fim || !verSaida.regressoAuto); return (
                 <div>
                   <div style={{ background: t.cor, margin: "6px 12px 0", borderRadius: 14, padding: "13px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div><div style={{ fontSize: 15, fontWeight: 800, color: t.corTexto }}>{t.label}</div><div style={{ fontSize: 12, color: t.corTexto, opacity: 0.85 }}>{selUtente ? (selUtente.name + " · ID " + selUtente.id) : ""}</div></div>
@@ -4726,11 +4731,12 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
                       <div style={{ flex: 1, background: "#F7F5F0", borderRadius: 10, padding: "9px 11px" }}><div style={{ fontSize: 10, color: "#A39B8E", fontWeight: 700, textTransform: "uppercase" as const }}>Saída</div><div style={{ fontSize: 14, fontWeight: 700 }}>{verSaida.inicio}{verSaida.horaInicio ? " · " + verSaida.horaInicio : ""}</div></div>
                       <div style={{ flex: 1, background: "#F7F5F0", borderRadius: 10, padding: "9px 11px" }}><div style={{ fontSize: 10, color: "#A39B8E", fontWeight: 700, textTransform: "uppercase" as const }}>Regresso</div><div style={{ fontSize: 14, fontWeight: 700 }}>{(verSaida.dataRegresso || verSaida.fim || "—")}{verSaida.horaRegresso ? " · " + verSaida.horaRegresso : ""}</div></div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: verSaida.regressado ? "#EEF3F7" : (verSaida.regressoAuto && verSaida.fim ? "#E8F0E8" : "#FFF8E8"), border: "1px solid " + (verSaida.regressado ? "#B8CCE0" : (verSaida.regressoAuto && verSaida.fim ? "#B7D4B0" : "#E8D28A")), borderRadius: 10, padding: "8px 11px", marginBottom: 12 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: verSaida.regressado ? "#3A5A70" : (verSaida.regressoAuto && verSaida.fim ? "#2E6B2E" : "#8A6A2E") }}>{estadoTexto(verSaida)}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: verSaida.encerrada ? "#ECEAE6" : (verSaida.regressado ? "#EEF3F7" : (verSaida.regressoAuto && verSaida.fim ? "#E8F0E8" : "#FFF8E8")), border: "1px solid " + (verSaida.encerrada ? "#C9C4BB" : (verSaida.regressado ? "#B8CCE0" : (verSaida.regressoAuto && verSaida.fim ? "#B7D4B0" : "#E8D28A"))), borderRadius: 10, padding: "8px 11px", marginBottom: 12 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: verSaida.encerrada ? "#4A443B" : (verSaida.regressado ? "#3A5A70" : (verSaida.regressoAuto && verSaida.fim ? "#2E6B2E" : "#8A6A2E")) }}>{estadoTexto(verSaida)}</span>
                     </div>
                     {verSaida.notas ? (<div><div style={{ fontSize: 10, color: "#A39B8E", fontWeight: 700, textTransform: "uppercase" as const, marginBottom: 4 }}>Notas</div><div style={{ fontSize: 13, color: "#2A241C", background: "#FAF7F0", border: "1px solid #EFEAE2", borderRadius: 10, padding: "9px 11px", lineHeight: 1.5, marginBottom: 14, whiteSpace: "pre-wrap" as const }}>{verSaida.notas}</div></div>) : null}
                     {ongoing ? (<button onClick={() => confirmarRegresso(verSaida)} style={{ width: "100%", background: "#1F4D2E", color: "#FFF", border: "none", borderRadius: 10, padding: "11px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", marginBottom: 10 }}>✓ Confirmar regresso (hoje)</button>) : null}
+                    {ongoing ? (<button onClick={() => { setFObData(todayStr); setFObNota(""); setSheet({ mode: "obito", saidaId: verSaida.id }); }} style={{ width: "100%", background: "#FFF", color: "#6B4A2E", border: "1px solid #D8C3A8", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", marginBottom: 12 }}>✝️ Encerrar sem regresso (óbito)</button>) : null}
                     <div style={{ display: "flex", gap: 8 }}>
                       <button onClick={() => { setFTipo(verSaida.tipo); setFInicio(verSaida.inicio); setFHoraI(verSaida.horaInicio || ""); setFFim(verSaida.fim || ""); setFHoraF(verSaida.horaRegresso || ""); setFAuto(verSaida.regressoAuto); setFNotas(verSaida.notas || ""); setSheet({ mode: "editar", saidaId: verSaida.id }); }} style={{ flex: 1, background: "#1F4D2E", color: "#F5B944", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Editar</button>
                       <button onClick={() => apagarSaida(verSaida.id)} style={{ background: "#FFF0EE", color: "#C2554A", border: "1px solid #F2C4BC", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Apagar</button>
@@ -4759,6 +4765,20 @@ function SaidasPage({ onBack }: { onBack: () => void }) {
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={sheet.mode === "editar" ? guardarEdicao : guardarNova} style={{ flex: 1, background: "#1F4D2E", color: "#F5B944", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>{sheet.mode === "editar" ? "Guardar alterações" : "Guardar saída"}</button>
                     <button onClick={() => closeSheet()} style={{ background: "transparent", color: "#6B6358", border: "1px solid #E4DED3", borderRadius: 10, padding: "12px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
+                  </div>
+                </div>
+              ) : null}
+              {sheet && sheet.mode === "obito" ? (
+                <div style={{ padding: "8px 18px 24px" }}>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 17, fontWeight: 700, margin: "4px 0 4px" }}>✝️ Encerrar saída — Óbito{selUtente ? (" — " + selUtente.name) : ""}</div>
+                  <div style={{ fontSize: 12.5, color: "#6B6358", marginBottom: 16, lineHeight: 1.5 }}>Use quando o utente não vai regressar por falecimento. A saída fica encerrada nesta data e o utente deixa de aparecer como "fora".</div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6358", marginBottom: 6 }}>Data do óbito</label>
+                  <input value={fObData} onChange={(e) => setFObData(mask(e.target.value))} placeholder="DD/MM/AAAA" style={{ ...inputStyle, marginBottom: 14, maxWidth: 180 }} />
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6358", marginBottom: 6 }}>Descrição / motivo (opcional)</label>
+                  <textarea value={fObNota} onChange={(e) => setFObNota(e.target.value)} rows={3} placeholder="Ex: faleceu no hospital; comunicado à família..." style={{ ...inputStyle, resize: "vertical" as const, marginBottom: 16 }} />
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={confirmarObito} style={{ flex: 1, background: "#6B4A2E", color: "#FFF", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Confirmar encerramento</button>
+                    <button onClick={() => { if (sheet.saidaId) setSheet({ mode: "ver", saidaId: sheet.saidaId }); else closeSheet(); }} style={{ background: "transparent", color: "#6B6358", border: "1px solid #E4DED3", borderRadius: 10, padding: "12px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Cancelar</button>
                   </div>
                 </div>
               ) : null}
@@ -8932,7 +8952,7 @@ export default function App() {
       (u.saidas || []).forEach((s: any) => {
         const st = dnum(s.inicio);
         const lbl = _tipoLabelHoje(s.tipo);
-        const aberta = !(s.regressado || (s.regressoAuto && s.fim && dnum(s.fim) < tnum));
+        const aberta = !(s.regressado || s.encerrada || (s.regressoAuto && s.fim && dnum(s.fim) < tnum));
         if (aberta && st && st <= tnum && !seenF.has(u.id)) { seenF.add(u.id); fora.push({ uid: u.id, nome: u.name, sub: lbl + " · saiu " + s.inicio + (s.horaInicio ? " " + s.horaInicio : "") + (s.fim ? " · regresso prev. " + s.fim : "") }); }
         if (!s.regressado && s.fim && dnum(s.fim) === tnum && !seenR.has(u.id)) { seenR.add(u.id); regressos.push({ uid: u.id, nome: u.name, sub: lbl + " · regresso previsto hoje" }); }
         if (s.tipo === "consulta" && st === tnum && !seenC.has(u.id)) { seenC.add(u.id); consultas.push({ uid: u.id, nome: u.name, sub: lbl + (s.horaInicio ? " · " + s.horaInicio : "") }); }
@@ -8967,7 +8987,7 @@ export default function App() {
     if (!u) return;
     const tnum = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
     const dnum = (d?: string): number => { if (!d) return 0; const pr = String(d).split("/"); if (pr.length !== 3) return 0; return parseInt(pr[2], 10) * 10000 + parseInt(pr[1], 10) * 100 + parseInt(pr[0], 10); };
-    const abertas = (u.saidas || []).filter((x: any) => !x.regressado && dnum(x.inicio) <= tnum);
+    const abertas = (u.saidas || []).filter((x: any) => !x.regressado && !x.encerrada && dnum(x.inicio) <= tnum);
     if (!abertas.length) { setResumoTick((t) => t + 1); return; }
     if (!window.confirm("Dar entrada (regresso) de " + u.name + " hoje?")) return;
     const hm = new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
